@@ -1,20 +1,45 @@
-# React + TypeScript + Vite + shadcn/ui
+# Aspected Studio
 
-This is a template for a new Vite project with React, TypeScript, and shadcn/ui.
+React + TypeScript + Vite + shadcn/ui desktop UI for the Aspected vector
+database. Dependencies are managed with Deno (`deno install`, `deno.lock`).
 
-## Adding components
-
-To add components to your app, run the following command:
+## Setup
 
 ```bash
-npx shadcn@latest add button
+deno install
 ```
 
-This will place the ui components in the `src/components` directory.
+## Development
 
-## Using components
+```bash
+deno task dev
+```
 
-To use the components in your app, import them as follows:
+## Build
+
+```bash
+deno task build
+deno task preview
+```
+
+## Lint, format, and typecheck
+
+```bash
+deno task lint
+deno task fmt
+deno task check
+```
+
+## Adding shadcn components
+
+The `shadcn` package stays in dependencies for `@import "shadcn/tailwind.css"`.
+To add components, run the CLI via Deno (no global npm install needed):
+
+```bash
+deno run -A npm:shadcn@latest add button
+```
+
+Components are placed under `src/components`. Import them like:
 
 ```tsx
 import { Button } from "@/components/ui/button"

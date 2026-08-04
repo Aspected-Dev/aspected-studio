@@ -1,0 +1,26 @@
+{
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "dev": "deno run -A npm:vite",
+    "dev:desktop": "deno desktop --hmr .",
+    "build": "deno run -A npm:vite build",
+    "preview": "deno run -A npm:vite preview",
+    "check": "deno check",
+    "lint": "deno lint",
+    "fmt": "deno fmt"
+  },
+  "fmt": {
+    "useTabs": false,
+    "lineWidth": 80,
+    "indentWidth": 2,
+    "semiColons": false,
+    "singleQuote": false,
+    "exclude": ["node_modules/", "dist/", "deno.lock"]
+  },
+  "lint": {
+    "exclude": ["node_modules/", "dist/"],
+    "rules": {
+      "exclude": ["no-sloppy-imports", "no-window", "no-window-prefix"]
+    }
+  }
+}
