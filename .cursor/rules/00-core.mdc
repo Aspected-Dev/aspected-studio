@@ -1,0 +1,36 @@
+---
+alwaysApply: true
+---
+
+# Aspected Studio core
+
+Product: web UI for the Aspected vector database (REST-backed viewer). Web MVP
+first; `deno desktop` and Docker packaging later.
+
+## Tooling
+
+- Use Deno only: `deno task`, `deno add`, `deno install`, `deno.lock`
+- Never reintroduce ESLint, Prettier, or `package-lock.json`
+- Do not use npm/yarn/pnpm as the package manager (Deno `npm:` specifiers are OK)
+
+## UI
+
+- Prefer existing shadcn/ui primitives; add via
+  `deno run -A npm:shadcn@latest add …`
+- No Storybook
+
+## Definition of Done
+
+Before finishing a change:
+
+1. TSDoc on exported functions, hooks, types, and classes
+2. Tests updated for behavior changes; `deno task test` passes
+3. README updated if setup, tasks, or workflows changed
+4. `deno task fmt`, `deno task lint`, and `deno task check` are clean
+
+## Scope
+
+- Prefer editing existing files over new ones
+- No drive-by refactors unrelated to the request
+- Do not invent a `docs/` folder unless asked
+- Do not edit generated `dist/`

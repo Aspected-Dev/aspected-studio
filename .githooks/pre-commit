@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+deno task fmt
+deno task lint

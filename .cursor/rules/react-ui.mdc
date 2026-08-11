@@ -1,0 +1,29 @@
+---
+description: React, TypeScript, Tailwind, and shadcn UI conventions
+globs: src/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# React and UI
+
+- Functional components and TypeScript only
+- Tailwind CSS v4 utility classes; no new CSS frameworks
+- Prefer shadcn/ui from `@/components/ui/*`; do not hand-roll duplicates
+- Add missing primitives with
+  `deno run -A npm:shadcn@latest add <name>`
+- Import from `@/` (maps to `src/`)
+
+## TSDoc
+
+Required on **exported** functions, hooks, types, and classes. Skip tiny private
+helpers. Document purpose and non-obvious params/returns; do not restate the
+type signature.
+
+```ts
+/** Merges class names and resolves Tailwind conflicts. */
+export function cn(...inputs: ClassValue[]): string
+```
+
+## Validation
+
+When adding runtime validation, use Zod v4 syntax (not Zod v3 patterns).

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/block-npm.py",
+        "failClosed": true
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/stop-verify.py",
+        "loop_limit": 2,
+        "timeout": 300
+      }
+    ]
+  }
+}

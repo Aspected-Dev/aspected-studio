@@ -1,0 +1,22 @@
+---
+description: Vitest and Testing Library conventions for this repo
+alwaysApply: false
+---
+
+# Testing
+
+- Use Vitest + Testing Library + jsdom
+- Co-locate tests as `*.test.ts` or `*.test.tsx` next to the source
+- Prefer testing pure logic and data mappers; keep component tests light
+- After changing behavior: update tests and run `deno task test`
+- Watch mode: `deno task test:watch`
+
+## Example
+
+See `@src/lib/utils.test.ts` for the expected Vitest style (`describe` / `it` /
+`expect` imports from `vitest`).
+
+## Do not
+
+- Do not add Playwright or Storybook for MVP
+- Do not use `deno test` for React/UI tests

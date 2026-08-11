@@ -1,0 +1,15 @@
+---
+description: README and AGENTS.md documentation conventions when setup or workflows change
+globs: README.md,AGENTS.md
+alwaysApply: false
+---
+
+# Documentation
+
+- README is the only long-form project doc. Do not create a `docs/` folder unless
+  the user explicitly asks
+- Update README when tasks, setup steps, or user-facing workflows change
+- Keep AGENTS.md short: point to README and `.cursor/rules`; do not duplicate
+  long manuals there
+- Prefer tables and concrete commands over prose
+- Match the repo voice: direct, no em dashes
