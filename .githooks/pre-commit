@@ -1,5 +1,56 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-deno task fmt
+# Format staged content into the index without stash/add.
+# No unstaged edits on a file -> also refresh the worktree so the commit stays clean.
+# Unstaged edits on a file -> update index only (leave worktree alone).
+
+mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACM)
+
+staged_existing=()
+for file in "${staged[@]+"${staged[@]}"}"; do
+  if [[ -n "$file" && -f "$file" ]]; then
+    staged_existing+=("$file")
+  fi
+done
+
+for file in "${staged_existing[@]+"${staged_existing[@]}"}"; do
+  [[ -n "$file" ]] || continue
+
+  had_unstaged=0
+  if ! git diff --quiet -- "$file"; then
+    had_unstaged=1
+  fi
+
+  # Use basename so paths like .githooks/pre-commit do not become a suffix
+  # containing "/' (mktemp rejects that).
+  base="${file##*/}"
+  if [[ "$base" == *.* ]]; then
+    ext="${base##*.}"
+  else
+    ext="txt"
+  fi
+  tmp="$(mktemp --suffix=".${ext}")"
+
+  if ! git show ":${file}" > "$tmp"; then
+    rm -f "$tmp"
+    continue
+  fi
+
+  if ! deno fmt "$tmp" >/dev/null; then
+    rm -f "$tmp"
+    continue
+  fi
+
+  mode="$(git ls-files --stage -- "$file" | awk '{print $1}')"
+  hash="$(git hash-object -w -- "$tmp")"
+  git update-index --cacheinfo "${mode},${hash},${file}"
+
+  if [[ "$had_unstaged" -eq 0 ]]; then
+    cp -- "$tmp" "$file"
+  fi
+
+  rm -f "$tmp"
+done
+
 deno task lint
