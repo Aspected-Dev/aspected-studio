@@ -112,4 +112,38 @@ describe("AspectedClient", () => {
       } satisfies Partial<AspectedApiError>,
     );
   });
+
+  it("calls onNetworkError when fetch throws", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
+    const onNetworkError = vi.fn();
+    const client = new AspectedClient(
+      { baseUrl: "http://localhost:8080", apiToken: "" },
+      { onNetworkError },
+    );
+
+    await expect(client.listIndexes()).rejects.toThrow();
+    expect(onNetworkError).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT call onNetworkError for HTTP error responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({ error: "Index not found" }, 404),
+      ),
+    );
+    const onNetworkError = vi.fn();
+    const client = new AspectedClient(
+      { baseUrl: "http://localhost:8080", apiToken: "" },
+      { onNetworkError },
+    );
+
+    await expect(client.getIndex("missing")).rejects.toMatchObject({
+      status: 404,
+    });
+    expect(onNetworkError).not.toHaveBeenCalled();
+  });
 });

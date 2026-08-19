@@ -253,7 +253,14 @@ export function CreateIndexPage() {
             </Button>
             <Collapsible>
               <CollapsibleTrigger
-                render={<Button type="button" variant="ghost" size="sm" />}
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="bg-muted hover:bg-muted/70 dark:hover:bg-muted/50"
+                  />
+                }
               >
                 Advanced HNSW
               </CollapsibleTrigger>

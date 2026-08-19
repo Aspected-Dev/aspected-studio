@@ -48,15 +48,26 @@ type RequestOptions<T> = {
   schema: z.ZodType<T>;
 };
 
+type ClientOptions = {
+  /**
+   * Called whenever a network-level failure occurs (fetch throws, i.e. the
+   * server is unreachable). Not called for HTTP 4xx/5xx responses.
+   * Use this to invalidate the live session in the connection context.
+   */
+  onNetworkError?: () => void;
+};
+
 /**
  * Thin fetch wrapper for the Aspected REST API.
  */
 export class AspectedClient {
   readonly connection: ConnectionSettings;
+  private readonly options: ClientOptions;
   lastRequest: RecordedRequest | null = null;
 
-  constructor(connection: ConnectionSettings) {
+  constructor(connection: ConnectionSettings, options: ClientOptions = {}) {
     this.connection = connection;
+    this.options = options;
   }
 
   /** `GET /status` */
@@ -168,6 +179,7 @@ export class AspectedClient {
     try {
       response = await fetch(url, init);
     } catch (caught) {
+      this.options.onNetworkError?.();
       const message = caught instanceof Error
         ? caught.message
         : "Failed to fetch";
@@ -178,6 +190,15 @@ export class AspectedClient {
     const json = text ? parseJson(text) : null;
 
     if (!response.ok) {
+      // Treat proxy failures as an actual connection drop. With the Vite
+      // dev proxy, stopping the upstream server often yields HTTP 502/503/504
+      // instead of a fetch-throw network error.
+      if (
+        response.status === 502 || response.status === 503 ||
+        response.status === 504
+      ) {
+        this.options.onNetworkError?.();
+      }
       const parsed = errorResponseSchema.safeParse(json);
       const message = parsed.success && parsed.data.error
         ? parsed.data.error

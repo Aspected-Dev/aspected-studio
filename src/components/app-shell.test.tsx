@@ -21,6 +21,9 @@ const { connection } = vi.hoisted(() => ({
     status: null as StatusResponse | null,
     error: null as string | null,
     connecting: false,
+    wasConnected: false,
+    retrying: false,
+    nextRetryIn: null as number | null,
     activeId: null as string | null,
     statusReceivedAt: null as number | null,
     connections: [],
@@ -28,6 +31,7 @@ const { connection } = vi.hoisted(() => ({
     deleteConnection: vi.fn(),
     connect: vi.fn(),
     disconnect: vi.fn(),
+    reconnect: vi.fn(),
   },
 }));
 
@@ -70,6 +74,11 @@ describe("AppShell", () => {
   afterEach(() => {
     cleanup();
     connection.status = null;
+    connection.wasConnected = false;
+    connection.retrying = false;
+    connection.nextRetryIn = null;
+    connection.error = null;
+    connection.connecting = false;
   });
 
   it("shows Welcome instead of Indexes while disconnected", () => {
@@ -86,6 +95,7 @@ describe("AppShell", () => {
 
   it("renders the outlet and index nav after connect", () => {
     connection.status = statusResponse;
+    connection.wasConnected = true;
     renderShell();
     expect(screen.getByRole("heading", { name: "Indexes" }))
       .toBeInTheDocument();
@@ -94,5 +104,63 @@ describe("AppShell", () => {
     expect(
       screen.queryByRole("heading", { name: "Welcome to Aspected Studio" }),
     ).not.toBeInTheDocument();
+  });
+
+  describe("mid-session drop (wasConnected && !status)", () => {
+    beforeEach(() => {
+      connection.status = null;
+      connection.wasConnected = true;
+    });
+
+    it("keeps the outlet mounted instead of showing the welcome screen", () => {
+      renderShell();
+      expect(screen.getByRole("heading", { name: "Indexes" }))
+        .toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Welcome to Aspected Studio" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows the disconnected overlay with server URL and reconnect button", () => {
+      renderShell();
+      expect(screen.getByRole("heading", { name: "Connection lost" }))
+        .toBeInTheDocument();
+      expect(screen.getByText("http://localhost:8080")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Reconnect" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows an error message when one is present", () => {
+      connection.error = "Cannot reach Aspected";
+      renderShell();
+      expect(screen.getByText("Cannot reach Aspected")).toBeInTheDocument();
+    });
+
+    it("shows retry countdown when retrying", () => {
+      connection.retrying = true;
+      connection.nextRetryIn = 5;
+      renderShell();
+      expect(screen.getByText("Retrying in 5s...")).toBeInTheDocument();
+    });
+
+    it("shows reconnecting state while connecting", () => {
+      connection.connecting = true;
+      renderShell();
+      expect(
+        screen.getByRole("button", { name: "Reconnecting..." }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Reconnecting..." }))
+        .toBeDisabled();
+    });
+
+    it("calls reconnect when the Reconnect button is clicked", async () => {
+      const { user } = await import("@testing-library/user-event").then((
+        m,
+      ) => ({ user: m.default.setup() }));
+      renderShell();
+      await user.click(screen.getByRole("button", { name: "Reconnect" }));
+      expect(connection.reconnect).toHaveBeenCalledOnce();
+    });
   });
 });
