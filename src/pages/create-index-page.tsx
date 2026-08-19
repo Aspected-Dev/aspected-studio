@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Trash2Icon } from "lucide-react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router";
@@ -319,7 +320,14 @@ function AspectCard({
             label={`${type} resolver`}
           />
         </div>
-        <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onRemove}
+          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        >
+          <Trash2Icon />
           Remove
         </Button>
       </div>

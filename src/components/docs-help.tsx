@@ -33,12 +33,7 @@ type DocsPageProps = {
  * Inside a Badge the control shrinks to the chip height so the icon
  * does not sit in extra left and right gutters.
  */
-export function DocsHelpIcon({
-  page,
-  hash,
-  label,
-  blurb,
-}: DocsPageProps) {
+export function DocsHelpIcon({ page, hash, label, blurb }: DocsPageProps) {
   const title = label ?? DOCS_PAGES[page].title;
   // When blurb is explicitly passed use it; otherwise fall back to the catalog.
   // Pass blurb={null} to suppress the tooltip content entirely.
@@ -177,8 +172,8 @@ export function DocsField({
           )
           : null}
       </div>
-      {description ? <FieldDescription>{description}</FieldDescription> : null}
       {children}
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
       {error ? <FieldError>{error}</FieldError> : null}
     </Field>
   );
