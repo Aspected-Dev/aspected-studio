@@ -1,21 +1,40 @@
-import { Button } from "@/components/ui/button"
+import { createBrowserRouter, RouterProvider } from "react-router";
+import { AppShell } from "@/components/app-shell.tsx";
+import { IndexLayout } from "@/components/index-layout.tsx";
+import { ConnectionProvider } from "@/hooks/use-connection.tsx";
+import { CreateIndexPage } from "@/pages/create-index-page.tsx";
+import { IndexDocsPage } from "@/pages/index-docs-page.tsx";
+import { IndexSchemaPage } from "@/pages/index-schema-page.tsx";
+import { IndexSearchPage } from "@/pages/index-search-page.tsx";
+import { IndexesPage } from "@/pages/indexes-page.tsx";
 
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <AppShell />,
+    children: [
+      { index: true, element: <IndexesPage /> },
+      { path: "indexes/new", element: <CreateIndexPage /> },
+      {
+        path: "indexes/:name",
+        element: <IndexLayout />,
+        children: [
+          { index: true, element: <IndexSchemaPage /> },
+          { path: "docs", element: <IndexDocsPage /> },
+          { path: "search", element: <IndexSearchPage /> },
+        ],
+      },
+    ],
+  },
+]);
+
+/** Studio root: connection provider plus React Router 7 routes. */
 export function App() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">Project ready!</h1>
-          <p>You may now add components and start building.</p>
-          <p>We&apos;ve already added the button component for you.</p>
-          <Button className="mt-2">Button</Button>
-        </div>
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
-      </div>
-    </div>
-  )
+    <ConnectionProvider>
+      <RouterProvider router={router} />
+    </ConnectionProvider>
+  );
 }
 
-export default App
+export default App;
