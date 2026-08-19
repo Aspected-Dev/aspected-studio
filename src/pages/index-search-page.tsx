@@ -235,6 +235,7 @@ export function IndexSearchPage() {
                 hash={DOCS_HASH.tutorialSearch}
                 blurb="Number of nearest neighbours to return."
                 error={errors.k?.message}
+                mono
               >
                 <Input
                   id="k"
@@ -288,7 +289,7 @@ export function IndexSearchPage() {
                       onCheckedChange={(checked) =>
                         field.onChange(Boolean(checked))}
                     />
-                    <FieldLabel>withDocs</FieldLabel>
+                    <FieldLabel className="font-mono">withDocs</FieldLabel>
                   </Field>
                 )}
               />
@@ -302,7 +303,7 @@ export function IndexSearchPage() {
                       onCheckedChange={(checked) =>
                         field.onChange(Boolean(checked))}
                     />
-                    <FieldLabel>
+                    <FieldLabel className="font-mono">
                       withExplanation
                       <DocsHelpIcon
                         page="resolvers"
@@ -331,7 +332,7 @@ export function IndexSearchPage() {
                         onCheckedChange={(checked) =>
                           field.onChange(Boolean(checked))}
                       />
-                      <FieldLabel>withVectors</FieldLabel>
+                      <FieldLabel className="font-mono">withVectors</FieldLabel>
                     </Field>
                   )}
                 />
@@ -341,6 +342,7 @@ export function IndexSearchPage() {
                   page="accessControl"
                   hash={DOCS_HASH.accessFiltering}
                   description="Comma-separated keys. Documents need at least one match. [null] is not the same as omitting the filter."
+                  mono
                 >
                   <Input
                     id="access-filter"

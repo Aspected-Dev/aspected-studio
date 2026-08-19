@@ -164,6 +164,7 @@ export function CreateIndexPage() {
           hash={INDEX_FIELD_DOCS.idSize.hash}
           blurb={INDEX_FIELD_DOCS.idSize.blurb}
           error={errors.idSize?.message}
+          mono
         >
           <Input
             id="id-size"
@@ -269,6 +270,7 @@ export function CreateIndexPage() {
                       hash={help?.hash}
                       blurb={help?.blurb}
                       error={errors.hnsw?.[key]?.message}
+                      mono
                     >
                       <Input
                         id={`hnsw-${key}`}
@@ -431,6 +433,7 @@ function AspectSettings({
             page="resolverEnum"
             blurb="Maximum values encoded per radial group. Default 5."
             error={aspectErrors?.maxValuesPerRadial?.message}
+            mono
           >
             <Input
               id={`aspect-${index}-max-radial`}
@@ -530,7 +533,7 @@ function AspectSettings({
                         field.onChange([...selected]);
                       }}
                     />
-                    <FieldLabel>{item}</FieldLabel>
+                    <FieldLabel className="font-mono">{item}</FieldLabel>
                   </Field>
                 )}
               />
@@ -542,6 +545,7 @@ function AspectSettings({
               htmlFor={`aspect-${index}-format`}
               page="resolverDatetime"
               blurb="strftime format used only for the single-granularity legacy mode."
+              mono
             >
               <Input
                 id={`aspect-${index}-format`}
@@ -554,6 +558,7 @@ function AspectSettings({
               page="resolverDatetime"
               blurb="Inclusive minimum year when granularity includes year or timestamp. Default 1970."
               error={aspectErrors?.minYear?.message}
+              mono
             >
               <Input
                 id={`aspect-${index}-min-year`}
@@ -566,6 +571,7 @@ function AspectSettings({
               page="resolverDatetime"
               blurb="Inclusive maximum year when granularity includes year or timestamp. Default 2030."
               error={aspectErrors?.maxYear?.message}
+              mono
             >
               <Input
                 id={`aspect-${index}-max-year`}
@@ -583,6 +589,7 @@ function AspectSettings({
           page="resolverRaw"
           blurb="Expected length of the pre-computed float array."
           error={aspectErrors?.numDims?.message}
+          mono
         >
           <Input
             id={`aspect-${index}-dims`}

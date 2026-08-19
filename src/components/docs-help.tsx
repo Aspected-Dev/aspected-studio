@@ -136,6 +136,8 @@ type DocsFieldProps = {
   description?: string;
   /** Inline validation error message forwarded from React Hook Form. */
   error?: string;
+  /** Render the label in a monospace font, e.g. for API field names like `idSize`. */
+  mono?: boolean;
   children: ReactNode;
 };
 
@@ -153,12 +155,17 @@ export function DocsField({
   docsLabel,
   blurb,
   error,
+  mono,
   children,
 }: DocsFieldProps) {
   return (
     <Field data-invalid={error ? true : undefined}>
       <div className="flex min-w-0 items-center gap-1">
-        <FieldLabel htmlFor={htmlFor}>{label}</FieldLabel>
+        <FieldLabel htmlFor={htmlFor}>
+          {mono
+            ? <span className="font-mono leading-none">{label}</span>
+            : label}
+        </FieldLabel>
         {page
           ? (
             <DocsHelpIcon
