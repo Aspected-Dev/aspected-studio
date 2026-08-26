@@ -13,7 +13,7 @@ import {
   sortFn_alphanumeric,
   sortFn_text,
   tableFeatures,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 
 /**
  * TanStack Table v9 features used by Studio data tables, matching the shadcn
@@ -32,16 +32,16 @@ export const features = tableFeatures({
   sortFns: { alphanumeric: sortFn_alphanumeric, text: sortFn_text },
   columnMeta: {} as {
     /** Tailwind classes for body cells only. Headers stay default. */
-    className?: string;
+    className?: string
   },
-});
+})
 
 /** Feature set type passed to `ColumnDef` and `createColumnHelper`. */
-export type DataTableFeatures = typeof features;
+export type DataTableFeatures = typeof features
 
 /**
  * Column helper bound to Studio's shared TanStack feature set.
  */
 export function createDataTableColumnHelper<TData extends RowData>() {
-  return createColumnHelper<DataTableFeatures, TData>();
+  return createColumnHelper<DataTableFeatures, TData>()
 }

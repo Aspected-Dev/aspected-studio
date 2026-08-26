@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router";
-import { createDataTableColumnHelper } from "@/components/data-table-features.ts";
-import { DataTable } from "@/components/data-table.tsx";
-import { DocsHelpIcon, PageDocsButton } from "@/components/docs-help.tsx";
-import { JsonEditor } from "@/components/json-editor.tsx";
-import { Badge } from "@/components/ui/badge.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { toastCaughtError } from "@/lib/aspected/user-error.ts";
-import type { IndexDetail, StoredAspect } from "@/lib/aspected/types.ts";
-import { docsPageForAspectType, INDEX_FIELD_DOCS } from "@/lib/docs.ts";
+import { useEffect, useState } from "react"
+import { useParams } from "react-router"
+import { createDataTableColumnHelper } from "@/components/data-table-features.ts"
+import { DataTable } from "@/components/data-table.tsx"
+import { DocsHelpIcon, PageDocsButton } from "@/components/docs-help.tsx"
+import { JsonEditor } from "@/components/json-editor.tsx"
+import { Badge } from "@/components/ui/badge.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { toastCaughtError } from "@/lib/aspected/user-error.ts"
+import type { IndexDetail, StoredAspect } from "@/lib/aspected/types.ts"
+import { docsPageForAspectType, INDEX_FIELD_DOCS } from "@/lib/docs.ts"
 
-const columnHelper = createDataTableColumnHelper<StoredAspect>();
+const columnHelper = createDataTableColumnHelper<StoredAspect>()
 
 const columns = columnHelper.columns([
   columnHelper.accessor("name", {
@@ -20,7 +20,7 @@ const columns = columnHelper.columns([
   columnHelper.accessor("type", {
     header: "Type",
     cell: ({ getValue }) => {
-      const type = getValue();
+      const type = getValue()
       return (
         <span className="inline-flex items-center gap-1">
           {type}
@@ -29,7 +29,7 @@ const columns = columnHelper.columns([
             label={`${type} resolver`}
           />
         </span>
-      );
+      )
     },
   }),
   columnHelper.accessor("path", {
@@ -49,46 +49,46 @@ const columns = columnHelper.columns([
       </span>
     ),
   }),
-]);
+])
 
 /**
  * Read-only index schema, dimensions, and HNSW settings.
  */
 export function IndexSchemaPage() {
-  const { name } = useParams();
-  const { client } = useConnection();
-  const [index, setIndex] = useState<IndexDetail | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const { name } = useParams()
+  const { client } = useConnection()
+  const [index, setIndex] = useState<IndexDetail | null>(null)
+  const [loadFailed, setLoadFailed] = useState(false)
 
   useEffect(() => {
     if (!name) {
-      return;
+      return
     }
-    let cancelled = false;
+    let cancelled = false
     client.getIndex(name).then((response) => {
       if (!cancelled) {
-        setIndex(response.data);
-        setLoadFailed(false);
+        setIndex(response.data)
+        setLoadFailed(false)
       }
     }).catch((caught) => {
       if (!cancelled) {
-        setLoadFailed(true);
-        toastCaughtError(caught, "Could not load schema");
+        setLoadFailed(true)
+        toastCaughtError(caught, "Could not load schema")
       }
-    });
+    })
     return () => {
-      cancelled = true;
-    };
-  }, [client, name]);
+      cancelled = true
+    }
+  }, [client, name])
 
   if (loadFailed) {
     return (
       <p className="text-sm text-muted-foreground">Could not load schema.</p>
-    );
+    )
   }
 
   if (!index) {
-    return <p className="text-sm text-muted-foreground">Loading schema…</p>;
+    return <p className="text-sm text-muted-foreground">Loading schema…</p>
   }
 
   return (
@@ -141,5 +141,5 @@ export function IndexSchemaPage() {
         />
       </div>
     </div>
-  );
+  )
 }

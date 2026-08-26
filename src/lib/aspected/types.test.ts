@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { createIndexRequestSchema } from "./types.ts";
+import { describe, expect, it } from "vitest"
+import { createIndexRequestSchema } from "./types.ts"
 
 describe("createIndexRequestSchema", () => {
   it("accepts schema and camelCase fields", () => {
@@ -13,10 +13,10 @@ describe("createIndexRequestSchema", () => {
           settings: { values: ["electronics", "clothing"] },
         },
       ],
-    });
+    })
 
-    expect(parsed.schema[0]?.name).toBe("category");
-  });
+    expect(parsed.schema[0]?.name).toBe("category")
+  })
 
   it("rejects tutorial aspects field name", () => {
     const result = createIndexRequestSchema.safeParse({
@@ -29,8 +29,8 @@ describe("createIndexRequestSchema", () => {
           settings: { values: ["electronics"] },
         },
       ],
-    });
+    })
 
-    expect(result.success).toBe(false);
-  });
-});
+    expect(result.success).toBe(false)
+  })
+})

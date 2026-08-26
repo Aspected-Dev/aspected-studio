@@ -1,42 +1,42 @@
-import { useEffect, useState } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useParams } from "react-router";
-import { createDataTableColumnHelper } from "@/components/data-table-features.ts";
-import { DataTable } from "@/components/data-table.tsx";
+import { useEffect, useState } from "react"
+import { Controller, useFieldArray, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useParams } from "react-router"
+import { createDataTableColumnHelper } from "@/components/data-table-features.ts"
+import { DataTable } from "@/components/data-table.tsx"
 import {
   DocsField,
   DocsHelpIcon,
   DocsTextLink,
   PageDocsButton,
-} from "@/components/docs-help.tsx";
-import { JsonEditor } from "@/components/json-editor.tsx";
-import { RequestInspector } from "@/components/request-inspector.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Checkbox } from "@/components/ui/checkbox.tsx";
+} from "@/components/docs-help.tsx"
+import { JsonEditor } from "@/components/json-editor.tsx"
+import { RequestInspector } from "@/components/request-inspector.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import { Checkbox } from "@/components/ui/checkbox.tsx"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible.tsx";
-import { Field, FieldLabel } from "@/components/ui/field.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { type RecordedRequest } from "@/lib/aspected/client.ts";
-import { toastCaughtError } from "@/lib/aspected/user-error.ts";
+} from "@/components/ui/collapsible.tsx"
+import { Field, FieldLabel } from "@/components/ui/field.tsx"
+import { Input } from "@/components/ui/input.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { type RecordedRequest } from "@/lib/aspected/client.ts"
+import { toastCaughtError } from "@/lib/aspected/user-error.ts"
 import {
   buildSparseSearchRequest,
   searchFormSchema,
   type SearchFormValues,
-} from "@/lib/aspected/query.ts";
+} from "@/lib/aspected/query.ts"
 import {
   type SearchIndexRequest,
   searchIndexRequestSchema,
   type SearchResultRow,
-} from "@/lib/aspected/types.ts";
-import { DOCS_HASH } from "@/lib/docs.ts";
+} from "@/lib/aspected/types.ts"
+import { DOCS_HASH } from "@/lib/docs.ts"
 
-const columnHelper = createDataTableColumnHelper<SearchResultRow>();
+const columnHelper = createDataTableColumnHelper<SearchResultRow>()
 
 const columns = columnHelper.columns([
   columnHelper.accessor("id", {
@@ -69,43 +69,43 @@ const columns = columnHelper.columns([
     ),
     meta: { className: "max-w-sm font-mono text-xs whitespace-normal" },
     cell: ({ getValue }) => {
-      const value = getValue();
+      const value = getValue()
       return value
         ? (
           <span className="inline-block max-w-36 whitespace-normal break-all sm:max-w-sm">
             {JSON.stringify(value)}
           </span>
         )
-        : "";
+        : ""
     },
   }),
   columnHelper.accessor("doc", {
     header: "Document",
     meta: { className: "font-mono text-xs" },
     cell: ({ getValue }) => {
-      const value = getValue();
+      const value = getValue()
       return value
         ? (
           <span className="inline-block w-36 truncate sm:w-52">
             {JSON.stringify(value)}
           </span>
         )
-        : "";
+        : ""
     },
   }),
-]);
+])
 
 /**
  * Sparse search form generated from the index schema.
  */
 export function IndexSearchPage() {
-  const { name } = useParams();
-  const { client } = useConnection();
-  const [jsonMode, setJsonMode] = useState(false);
-  const [jsonText, setJsonText] = useState("");
-  const [results, setResults] = useState<SearchResultRow[]>([]);
-  const [selected, setSelected] = useState<SearchResultRow | null>(null);
-  const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null);
+  const { name } = useParams()
+  const { client } = useConnection()
+  const [jsonMode, setJsonMode] = useState(false)
+  const [jsonText, setJsonText] = useState("")
+  const [results, setResults] = useState<SearchResultRow[]>([])
+  const [selected, setSelected] = useState<SearchResultRow | null>(null)
+  const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null)
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
@@ -118,16 +118,16 @@ export function IndexSearchPage() {
       withExplanation: true,
       withVectors: false,
     },
-  });
+  })
 
   const { fields: aspectFields } = useFieldArray({
     control: form.control,
     name: "aspects",
-  });
+  })
 
   useEffect(() => {
     if (!name) {
-      return;
+      return
     }
     client.getIndex(name).then((response) => {
       form.setValue(
@@ -137,17 +137,17 @@ export function IndexSearchPage() {
           value: "",
           weight: "",
         })),
-      );
+      )
     }).catch((caught) => {
-      toastCaughtError(caught, "Could not load index");
-    });
-  }, [client, name, form]);
+      toastCaughtError(caught, "Could not load index")
+    })
+  }, [client, name, form])
 
   function currentRequest(): SearchIndexRequest {
     if (jsonMode) {
-      return searchIndexRequestSchema.parse(JSON.parse(jsonText));
+      return searchIndexRequestSchema.parse(JSON.parse(jsonText))
     }
-    const values = form.getValues();
+    const values = form.getValues()
     return buildSparseSearchRequest({
       k: Number(values.k),
       aspects: values.aspects,
@@ -156,21 +156,21 @@ export function IndexSearchPage() {
       withDocs: values.withDocs,
       withVectors: values.withVectors,
       withExplanation: values.withExplanation,
-    });
+    })
   }
 
   function switchToJson() {
     try {
-      setJsonText(JSON.stringify(currentRequest(), null, 2));
-      setJsonMode(true);
+      setJsonText(JSON.stringify(currentRequest(), null, 2))
+      setJsonMode(true)
     } catch (caught) {
-      toastCaughtError(caught, "Could not switch to JSON");
+      toastCaughtError(caught, "Could not switch to JSON")
     }
   }
 
   const handleSubmit = form.handleSubmit(async (values) => {
     if (!name) {
-      return;
+      return
     }
     try {
       const body = jsonMode ? currentRequest() : buildSparseSearchRequest({
@@ -181,18 +181,18 @@ export function IndexSearchPage() {
         withDocs: values.withDocs,
         withVectors: values.withVectors,
         withExplanation: values.withExplanation,
-      });
-      const response = await client.searchIndex(name, body);
-      setLastRequest(client.lastRequest);
-      setResults(response.data);
-      setSelected(null);
+      })
+      const response = await client.searchIndex(name, body)
+      setLastRequest(client.lastRequest)
+      setResults(response.data)
+      setSelected(null)
     } catch (caught) {
-      setLastRequest(client.lastRequest);
-      toastCaughtError(caught, "Search failed");
+      setLastRequest(client.lastRequest)
+      toastCaughtError(caught, "Search failed")
     }
-  });
+  })
 
-  const errors = form.formState.errors;
+  const errors = form.formState.errors
 
   return (
     <form onSubmit={handleSubmit} className="grid min-w-0 gap-6">
@@ -407,5 +407,5 @@ export function IndexSearchPage() {
         <RequestInspector request={lastRequest} />
       </section>
     </form>
-  );
+  )
 }

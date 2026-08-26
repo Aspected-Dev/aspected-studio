@@ -1,23 +1,23 @@
-import type { CSSProperties } from "react";
-import { Outlet } from "react-router";
-import { Loader2Icon, UnplugIcon } from "lucide-react";
-import { AppSidebar } from "@/components/app-sidebar.tsx";
-import { ConnectionDialogProvider } from "@/components/connection-dialog.tsx";
-import { SiteHeader } from "@/components/site-header.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Toaster } from "@/components/ui/sonner.tsx";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { WelcomePage } from "@/pages/welcome-page.tsx";
+import type { CSSProperties } from "react"
+import { Outlet } from "react-router"
+import { Loader2Icon, UnplugIcon } from "lucide-react"
+import { AppSidebar } from "@/components/app-sidebar.tsx"
+import { ConnectionDialogProvider } from "@/components/connection-dialog.tsx"
+import { SiteHeader } from "@/components/site-header.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import { Toaster } from "@/components/ui/sonner.tsx"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { WelcomePage } from "@/pages/welcome-page.tsx"
 
 type DisconnectedOverlayProps = {
-  serverUrl: string;
-  error: string | null;
-  connecting: boolean;
-  retrying: boolean;
-  nextRetryIn: number | null;
-  onReconnect: () => void;
-};
+  serverUrl: string
+  error: string | null
+  connecting: boolean
+  retrying: boolean
+  nextRetryIn: number | null
+  onReconnect: () => void
+}
 
 /**
  * Semi-transparent overlay shown over the current page when the connection
@@ -70,7 +70,7 @@ function DisconnectedOverlay({
         )}
       </div>
     </div>
-  );
+  )
 }
 
 /**
@@ -89,9 +89,9 @@ export function AppShell() {
     retrying,
     nextRetryIn,
     reconnect,
-  } = useConnection();
+  } = useConnection()
 
-  const droppedMidSession = wasConnected && !status;
+  const droppedMidSession = wasConnected && !status
 
   return (
     <ConnectionDialogProvider>
@@ -125,5 +125,5 @@ export function AppShell() {
         <Toaster />
       </SidebarProvider>
     </ConnectionDialogProvider>
-  );
+  )
 }

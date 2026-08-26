@@ -1,7 +1,7 @@
-import { Fragment } from "react";
-import { Link, useLocation } from "react-router";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { breadcrumbsForLocation } from "@/lib/app-nav.ts";
+import { Fragment } from "react"
+import { Link, useLocation } from "react-router"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { breadcrumbsForLocation } from "@/lib/app-nav.ts"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,23 +9,23 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb.tsx";
+} from "@/components/ui/breadcrumb.tsx"
 
 /**
  * Header trail for the current Studio route.
  */
 export function AppBreadcrumbs() {
-  const { pathname } = useLocation();
-  const { status } = useConnection();
+  const { pathname } = useLocation()
+  const { status } = useConnection()
   const crumbs = breadcrumbsForLocation(pathname, {
     connected: status !== null,
-  });
+  })
 
   return (
     <Breadcrumb>
       <BreadcrumbList>
         {crumbs.map((crumb, index) => {
-          const last = index === crumbs.length - 1;
+          const last = index === crumbs.length - 1
           return (
             <Fragment key={`${crumb.label}-${index}`}>
               {index > 0 ? <BreadcrumbSeparator /> : null}
@@ -43,9 +43,9 @@ export function AppBreadcrumbs() {
                   )}
               </BreadcrumbItem>
             </Fragment>
-          );
+          )
         })}
       </BreadcrumbList>
     </Breadcrumb>
-  );
+  )
 }

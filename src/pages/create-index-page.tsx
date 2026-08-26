@@ -1,36 +1,36 @@
-import { useState } from "react";
-import { Trash2Icon } from "lucide-react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
+import { useState } from "react"
+import { Trash2Icon } from "lucide-react"
+import { Controller, useFieldArray, useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useNavigate } from "react-router"
+import { toast } from "sonner"
 import {
   DocsField,
   DocsHelpIcon,
   DocsTextLink,
   PageDocsButton,
-} from "@/components/docs-help.tsx";
-import { JsonEditor } from "@/components/json-editor.tsx";
-import { RequestInspector } from "@/components/request-inspector.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { Checkbox } from "@/components/ui/checkbox.tsx";
+} from "@/components/docs-help.tsx"
+import { JsonEditor } from "@/components/json-editor.tsx"
+import { RequestInspector } from "@/components/request-inspector.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import { Checkbox } from "@/components/ui/checkbox.tsx"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible.tsx";
-import { Field, FieldLabel } from "@/components/ui/field.tsx";
-import { Input } from "@/components/ui/input.tsx";
+} from "@/components/ui/collapsible.tsx"
+import { Field, FieldLabel } from "@/components/ui/field.tsx"
+import { Input } from "@/components/ui/input.tsx"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select.tsx";
-import { Textarea } from "@/components/ui/textarea.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { type RecordedRequest } from "@/lib/aspected/client.ts";
+} from "@/components/ui/select.tsx"
+import { Textarea } from "@/components/ui/textarea.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { type RecordedRequest } from "@/lib/aspected/client.ts"
 import {
   ASPECT_TYPES,
   type CreateIndexDraft,
@@ -42,64 +42,64 @@ import {
   draftToCreateRequest,
   emptyAspectDraft,
   emptyCreateIndexDraft,
-} from "@/lib/aspected/create-index-form.ts";
+} from "@/lib/aspected/create-index-form.ts"
 import {
   type AspectType,
   createIndexRequestSchema,
   type DistanceType,
-} from "@/lib/aspected/types.ts";
-import { toastCaughtError } from "@/lib/aspected/user-error.ts";
+} from "@/lib/aspected/types.ts"
+import { toastCaughtError } from "@/lib/aspected/user-error.ts"
 import {
   DOCS_HASH,
   docsPageForAspectType,
   HNSW_FIELD_DOCS,
   INDEX_FIELD_DOCS,
-} from "@/lib/docs.ts";
+} from "@/lib/docs.ts"
 
 /**
  * Guided create-index form with a JSON source toggle.
  */
 export function CreateIndexPage() {
-  const { client } = useConnection();
-  const navigate = useNavigate();
-  const [jsonMode, setJsonMode] = useState(false);
-  const [jsonText, setJsonText] = useState("");
-  const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null);
+  const { client } = useConnection()
+  const navigate = useNavigate()
+  const [jsonMode, setJsonMode] = useState(false)
+  const [jsonText, setJsonText] = useState("")
+  const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null)
 
   const form = useForm<CreateIndexFormValues>({
     resolver: zodResolver(createIndexFormSchema),
     defaultValues: emptyCreateIndexDraft(),
-  });
+  })
 
   const { fields: aspectFields, append, remove } = useFieldArray({
     control: form.control,
     name: "aspects",
-  });
+  })
 
   function switchToJson() {
     try {
-      const values = form.getValues();
+      const values = form.getValues()
       setJsonText(
         JSON.stringify(
           draftToCreateRequest(values as CreateIndexDraft),
           null,
           2,
         ),
-      );
-      setJsonMode(true);
+      )
+      setJsonMode(true)
     } catch (caught) {
-      toastCaughtError(caught, "Could not switch to JSON");
+      toastCaughtError(caught, "Could not switch to JSON")
     }
   }
 
   function switchToForm() {
     try {
-      const parsed = createIndexRequestSchema.parse(JSON.parse(jsonText));
-      const name = form.getValues("name");
-      form.reset(createRequestToDraft(name, parsed) as CreateIndexFormValues);
-      setJsonMode(false);
+      const parsed = createIndexRequestSchema.parse(JSON.parse(jsonText))
+      const name = form.getValues("name")
+      form.reset(createRequestToDraft(name, parsed) as CreateIndexFormValues)
+      setJsonMode(false)
     } catch (caught) {
-      toastCaughtError(caught, "Could not switch to the form");
+      toastCaughtError(caught, "Could not switch to the form")
     }
   }
 
@@ -107,18 +107,18 @@ export function CreateIndexPage() {
     try {
       const body = jsonMode
         ? createIndexRequestSchema.parse(JSON.parse(jsonText))
-        : draftToCreateRequest(values as CreateIndexDraft);
-      await client.createIndex(values.name.trim(), body);
-      setLastRequest(client.lastRequest);
-      toast.success(`Created ${values.name.trim()}`);
-      navigate(`/indexes/${encodeURIComponent(values.name.trim())}`);
+        : draftToCreateRequest(values as CreateIndexDraft)
+      await client.createIndex(values.name.trim(), body)
+      setLastRequest(client.lastRequest)
+      toast.success(`Created ${values.name.trim()}`)
+      navigate(`/indexes/${encodeURIComponent(values.name.trim())}`)
     } catch (caught) {
-      setLastRequest(client.lastRequest);
-      toastCaughtError(caught, "Could not create index");
+      setLastRequest(client.lastRequest)
+      toastCaughtError(caught, "Could not create index")
     }
-  });
+  })
 
-  const errors = form.formState.errors;
+  const errors = form.formState.errors
 
   return (
     <form onSubmit={handleSubmit} className="grid min-w-0 gap-6">
@@ -187,7 +187,7 @@ export function CreateIndexPage() {
                 value={field.value}
                 onValueChange={(value) => {
                   if (value) {
-                    field.onChange(value as DistanceType);
+                    field.onChange(value as DistanceType)
                   }
                 }}
               >
@@ -268,7 +268,7 @@ export function CreateIndexPage() {
                 {(Object.keys(emptyCreateIndexDraft().hnsw) as Array<
                   keyof CreateIndexFormValues["hnsw"]
                 >).map((key) => {
-                  const help = HNSW_FIELD_DOCS[key];
+                  const help = HNSW_FIELD_DOCS[key]
                   return (
                     <DocsField
                       key={key}
@@ -285,7 +285,7 @@ export function CreateIndexPage() {
                         {...form.register(`hnsw.${key}`)}
                       />
                     </DocsField>
-                  );
+                  )
                 })}
               </CollapsibleContent>
             </Collapsible>
@@ -301,7 +301,7 @@ export function CreateIndexPage() {
         <RequestInspector request={lastRequest} />
       </section>
     </form>
-  );
+  )
 }
 
 function AspectCard({
@@ -309,13 +309,13 @@ function AspectCard({
   form,
   onRemove,
 }: {
-  index: number;
-  form: ReturnType<typeof useForm<CreateIndexFormValues>>;
-  onRemove: () => void;
+  index: number
+  form: ReturnType<typeof useForm<CreateIndexFormValues>>
+  onRemove: () => void
 }) {
-  const errors = form.formState.errors;
-  const aspectErrors = errors.aspects?.[index];
-  const type = form.watch(`aspects.${index}.type`) as AspectType;
+  const errors = form.formState.errors
+  const aspectErrors = errors.aspects?.[index]
+  const type = form.watch(`aspects.${index}.type`) as AspectType
 
   return (
     <div className="grid gap-3 rounded-xl border p-4">
@@ -364,7 +364,7 @@ function AspectCard({
                 value={field.value}
                 onValueChange={(value) => {
                   if (value) {
-                    field.onChange(value as AspectType);
+                    field.onChange(value as AspectType)
                   }
                 }}
               >
@@ -411,19 +411,19 @@ function AspectCard({
       </div>
       <AspectSettings index={index} form={form} />
     </div>
-  );
+  )
 }
 
 function AspectSettings({
   index,
   form,
 }: {
-  index: number;
-  form: ReturnType<typeof useForm<CreateIndexFormValues>>;
+  index: number
+  form: ReturnType<typeof useForm<CreateIndexFormValues>>
 }) {
-  const type = form.watch(`aspects.${index}.type`) as AspectType;
-  const errors = form.formState.errors;
-  const aspectErrors = errors.aspects?.[index];
+  const type = form.watch(`aspects.${index}.type`) as AspectType
+  const errors = form.formState.errors
+  const aspectErrors = errors.aspects?.[index]
 
   switch (type) {
     case "enum":
@@ -457,7 +457,7 @@ function AspectSettings({
             />
           </DocsField>
         </div>
-      );
+      )
     case "text":
       return (
         <div className="grid gap-2">
@@ -482,7 +482,7 @@ function AspectSettings({
             .
           </p>
         </div>
-      );
+      )
     case "number":
       return (
         <div className="grid items-start gap-3 sm:grid-cols-2">
@@ -511,7 +511,7 @@ function AspectSettings({
             />
           </DocsField>
         </div>
-      );
+      )
     case "datetime":
       return (
         <div className="grid gap-3">
@@ -539,13 +539,13 @@ function AspectSettings({
                     <Checkbox
                       checked={field.value.includes(item)}
                       onCheckedChange={(checked) => {
-                        const selected = new Set(field.value);
+                        const selected = new Set(field.value)
                         if (checked) {
-                          selected.add(item);
+                          selected.add(item)
                         } else {
-                          selected.delete(item);
+                          selected.delete(item)
                         }
-                        field.onChange([...selected]);
+                        field.onChange([...selected])
                       }}
                     />
                     <FieldLabel className="font-mono">{item}</FieldLabel>
@@ -595,7 +595,7 @@ function AspectSettings({
             </DocsField>
           </div>
         </div>
-      );
+      )
     case "raw":
       return (
         <DocsField
@@ -611,7 +611,7 @@ function AspectSettings({
             {...form.register(`aspects.${index}.numDims`)}
           />
         </DocsField>
-      );
+      )
     case "dict":
       return (
         <div className="grid gap-2">
@@ -633,8 +633,8 @@ function AspectSettings({
             />
           </DocsField>
         </div>
-      );
+      )
     default:
-      return null;
+      return null
   }
 }

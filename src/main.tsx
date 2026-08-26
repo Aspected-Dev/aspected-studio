@@ -1,12 +1,12 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
 
-import "./index.css";
-import App from "./App.tsx";
-import { ThemeProvider } from "@/components/theme-provider.tsx";
-import { configureMonaco } from "@/lib/monaco.ts";
+import "./index.css"
+import App from "./App.tsx"
+import { ThemeProvider } from "@/components/theme-provider.tsx"
+import { configureMonaco } from "@/lib/monaco.ts"
 
-configureMonaco();
+configureMonaco()
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -14,4 +14,4 @@ createRoot(document.getElementById("root")!).render(
       <App />
     </ThemeProvider>
   </StrictMode>,
-);
+)

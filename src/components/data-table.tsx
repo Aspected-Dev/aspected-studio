@@ -1,19 +1,19 @@
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { MoreHorizontalIcon } from "lucide-react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react"
+import { MoreHorizontalIcon } from "lucide-react"
 import {
   type ColumnDef,
   type PaginationState,
   type RowData,
   type Updater,
   useTable,
-} from "@tanstack/react-table";
-import { useNavigate } from "react-router";
-import { Button } from "@/components/ui/button.tsx";
+} from "@tanstack/react-table"
+import { useNavigate } from "react-router"
+import { Button } from "@/components/ui/button.tsx"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu.tsx";
+} from "@/components/ui/dropdown-menu.tsx"
 import {
   Table,
   TableBody,
@@ -21,14 +21,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table.tsx";
+} from "@/components/ui/table.tsx"
 import {
   type DataTableFeatures,
   features,
-} from "@/components/data-table-features.ts";
+} from "@/components/data-table-features.ts"
 
 const ROW_CLICK_EXCLUDED =
-  "a, button, input, select, textarea, label, [role='button'], [role='link'], [role='checkbox'], [role='menuitem'], [data-slot='checkbox'], [data-slot='dropdown-menu-trigger']";
+  "a, button, input, select, textarea, label, [role='button'], [role='link'], [role='checkbox'], [role='menuitem'], [data-slot='checkbox'], [data-slot='dropdown-menu-trigger']"
 
 /**
  * True when a row click started on a nested control that should keep its own
@@ -36,28 +36,28 @@ const ROW_CLICK_EXCLUDED =
  */
 function isRowClickExcluded(target: EventTarget | null): boolean {
   return target instanceof Element &&
-    target.closest(ROW_CLICK_EXCLUDED) !== null;
+    target.closest(ROW_CLICK_EXCLUDED) !== null
 }
 
 type DataTablePagination = {
-  pageIndex: number;
-  pageSize: number;
-  rowCount: number;
-  onPageIndexChange: (pageIndex: number) => void;
-  label?: ReactNode;
-};
+  pageIndex: number
+  pageSize: number
+  rowCount: number
+  onPageIndexChange: (pageIndex: number) => void
+  label?: ReactNode
+}
 
 type DataTableProps<TData extends RowData> = {
-  columns: ColumnDef<DataTableFeatures, TData>[];
-  data: TData[];
-  getRowId?: (originalRow: TData, index: number) => string;
-  selectedRowId?: string;
-  pagination?: DataTablePagination;
+  columns: ColumnDef<DataTableFeatures, TData>[]
+  data: TData[]
+  getRowId?: (originalRow: TData, index: number) => string
+  selectedRowId?: string
+  pagination?: DataTablePagination
   /** Navigate to this path when a body row is activated. */
-  getRowHref?: (row: TData) => string | undefined;
+  getRowHref?: (row: TData) => string | undefined
   /** Called when a body row is activated and `getRowHref` did not navigate. */
-  onRowClick?: (row: TData) => void;
-};
+  onRowClick?: (row: TData) => void
+}
 
 /**
  * shadcn Data Table built on TanStack Table v9.
@@ -75,7 +75,7 @@ export function DataTable<TData extends RowData>({
   getRowHref,
   onRowClick,
 }: DataTableProps<TData>) {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const table = useTable({
     features,
     data,
@@ -96,22 +96,22 @@ export function DataTable<TData extends RowData>({
         const current: PaginationState = {
           pageIndex: pagination.pageIndex,
           pageSize: pagination.pageSize,
-        };
-        const next = typeof updater === "function" ? updater(current) : updater;
+        }
+        const next = typeof updater === "function" ? updater(current) : updater
         if (next.pageIndex !== current.pageIndex) {
-          pagination.onPageIndexChange(next.pageIndex);
+          pagination.onPageIndexChange(next.pageIndex)
         }
       }
       : undefined,
-  });
+  })
 
   function activateRow(original: TData) {
-    const href = getRowHref?.(original);
+    const href = getRowHref?.(original)
     if (href) {
-      navigate(href);
-      return;
+      navigate(href)
+      return
     }
-    onRowClick?.(original);
+    onRowClick?.(original)
   }
 
   function handleRowClick(
@@ -119,9 +119,9 @@ export function DataTable<TData extends RowData>({
     original: TData,
   ) {
     if (event.defaultPrevented || isRowClickExcluded(event.target)) {
-      return;
+      return
     }
-    activateRow(original);
+    activateRow(original)
   }
 
   function handleRowKeyDown(
@@ -129,13 +129,13 @@ export function DataTable<TData extends RowData>({
     original: TData,
   ) {
     if (event.key !== "Enter" || event.defaultPrevented) {
-      return;
+      return
     }
     if (isRowClickExcluded(event.target)) {
-      return;
+      return
     }
-    event.preventDefault();
-    activateRow(original);
+    event.preventDefault()
+    activateRow(original)
   }
 
   return (
@@ -158,8 +158,8 @@ export function DataTable<TData extends RowData>({
           <TableBody>
             {table.getRowModel().rows.length
               ? table.getRowModel().rows.map((row) => {
-                const href = getRowHref?.(row.original);
-                const clickable = Boolean(href) || onRowClick !== undefined;
+                const href = getRowHref?.(row.original)
+                const clickable = Boolean(href) || onRowClick !== undefined
                 return (
                   <TableRow
                     key={row.id}
@@ -184,7 +184,7 @@ export function DataTable<TData extends RowData>({
                       </TableCell>
                     ))}
                   </TableRow>
-                );
+                )
               })
               : (
                 <TableRow>
@@ -231,12 +231,12 @@ export function DataTable<TData extends RowData>({
         )
         : null}
     </div>
-  );
+  )
 }
 
 type DataTableRowActionsProps = {
-  children: ReactNode;
-};
+  children: ReactNode
+}
 
 /**
  * Ghost icon button that opens a row-actions dropdown.
@@ -262,5 +262,5 @@ export function DataTableRowActions({ children }: DataTableRowActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-  );
+  )
 }

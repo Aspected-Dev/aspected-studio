@@ -1,12 +1,12 @@
-import { createBrowserRouter, RouterProvider } from "react-router";
-import { AppShell } from "@/components/app-shell.tsx";
-import { IndexLayout } from "@/components/index-layout.tsx";
-import { ConnectionProvider } from "@/hooks/use-connection.tsx";
-import { CreateIndexPage } from "@/pages/create-index-page.tsx";
-import { IndexDocsPage } from "@/pages/index-docs-page.tsx";
-import { IndexSchemaPage } from "@/pages/index-schema-page.tsx";
-import { IndexSearchPage } from "@/pages/index-search-page.tsx";
-import { IndexesPage } from "@/pages/indexes-page.tsx";
+import { createBrowserRouter, RouterProvider } from "react-router"
+import { AppShell } from "@/components/app-shell.tsx"
+import { IndexLayout } from "@/components/index-layout.tsx"
+import { ConnectionProvider } from "@/hooks/use-connection.tsx"
+import { CreateIndexPage } from "@/pages/create-index-page.tsx"
+import { IndexDocsPage } from "@/pages/index-docs-page.tsx"
+import { IndexSchemaPage } from "@/pages/index-schema-page.tsx"
+import { IndexSearchPage } from "@/pages/index-search-page.tsx"
+import { IndexesPage } from "@/pages/indexes-page.tsx"
 
 const router = createBrowserRouter([
   {
@@ -26,7 +26,7 @@ const router = createBrowserRouter([
       },
     ],
   },
-]);
+])
 
 /** Studio root: connection provider plus React Router 7 routes. */
 export function App() {
@@ -34,7 +34,7 @@ export function App() {
     <ConnectionProvider>
       <RouterProvider router={router} />
     </ConnectionProvider>
-  );
+  )
 }
 
-export default App;
+export default App

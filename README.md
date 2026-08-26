@@ -24,7 +24,11 @@ deno install
 git config core.hooksPath .githooks
 ```
 
-The git hooks path is local to this repo. Pre-commit runs format and lint only.
+The git hooks path is local to this repo. Pre-commit runs `deno fmt` (using this
+repo's `deno.json`) and `deno task lint` only.
+
+This workspace disables Prettier in `.vscode/settings.json`. Keep the Deno
+extension enabled, or format-on-save can fight `deno fmt` again.
 
 ## Run against Aspected
 
@@ -45,8 +49,9 @@ the proxy target with `ASPECTED_URL` if the server is on another local port.
 
 Studio starts disconnected. Add a server from the sidebar or the welcome screen,
 save it if you want it in the list, then click Connect. A local Docker server is
-`http://localhost:8080` and uses the Vite `/api` proxy. The sidebar footer shows
-the host, version, and uptime after `/status` succeeds. For a remote instance,
+`http://localhost:8080` and uses the Vite `/api` proxy. The sidebar has
+Settings, Get Help, and Support below the main nav, then the connections list
+(host, version, and uptime after `/status` succeeds). For a remote instance,
 enter its origin and enable CORS on the server
 (`ASPECTED_SERVER_CORS_ENABLED=true` or `server.corsEnabled`). If the server
 uses a static API token, paste it in the connection dialog. Studio sends
@@ -122,7 +127,7 @@ deno run -A npm:shadcn@latest add button
 Import from `@/components/ui/...`:
 
 ```tsx
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"
 ```
 
 ## Definition of Done

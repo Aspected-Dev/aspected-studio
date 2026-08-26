@@ -1,21 +1,21 @@
-import { toast } from "sonner";
-import { z } from "zod";
-import { AspectedApiError } from "./client.ts";
-import { DOCS_HASH, type DocsTarget, openDocs } from "@/lib/docs.ts";
+import { toast } from "sonner"
+import { z } from "zod"
+import { AspectedApiError } from "./client.ts"
+import { DOCS_HASH, type DocsTarget, openDocs } from "@/lib/docs.ts"
 
 /** Title plus next-step copy for a user-facing error toast. */
 export type UserFacingError = {
-  title: string;
-  description: string;
-  docs?: DocsTarget;
-};
+  title: string
+  description: string
+  docs?: DocsTarget
+}
 
 type ServerHint = {
-  match: string | RegExp;
-  title: string;
-  action: string;
-  docs?: DocsTarget;
-};
+  match: string | RegExp
+  title: string
+  action: string
+  docs?: DocsTarget
+}
 
 const SERVER_HINTS: ServerHint[] = [
   {
@@ -97,7 +97,7 @@ const SERVER_HINTS: ServerHint[] = [
     title: "Search weights are out of range",
     action: "Use smaller aspect weights and search again.",
   },
-];
+]
 
 /**
  * Turns API, network, and validation failures into a short title and an
@@ -108,7 +108,7 @@ export function toUserFacingError(
   fallbackTitle: string,
 ): UserFacingError {
   if (caught instanceof AspectedApiError) {
-    return fromApiError(caught, fallbackTitle);
+    return fromApiError(caught, fallbackTitle)
   }
 
   if (caught instanceof z.ZodError) {
@@ -118,7 +118,7 @@ export function toUserFacingError(
         z.prettifyError(caught),
         "Correct the highlighted fields and try again.",
       ),
-    };
+    }
   }
 
   if (caught instanceof SyntaxError) {
@@ -126,24 +126,24 @@ export function toUserFacingError(
       title: "Invalid JSON",
       description:
         "The JSON could not be parsed. Check for missing commas, quotes, or brackets.",
-    };
+    }
   }
 
   if (isNetworkFailure(caught)) {
-    return networkError();
+    return networkError()
   }
 
   if (caught instanceof Error && caught.message.trim()) {
     return {
       title: fallbackTitle,
       description: withAction(caught.message, "Fix the input and try again."),
-    };
+    }
   }
 
   return {
     title: fallbackTitle,
     description: "Try again. If it keeps failing, check the request inspector.",
-  };
+  }
 }
 
 /**
@@ -156,9 +156,9 @@ export function toastCaughtError(
   caught: unknown,
   fallbackTitle: string,
 ): UserFacingError {
-  const error = toUserFacingError(caught, fallbackTitle);
-  toastUserFacingError(error);
-  return error;
+  const error = toUserFacingError(caught, fallbackTitle)
+  toastUserFacingError(error)
+  return error
 }
 
 /**
@@ -166,7 +166,7 @@ export function toastCaughtError(
  * title and description.
  */
 export function toastUserFacingError(error: UserFacingError): void {
-  const docs = error.docs;
+  const docs = error.docs
   toast.error(error.title, {
     id: toastId(error),
     description: error.description,
@@ -177,11 +177,11 @@ export function toastUserFacingError(error: UserFacingError): void {
         onClick: () => openDocs(docs.page, docs.hash),
       }
       : undefined,
-  });
+  })
 }
 
 function toastId(error: UserFacingError): string {
-  return `${error.title}\n${error.description}`;
+  return `${error.title}\n${error.description}`
 }
 
 function fromApiError(
@@ -189,17 +189,17 @@ function fromApiError(
   fallbackTitle: string,
 ): UserFacingError {
   if (error.status === 0 || isNetworkFailure(error)) {
-    return networkError();
+    return networkError()
   }
 
-  const serverMessage = error.message.trim();
-  const hint = matchHint(serverMessage);
+  const serverMessage = error.message.trim()
+  const hint = matchHint(serverMessage)
   if (hint) {
     return {
       title: hint.title,
       description: withAction(serverMessage, hint.action),
       docs: hint.docs,
-    };
+    }
   }
 
   if (error.status === 401) {
@@ -210,7 +210,7 @@ function fromApiError(
         "Open Server in the sidebar and paste a valid API token.",
       ),
       docs: { page: "security", hash: DOCS_HASH.apiToken },
-    };
+    }
   }
 
   if (error.status === 403) {
@@ -221,7 +221,7 @@ function fromApiError(
         "Use a token with access, or pick a different index.",
       ),
       docs: { page: "security", hash: DOCS_HASH.apiToken },
-    };
+    }
   }
 
   if (error.status === 404) {
@@ -231,7 +231,7 @@ function fromApiError(
         serverMessage || "The index or document is not on the server.",
         "Refresh the list, or return to Indexes.",
       ),
-    };
+    }
   }
 
   if (error.status === 409) {
@@ -241,7 +241,7 @@ function fromApiError(
         serverMessage || "The server rejected this change.",
         "Refresh and try again.",
       ),
-    };
+    }
   }
 
   if (error.status === 422) {
@@ -251,7 +251,7 @@ function fromApiError(
         serverMessage || "The server could not process this request.",
         "Adjust the input and try again.",
       ),
-    };
+    }
   }
 
   if (error.status === 502 || error.status === 503 || error.status === 504) {
@@ -262,7 +262,7 @@ function fromApiError(
         "Start Aspected, then click Connect in Server.",
       ),
       docs: { page: "gettingStarted" },
-    };
+    }
   }
 
   if (error.status >= 500) {
@@ -272,7 +272,7 @@ function fromApiError(
         serverMessage || "Aspected returned an unexpected error.",
         "Retry, or check the server logs.",
       ),
-    };
+    }
   }
 
   if (error.status >= 400) {
@@ -282,7 +282,7 @@ function fromApiError(
         serverMessage || `The server returned HTTP ${error.status}.`,
         "Fix the request and try again. The request inspector shows the payload.",
       ),
-    };
+    }
   }
 
   return {
@@ -291,7 +291,7 @@ function fromApiError(
       serverMessage || "The request failed.",
       "Try again.",
     ),
-  };
+  }
 }
 
 function matchHint(message: string): ServerHint | undefined {
@@ -299,7 +299,7 @@ function matchHint(message: string): ServerHint | undefined {
     typeof hint.match === "string"
       ? message.includes(hint.match)
       : hint.match.test(message)
-  );
+  )
 }
 
 function networkError(): UserFacingError {
@@ -308,30 +308,30 @@ function networkError(): UserFacingError {
     description:
       "Check that the server is running and the Server URL is correct. For a remote origin, enable CORS on the server.",
     docs: { page: "gettingStarted" },
-  };
+  }
 }
 
 function isNetworkFailure(caught: unknown): boolean {
   if (!(caught instanceof Error)) {
-    return false;
+    return false
   }
 
-  const message = caught.message.toLowerCase();
+  const message = caught.message.toLowerCase()
   return (
     message.includes("failed to fetch") ||
     message.includes("networkerror") ||
     message.includes("load failed") ||
     message.includes("network request failed")
-  );
+  )
 }
 
 function withAction(detail: string, action: string): string {
-  const base = detail.trim().replace(/[.]+$/, "");
+  const base = detail.trim().replace(/[.]+$/, "")
   if (!base) {
-    return action;
+    return action
   }
   if (base.toLowerCase().includes(action.toLowerCase())) {
-    return `${base}.`;
+    return `${base}.`
   }
-  return `${base}. ${action}`;
+  return `${base}. ${action}`
 }

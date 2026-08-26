@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react"
 import {
   BracesIcon,
   CopyIcon,
@@ -8,11 +8,11 @@ import {
   SearchIcon,
   SquareTerminalIcon,
   Trash2Icon,
-} from "lucide-react";
-import { Link, useNavigate } from "react-router";
-import { toast } from "sonner";
-import { createDataTableColumnHelper } from "@/components/data-table-features.ts";
-import { DataTable, DataTableRowActions } from "@/components/data-table.tsx";
+} from "lucide-react"
+import { Link, useNavigate } from "react-router"
+import { toast } from "sonner"
+import { createDataTableColumnHelper } from "@/components/data-table-features.ts"
+import { DataTable, DataTableRowActions } from "@/components/data-table.tsx"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,72 +22,72 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { DocsTextLink, PageDocsButton } from "@/components/docs-help.tsx";
+} from "@/components/ui/alert-dialog.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import { DocsTextLink, PageDocsButton } from "@/components/docs-help.tsx"
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { indexPath, indexStudioUrl } from "@/lib/app-nav.ts";
-import { indexUrlForCopy } from "@/lib/aspected/connection.ts";
-import { buildCurlCommand } from "@/lib/aspected/curl.ts";
-import { toastCaughtError } from "@/lib/aspected/user-error.ts";
-import { copyToClipboard } from "@/lib/utils.ts";
+} from "@/components/ui/dropdown-menu.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { indexPath, indexStudioUrl } from "@/lib/app-nav.ts"
+import { indexUrlForCopy } from "@/lib/aspected/connection.ts"
+import { buildCurlCommand } from "@/lib/aspected/curl.ts"
+import { toastCaughtError } from "@/lib/aspected/user-error.ts"
+import { copyToClipboard } from "@/lib/utils.ts"
 
 type IndexRow = {
-  name: string;
-};
+  name: string
+}
 
-const columnHelper = createDataTableColumnHelper<IndexRow>();
+const columnHelper = createDataTableColumnHelper<IndexRow>()
 
 /**
  * Lists indexes on the connected Aspected server.
  */
 export function IndexesPage() {
-  const { client, settings } = useConnection();
-  const navigate = useNavigate();
-  const [names, setNames] = useState<string[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const { client, settings } = useConnection()
+  const navigate = useNavigate()
+  const [names, setNames] = useState<string[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
 
   async function load() {
     try {
-      const response = await client.listIndexes();
-      setNames(response.data.map((row) => row.name));
+      const response = await client.listIndexes()
+      setNames(response.data.map((row) => row.name))
     } catch (caught) {
-      toastCaughtError(caught, "Could not load indexes");
+      toastCaughtError(caught, "Could not load indexes")
     } finally {
-      setLoaded(true);
+      setLoaded(true)
     }
   }
 
   useEffect(() => {
-    void load();
-  }, [client]);
+    void load()
+  }, [client])
 
   async function copyText(value: string, success: string) {
     try {
-      await copyToClipboard(value);
-      toast.success(success);
+      await copyToClipboard(value)
+      toast.success(success)
     } catch {
-      toastCaughtError(new Error("Clipboard unavailable"), "Could not copy");
+      toastCaughtError(new Error("Clipboard unavailable"), "Could not copy")
     }
   }
 
   async function confirmDelete() {
     if (!pendingDelete) {
-      return;
+      return
     }
 
     try {
-      await client.deleteIndex(pendingDelete);
-      toast.success(`Deleted ${pendingDelete}`);
-      setPendingDelete(null);
-      await load();
+      await client.deleteIndex(pendingDelete)
+      toast.success(`Deleted ${pendingDelete}`)
+      setPendingDelete(null)
+      await load()
     } catch (caught) {
-      toastCaughtError(caught, "Could not delete index");
+      toastCaughtError(caught, "Could not delete index")
     }
   }
 
@@ -110,8 +110,8 @@ export function IndexesPage() {
           id: "actions",
           meta: { className: "w-10" },
           cell: ({ row }) => {
-            const name = row.original.name;
-            const apiUrl = indexUrlForCopy(settings.baseUrl, name);
+            const name = row.original.name
+            const apiUrl = indexUrlForCopy(settings.baseUrl, name)
             return (
               <DataTableRowActions>
                 <DropdownMenuItem onClick={() => navigate(indexPath(name))}>
@@ -172,17 +172,17 @@ export function IndexesPage() {
                   Delete
                 </DropdownMenuItem>
               </DataTableRowActions>
-            );
+            )
           },
         }),
       ]),
     [navigate, settings.baseUrl],
-  );
+  )
 
   const data = useMemo(
     () => names.map((name) => ({ name })),
     [names],
-  );
+  )
 
   return (
     <div className="grid min-w-0 gap-4">
@@ -225,7 +225,7 @@ export function IndexesPage() {
         open={pendingDelete !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingDelete(null);
+            setPendingDelete(null)
           }
         }}
       >
@@ -246,5 +246,5 @@ export function IndexesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
+  )
 }

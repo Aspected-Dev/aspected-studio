@@ -1,38 +1,38 @@
-import { useEffect, useRef, useState } from "react";
-import Editor, { type OnMount } from "@monaco-editor/react";
-import { useTheme } from "@/components/theme-provider.tsx";
-import { jsonEditorFitHeight } from "@/lib/json-editor-height.ts";
-import { configureMonaco } from "@/lib/monaco.ts";
-import { cn } from "@/lib/utils.ts";
+import { useEffect, useRef, useState } from "react"
+import Editor, { type OnMount } from "@monaco-editor/react"
+import { useTheme } from "@/components/theme-provider.tsx"
+import { jsonEditorFitHeight } from "@/lib/json-editor-height.ts"
+import { configureMonaco } from "@/lib/monaco.ts"
+import { cn } from "@/lib/utils.ts"
 
-configureMonaco();
+configureMonaco()
 
-const READ_ONLY_MIN_HEIGHT = 40;
-const EDITABLE_MIN_HEIGHT = 160;
-const DEFAULT_MAX_HEIGHT = 560;
+const READ_ONLY_MIN_HEIGHT = 40
+const EDITABLE_MIN_HEIGHT = 160
+const DEFAULT_MAX_HEIGHT = 560
 
 /** Props for the theme-aware JSON Monaco editor. */
 export type JsonEditorProps = {
   /** JSON text shown in the editor. */
-  value: string;
+  value: string
   /** Called when the user edits the JSON. Ignored when `readOnly` is true. */
-  onChange?: (value: string) => void;
+  onChange?: (value: string) => void
   /** When true, the editor cannot be edited. */
-  readOnly?: boolean;
+  readOnly?: boolean
   /** Optional class names for the editor wrapper. */
-  className?: string;
+  className?: string
   /**
    * When true, the editor height tracks the JSON. Defaults to true.
    * Set false to use a fixed `height`.
    */
-  fitContent?: boolean;
+  fitContent?: boolean
   /** Fixed CSS height when `fitContent` is false. */
-  height?: string;
+  height?: string
   /** Minimum pixel height when fitting content. */
-  minHeight?: number;
+  minHeight?: number
   /** Maximum pixel height when fitting content. Overflow scrolls. */
-  maxHeight?: number;
-};
+  maxHeight?: number
+}
 
 /**
  * Theme-aware Monaco editor locked to JSON.
@@ -47,52 +47,52 @@ export function JsonEditor({
   minHeight,
   maxHeight = DEFAULT_MAX_HEIGHT,
 }: JsonEditorProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { theme } = useTheme()
   const min = minHeight ??
-    (readOnly ? READ_ONLY_MIN_HEIGHT : EDITABLE_MIN_HEIGHT);
+    (readOnly ? READ_ONLY_MIN_HEIGHT : EDITABLE_MIN_HEIGHT)
   const [fittedHeight, setFittedHeight] = useState(() =>
     jsonEditorFitHeight(value, { min, max: maxHeight })
-  );
+  )
   const resolved = theme === "system"
     ? (window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light")
-    : theme;
+    : theme
 
   useEffect(() => {
     if (!fitContent) {
-      return;
+      return
     }
-    setFittedHeight(jsonEditorFitHeight(value, { min, max: maxHeight }));
-  }, [fitContent, maxHeight, min, value]);
+    setFittedHeight(jsonEditorFitHeight(value, { min, max: maxHeight }))
+  }, [fitContent, maxHeight, min, value])
 
   const onMount: OnMount = (editor) => {
     const layoutToContainer = () => {
-      const width = containerRef.current?.clientWidth;
+      const width = containerRef.current?.clientWidth
       if (!width) {
-        return;
+        return
       }
       if (fitContent) {
         const next = Math.min(
           maxHeight,
           Math.max(min, editor.getContentHeight()),
-        );
-        setFittedHeight((current) => current === next ? current : next);
-        editor.layout({ width, height: next });
-        return;
+        )
+        setFittedHeight((current) => current === next ? current : next)
+        editor.layout({ width, height: next })
+        return
       }
-      editor.layout({ width, height: editor.getLayoutInfo().height });
-    };
-
-    layoutToContainer();
-    editor.onDidContentSizeChange(layoutToContainer);
-    const observer = new ResizeObserver(layoutToContainer);
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
+      editor.layout({ width, height: editor.getLayoutInfo().height })
     }
-    editor.onDidDispose(() => observer.disconnect());
-  };
+
+    layoutToContainer()
+    editor.onDidContentSizeChange(layoutToContainer)
+    const observer = new ResizeObserver(layoutToContainer)
+    if (containerRef.current) {
+      observer.observe(containerRef.current)
+    }
+    editor.onDidDispose(() => observer.disconnect())
+  }
 
   return (
     <div
@@ -135,5 +135,5 @@ export function JsonEditor({
         }}
       />
     </div>
-  );
+  )
 }

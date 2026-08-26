@@ -4,6 +4,14 @@ set -euo pipefail
 # Format staged content into the index without stash/add.
 # No unstaged edits on a file -> also refresh the worktree so the commit stays clean.
 # Unstaged edits on a file -> update index only (leave worktree alone).
+#
+# IMPORTANT: always pass --config. Staged blobs are formatted via mktemp paths
+# under /tmp. Without an explicit config, deno fmt uses defaults (semicolons ON),
+# which fights deno.json ("semiColons": false) and reintroduces fmt churn on
+# every commit.
+
+ROOT="$(git rev-parse --show-toplevel)"
+CONFIG="$ROOT/deno.json"
 
 mapfile -t staged < <(git diff --cached --name-only --diff-filter=ACM)
 
@@ -37,7 +45,7 @@ for file in "${staged_existing[@]+"${staged_existing[@]}"}"; do
     continue
   fi
 
-  if ! deno fmt "$tmp" >/dev/null; then
+  if ! deno fmt --config="$CONFIG" "$tmp" >/dev/null; then
     rm -f "$tmp"
     continue
   fi

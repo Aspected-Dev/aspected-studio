@@ -1,14 +1,14 @@
-import { PlusIcon } from "lucide-react";
-import { InstantAnalysisIllustration } from "@/assets/instant-analysis.tsx";
-import { useConnectionDialog } from "@/components/connection-dialog.tsx";
-import { DocsTextLink } from "@/components/docs-help.tsx";
-import { Button } from "@/components/ui/button.tsx";
+import { PlusIcon } from "lucide-react"
+import { InstantAnalysisIllustration } from "@/assets/instant-analysis.tsx"
+import { useConnectionDialog } from "@/components/connection-dialog.tsx"
+import { DocsTextLink } from "@/components/docs-help.tsx"
+import { Button } from "@/components/ui/button.tsx"
 
 /**
  * Centered landing screen shown until the user connects to a server.
  */
 export function WelcomePage() {
-  const { openNew } = useConnectionDialog();
+  const { openNew } = useConnectionDialog()
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
@@ -33,5 +33,5 @@ export function WelcomePage() {
         Add new connection
       </Button>
     </div>
-  );
+  )
 }

@@ -1,17 +1,17 @@
-import { loader } from "@monaco-editor/react";
-import * as monaco from "monaco-editor";
+import { loader } from "@monaco-editor/react"
+import * as monaco from "monaco-editor"
 
-let configured = false;
+let configured = false
 
 /**
  * Bundles Monaco from `node_modules` instead of loading the CDN copy.
  */
 export function configureMonaco(): void {
   if (configured) {
-    return;
+    return
   }
 
-  configured = true;
+  configured = true
 
   self.MonacoEnvironment = {
     getWorker(_workerId: string, label: string) {
@@ -22,15 +22,15 @@ export function configureMonaco(): void {
             import.meta.url,
           ),
           { type: "module" },
-        );
+        )
       }
 
       return new Worker(
         new URL("monaco-editor/editor/editor.worker.js", import.meta.url),
         { type: "module" },
-      );
+      )
     },
-  };
+  }
 
-  loader.config({ monaco });
+  loader.config({ monaco })
 }

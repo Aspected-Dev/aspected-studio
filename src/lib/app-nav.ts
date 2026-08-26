@@ -1,32 +1,32 @@
-import { DOCS_HASH, type DocsTarget } from "@/lib/docs.ts";
+import { DOCS_HASH, type DocsTarget } from "@/lib/docs.ts"
 
 /** Page within an index: schema is the index root. */
-export type IndexPage = "schema" | "docs" | "search";
+export type IndexPage = "schema" | "docs" | "search"
 
 /** Parsed Studio location used by the sidebar and breadcrumbs. */
 export type StudioLocation =
   | { kind: "indexes" }
   | { kind: "create" }
-  | { kind: "index"; name: string; page: IndexPage };
+  | { kind: "index"; name: string; page: IndexPage }
 
 /** One breadcrumb. Omit `href` for the current page. */
 export type AppBreadcrumb = {
-  label: string;
-  href?: string;
-};
+  label: string
+  href?: string
+}
 
 /**
  * Returns the path to an index page.
  */
 export function indexPath(name: string, page: IndexPage = "schema"): string {
-  const encoded = encodeURIComponent(name);
+  const encoded = encodeURIComponent(name)
   if (page === "docs") {
-    return `/indexes/${encoded}/docs`;
+    return `/indexes/${encoded}/docs`
   }
   if (page === "search") {
-    return `/indexes/${encoded}/search`;
+    return `/indexes/${encoded}/search`
   }
-  return `/indexes/${encoded}`;
+  return `/indexes/${encoded}`
 }
 
 /**
@@ -37,7 +37,7 @@ export function indexStudioUrl(
   name: string,
   page: IndexPage = "schema",
 ): string {
-  return `${origin.replace(/\/+$/, "")}${indexPath(name, page)}`;
+  return `${origin.replace(/\/+$/, "")}${indexPath(name, page)}`
 }
 
 /**
@@ -45,37 +45,37 @@ export function indexStudioUrl(
  */
 export function parseStudioLocation(pathname: string): StudioLocation {
   if (pathname === "/indexes/new") {
-    return { kind: "create" };
+    return { kind: "create" }
   }
 
   const match = pathname.match(
     /^\/indexes\/([^/]+)(?:\/(docs|search))?\/?$/,
-  );
+  )
   if (!match) {
-    return { kind: "indexes" };
+    return { kind: "indexes" }
   }
 
   const page: IndexPage = match[2] === "docs"
     ? "docs"
     : match[2] === "search"
     ? "search"
-    : "schema";
+    : "schema"
 
   return {
     kind: "index",
     name: decodeURIComponent(match[1]),
     page,
-  };
+  }
 }
 
 function indexPageLabel(page: IndexPage): string {
   if (page === "docs") {
-    return "Documents";
+    return "Documents"
   }
   if (page === "search") {
-    return "Search";
+    return "Search"
   }
-  return "Schema";
+  return "Schema"
 }
 
 /**
@@ -87,23 +87,23 @@ export function docsTargetForLocation(
   options: { connected?: boolean } = {},
 ): DocsTarget {
   if (options.connected === false) {
-    return { page: "gettingStarted" };
+    return { page: "gettingStarted" }
   }
 
-  const location = parseStudioLocation(pathname);
+  const location = parseStudioLocation(pathname)
   if (location.kind === "create") {
-    return { page: "resolvers" };
+    return { page: "resolvers" }
   }
   if (location.kind === "index") {
     if (location.page === "docs") {
-      return { page: "tutorial", hash: DOCS_HASH.tutorialTrain };
+      return { page: "tutorial", hash: DOCS_HASH.tutorialTrain }
     }
     if (location.page === "search") {
-      return { page: "resolvers", hash: DOCS_HASH.combiningResolvers };
+      return { page: "resolvers", hash: DOCS_HASH.combiningResolvers }
     }
-    return { page: "resolvers" };
+    return { page: "resolvers" }
   }
-  return { page: "tutorial" };
+  return { page: "tutorial" }
 }
 
 /**
@@ -115,25 +115,25 @@ export function breadcrumbsForLocation(
   options: { connected?: boolean } = {},
 ): AppBreadcrumb[] {
   if (options.connected === false) {
-    return [{ label: "Welcome" }];
+    return [{ label: "Welcome" }]
   }
 
-  const location = parseStudioLocation(pathname);
+  const location = parseStudioLocation(pathname)
 
   if (location.kind === "indexes") {
-    return [{ label: "Indexes" }];
+    return [{ label: "Indexes" }]
   }
 
   if (location.kind === "create") {
     return [
       { label: "Indexes", href: "/" },
       { label: "Create" },
-    ];
+    ]
   }
 
   return [
     { label: "Indexes", href: "/" },
     { label: location.name, href: indexPath(location.name) },
     { label: indexPageLabel(location.page) },
-  ];
+  ]
 }

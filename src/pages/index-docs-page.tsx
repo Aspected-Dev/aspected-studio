@@ -1,17 +1,17 @@
-import { type FormEvent, useEffect, useState } from "react";
-import { PencilIcon, Trash2Icon } from "lucide-react";
-import { useParams } from "react-router";
-import { toast } from "sonner";
-import { createDataTableColumnHelper } from "@/components/data-table-features.ts";
-import { DataTable, DataTableRowActions } from "@/components/data-table.tsx";
+import { type FormEvent, useEffect, useState } from "react"
+import { PencilIcon, Trash2Icon } from "lucide-react"
+import { useParams } from "react-router"
+import { toast } from "sonner"
+import { createDataTableColumnHelper } from "@/components/data-table-features.ts"
+import { DataTable, DataTableRowActions } from "@/components/data-table.tsx"
 import {
   DocsField,
   DocsHelpIcon,
   DocsTextLink,
   PageDocsButton,
-} from "@/components/docs-help.tsx";
-import { JsonEditor } from "@/components/json-editor.tsx";
-import { RequestInspector } from "@/components/request-inspector.tsx";
+} from "@/components/docs-help.tsx"
+import { JsonEditor } from "@/components/json-editor.tsx"
+import { RequestInspector } from "@/components/request-inspector.tsx"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,39 +21,39 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog.tsx";
-import { Button } from "@/components/ui/button.tsx";
+} from "@/components/ui/alert-dialog.tsx"
+import { Button } from "@/components/ui/button.tsx"
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu.tsx";
+} from "@/components/ui/dropdown-menu.tsx"
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.tsx";
-import { Input } from "@/components/ui/input.tsx";
+} from "@/components/ui/dialog.tsx"
+import { Input } from "@/components/ui/input.tsx"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
-import { type RecordedRequest } from "@/lib/aspected/client.ts";
-import { toastCaughtError } from "@/lib/aspected/user-error.ts";
+} from "@/components/ui/select.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
+import { type RecordedRequest } from "@/lib/aspected/client.ts"
+import { toastCaughtError } from "@/lib/aspected/user-error.ts"
 import {
   type DocEntry,
   type IndexDetail,
   type UploadDocsRequest,
   uploadDocsRequestSchema,
-} from "@/lib/aspected/types.ts";
-import { DOCS_HASH } from "@/lib/docs.ts";
+} from "@/lib/aspected/types.ts"
+import { DOCS_HASH } from "@/lib/docs.ts"
 
-const columnHelper = createDataTableColumnHelper<DocEntry>();
+const columnHelper = createDataTableColumnHelper<DocEntry>()
 
 const DEFAULT_BULK = JSON.stringify(
   {
@@ -68,89 +68,89 @@ const DEFAULT_BULK = JSON.stringify(
   },
   null,
   2,
-);
+)
 
 /**
  * Lists, upserts, and deletes documents for an index.
  */
 export function IndexDocsPage() {
-  const { name } = useParams();
-  const { client } = useConnection();
-  const [index, setIndex] = useState<IndexDetail | null>(null);
-  const [docs, setDocs] = useState<DocEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<DocEntry | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
-  const [docId, setDocId] = useState("");
-  const [docJson, setDocJson] = useState("{}");
-  const [accessList, setAccessList] = useState("");
-  const [bulkJson, setBulkJson] = useState(DEFAULT_BULK);
-  const [duplicatePolicy, setDuplicatePolicy] = useState("Replace");
-  const [missingPolicy, setMissingPolicy] = useState("Ignore");
-  const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null);
-  const limit = 10;
+  const { name } = useParams()
+  const { client } = useConnection()
+  const [index, setIndex] = useState<IndexDetail | null>(null)
+  const [docs, setDocs] = useState<DocEntry[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [selected, setSelected] = useState<DocEntry | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [docId, setDocId] = useState("")
+  const [docJson, setDocJson] = useState("{}")
+  const [accessList, setAccessList] = useState("")
+  const [bulkJson, setBulkJson] = useState(DEFAULT_BULK)
+  const [duplicatePolicy, setDuplicatePolicy] = useState("Replace")
+  const [missingPolicy, setMissingPolicy] = useState("Ignore")
+  const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null)
+  const limit = 10
 
   async function load(nextPage = page) {
     if (!name) {
-      return;
+      return
     }
     try {
       const [indexResponse, docsResponse] = await Promise.all([
         client.getIndex(name),
         client.listDocs(name, { page: nextPage, limit }),
-      ]);
-      setIndex(indexResponse.data);
-      setDocs(docsResponse.data);
-      setTotal(docsResponse.total);
-      setPage(docsResponse.page);
+      ])
+      setIndex(indexResponse.data)
+      setDocs(docsResponse.data)
+      setTotal(docsResponse.total)
+      setPage(docsResponse.page)
     } catch (caught) {
-      toastCaughtError(caught, "Could not load documents");
+      toastCaughtError(caught, "Could not load documents")
     }
   }
 
   useEffect(() => {
-    void load(1);
-  }, [client, name]);
+    void load(1)
+  }, [client, name])
 
   function openCreate() {
-    setDocId("");
+    setDocId("")
     setDocJson(
       JSON.stringify(
         Object.fromEntries(
           (index?.schema ?? []).map((aspect) => {
-            const field = aspect.path.replace(/^\$\./, "");
-            return [field, ""];
+            const field = aspect.path.replace(/^\$\./, "")
+            return [field, ""]
           }),
         ),
         null,
         2,
       ),
-    );
-    setAccessList("");
-    setEditorOpen(true);
+    )
+    setAccessList("")
+    setEditorOpen(true)
   }
 
   function openEdit(doc: DocEntry) {
-    setSelected(doc);
-    setDocId(doc.id);
-    setDocJson(JSON.stringify(doc.doc, null, 2));
-    setAccessList((doc.accessList ?? []).join(", "));
-    setEditorOpen(true);
+    setSelected(doc)
+    setDocId(doc.id)
+    setDocJson(JSON.stringify(doc.doc, null, 2))
+    setAccessList((doc.accessList ?? []).join(", "))
+    setEditorOpen(true)
   }
 
   async function submitDoc(event: FormEvent) {
-    event.preventDefault();
+    event.preventDefault()
     if (!name) {
-      return;
+      return
     }
     try {
-      const doc = JSON.parse(docJson) as Record<string, unknown>;
+      const doc = JSON.parse(docJson) as Record<string, unknown>
       const keys = accessList.split(",").map((part) => part.trim()).filter(
         Boolean,
-      );
+      )
       const body: UploadDocsRequest = {
         data: [{
           id: docId.trim(),
@@ -161,63 +161,63 @@ export function IndexDocsPage() {
           duplicate: duplicatePolicy as "Replace" | "Ignore" | "Fail",
           missing: missingPolicy as "Ignore" | "Fail",
         },
-      };
-      const result = await client.uploadDocs(name, body);
-      setLastRequest(client.lastRequest);
+      }
+      const result = await client.uploadDocs(name, body)
+      setLastRequest(client.lastRequest)
       toast.success(
         `Created ${result.data.created.length}, updated ${result.data.updated.length}`,
-      );
-      setEditorOpen(false);
-      await load();
+      )
+      setEditorOpen(false)
+      await load()
     } catch (caught) {
-      setLastRequest(client.lastRequest);
-      toastCaughtError(caught, "Could not save document");
+      setLastRequest(client.lastRequest)
+      toastCaughtError(caught, "Could not save document")
     }
   }
 
   async function submitBulk(event: FormEvent) {
-    event.preventDefault();
+    event.preventDefault()
     if (!name) {
-      return;
+      return
     }
     try {
-      const body = uploadDocsRequestSchema.parse(JSON.parse(bulkJson));
-      const result = await client.uploadDocs(name, body);
-      setLastRequest(client.lastRequest);
+      const body = uploadDocsRequestSchema.parse(JSON.parse(bulkJson))
+      const result = await client.uploadDocs(name, body)
+      setLastRequest(client.lastRequest)
       toast.success(
         `Created ${result.data.created.length}, updated ${result.data.updated.length}, deleted ${result.data.deleted.length}`,
-      );
-      setBulkOpen(false);
-      await load();
+      )
+      setBulkOpen(false)
+      await load()
     } catch (caught) {
-      setLastRequest(client.lastRequest);
-      toastCaughtError(caught, "Could not upload documents");
+      setLastRequest(client.lastRequest)
+      toastCaughtError(caught, "Could not upload documents")
     }
   }
 
   async function confirmDelete() {
     if (!name || !pendingDelete) {
-      return;
+      return
     }
     try {
       await client.uploadDocs(name, {
         data: [{ id: pendingDelete }],
         policy: { missing: missingPolicy as "Ignore" | "Fail" },
-      });
-      setLastRequest(client.lastRequest);
-      toast.success(`Deleted ${pendingDelete}`);
+      })
+      setLastRequest(client.lastRequest)
+      toast.success(`Deleted ${pendingDelete}`)
       if (selected?.id === pendingDelete) {
-        setSelected(null);
+        setSelected(null)
       }
-      setPendingDelete(null);
-      await load();
+      setPendingDelete(null)
+      await load()
     } catch (caught) {
-      setLastRequest(client.lastRequest);
-      toastCaughtError(caught, "Could not delete document");
+      setLastRequest(client.lastRequest)
+      toastCaughtError(caught, "Could not delete document")
     }
   }
 
-  const pageCount = Math.max(1, Math.ceil(total / limit));
+  const pageCount = Math.max(1, Math.ceil(total / limit))
 
   const columns = columnHelper.columns([
     columnHelper.accessor("id", {
@@ -269,7 +269,7 @@ export function IndexDocsPage() {
         </DataTableRowActions>
       ),
     }),
-  ]);
+  ])
 
   return (
     <div className="grid min-w-0 gap-4">
@@ -435,7 +435,7 @@ export function IndexDocsPage() {
         open={pendingDelete !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingDelete(null);
+            setPendingDelete(null)
           }
         }}
       >
@@ -460,5 +460,5 @@ export function IndexDocsPage() {
         <RequestInspector request={lastRequest} />
       </section>
     </div>
-  );
+  )
 }

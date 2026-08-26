@@ -1,14 +1,14 @@
-import { toast } from "sonner";
-import { DocsTextLink } from "@/components/docs-help.tsx";
-import { Button } from "@/components/ui/button.tsx";
-import { JsonEditor } from "@/components/json-editor.tsx";
-import { buildCurlCommand } from "@/lib/aspected/curl.ts";
-import type { RecordedRequest } from "@/lib/aspected/client.ts";
-import { DOCS_HASH } from "@/lib/docs.ts";
+import { toast } from "sonner"
+import { DocsTextLink } from "@/components/docs-help.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import { JsonEditor } from "@/components/json-editor.tsx"
+import { buildCurlCommand } from "@/lib/aspected/curl.ts"
+import type { RecordedRequest } from "@/lib/aspected/client.ts"
+import { DOCS_HASH } from "@/lib/docs.ts"
 
 type RequestInspectorProps = {
-  request: RecordedRequest | null;
-};
+  request: RecordedRequest | null
+}
 
 /**
  * Shows the last API call as JSON plus a copyable curl command.
@@ -19,7 +19,7 @@ export function RequestInspector({ request }: RequestInspectorProps) {
       <p className="text-sm text-muted-foreground">
         Submit a request to see the equivalent curl command.
       </p>
-    );
+    )
   }
 
   const curl = buildCurlCommand({
@@ -29,7 +29,7 @@ export function RequestInspector({ request }: RequestInspectorProps) {
       : request.url,
     headers: request.headers,
     body: request.body,
-  });
+  })
 
   return (
     <div className="grid gap-3">
@@ -46,8 +46,8 @@ export function RequestInspector({ request }: RequestInspectorProps) {
             size="sm"
             variant="outline"
             onClick={() => {
-              void navigator.clipboard.writeText(curl);
-              toast.success("Copied curl");
+              void navigator.clipboard.writeText(curl)
+              toast.success("Copied curl")
             }}
           >
             Copy curl
@@ -66,5 +66,5 @@ export function RequestInspector({ request }: RequestInspectorProps) {
         {curl}
       </pre>
     </div>
-  );
+  )
 }

@@ -6,12 +6,12 @@ import {
   useMemo,
   useRef,
   useState,
-} from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { DocsField } from "@/components/docs-help.tsx";
-import { Button } from "@/components/ui/button.tsx";
+} from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
+import { DocsField } from "@/components/docs-help.tsx"
+import { Button } from "@/components/ui/button.tsx"
 import {
   Dialog,
   DialogContent,
@@ -19,33 +19,33 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog.tsx";
-import { Input } from "@/components/ui/input.tsx";
-import { useConnection } from "@/hooks/use-connection.tsx";
+} from "@/components/ui/dialog.tsx"
+import { Input } from "@/components/ui/input.tsx"
+import { useConnection } from "@/hooks/use-connection.tsx"
 import {
   connectionFormSchema,
   type ConnectionFormValues,
   DEFAULT_BASE_URL,
   displayHost,
   type SavedConnection,
-} from "@/lib/aspected/connection.ts";
-import { toastCaughtError } from "@/lib/aspected/user-error.ts";
-import { DOCS_HASH } from "@/lib/docs.ts";
+} from "@/lib/aspected/connection.ts"
+import { toastCaughtError } from "@/lib/aspected/user-error.ts"
+import { DOCS_HASH } from "@/lib/docs.ts"
 
 type ConnectionDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  connection?: SavedConnection | null;
-};
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  connection?: SavedConnection | null
+}
 
 type ConnectionDialogApi = {
-  openNew: () => void;
-  openEdit: (connection: SavedConnection) => void;
-};
+  openNew: () => void
+  openEdit: (connection: SavedConnection) => void
+}
 
 const ConnectionDialogContext = createContext<
   ConnectionDialogApi | undefined
->(undefined);
+>(undefined)
 
 /**
  * Holds New/Edit connection dialog state for the sidebar and welcome screen.
@@ -53,23 +53,23 @@ const ConnectionDialogContext = createContext<
 export function ConnectionDialogProvider({
   children,
 }: {
-  children: ReactNode;
+  children: ReactNode
 }) {
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<SavedConnection | null>(null);
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<SavedConnection | null>(null)
   const api = useMemo<ConnectionDialogApi>(
     () => ({
       openNew: () => {
-        setEditing(null);
-        setOpen(true);
+        setEditing(null)
+        setOpen(true)
       },
       openEdit: (connection) => {
-        setEditing(connection);
-        setOpen(true);
+        setEditing(connection)
+        setOpen(true)
       },
     }),
     [],
-  );
+  )
 
   return (
     <ConnectionDialogContext.Provider value={api}>
@@ -78,30 +78,30 @@ export function ConnectionDialogProvider({
         open={open}
         connection={editing}
         onOpenChange={(nextOpen) => {
-          setOpen(nextOpen);
+          setOpen(nextOpen)
           if (!nextOpen) {
-            setEditing(null);
+            setEditing(null)
           }
         }}
       />
     </ConnectionDialogContext.Provider>
-  );
+  )
 }
 
 /**
  * Opens the New/Edit connection dialog from chrome that is not the dialog.
  */
 export function useConnectionDialog(): ConnectionDialogApi {
-  const context = useContext(ConnectionDialogContext);
+  const context = useContext(ConnectionDialogContext)
   if (!context) {
     throw new Error(
       "useConnectionDialog must be used within ConnectionDialogProvider",
-    );
+    )
   }
-  return context;
+  return context
 }
 
-type SubmitAction = "save" | "connect" | "saveAndConnect";
+type SubmitAction = "save" | "connect" | "saveAndConnect"
 
 /**
  * Modal to save and/or connect to an Aspected server.
@@ -111,8 +111,8 @@ export function ConnectionDialog({
   onOpenChange,
   connection,
 }: ConnectionDialogProps) {
-  const { connecting, upsertConnection, connect } = useConnection();
-  const editing = connection ?? null;
+  const { connecting, upsertConnection, connect } = useConnection()
+  const editing = connection ?? null
 
   const form = useForm<ConnectionFormValues>({
     resolver: zodResolver(connectionFormSchema),
@@ -121,27 +121,27 @@ export function ConnectionDialog({
       baseUrl: DEFAULT_BASE_URL,
       apiToken: "",
     },
-  });
+  })
 
   // Track which button triggered the submit so handleSubmit can branch.
-  const actionRef = useRef<SubmitAction>("saveAndConnect");
+  const actionRef = useRef<SubmitAction>("saveAndConnect")
 
   useEffect(() => {
     if (!open) {
-      return;
+      return
     }
     if (editing) {
       form.reset({
         name: editing.name,
         baseUrl: editing.baseUrl,
         apiToken: editing.apiToken,
-      });
-      return;
+      })
+      return
     }
-    form.reset({ name: "", baseUrl: DEFAULT_BASE_URL, apiToken: "" });
-  }, [open, editing, form]);
+    form.reset({ name: "", baseUrl: DEFAULT_BASE_URL, apiToken: "" })
+  }, [open, editing, form])
 
-  const baseUrlValue = form.watch("baseUrl");
+  const baseUrlValue = form.watch("baseUrl")
 
   function persist(values: ConnectionFormValues) {
     return upsertConnection({
@@ -149,24 +149,24 @@ export function ConnectionDialog({
       name: values.name,
       baseUrl: values.baseUrl.trim(),
       apiToken: values.apiToken.trim(),
-    });
+    })
   }
 
   async function runConnect(target: Parameters<typeof connect>[0]) {
-    const result = await connect(target);
+    const result = await connect(target)
     toast.success(
       `Connected to ${displayHost(target.baseUrl)} (v${result.version})`,
-    );
-    onOpenChange(false);
+    )
+    onOpenChange(false)
   }
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    const action = actionRef.current;
+    const action = actionRef.current
 
     if (action === "save") {
-      persist(values);
-      onOpenChange(false);
-      return;
+      persist(values)
+      onOpenChange(false)
+      return
     }
 
     if (action === "connect") {
@@ -174,23 +174,23 @@ export function ConnectionDialog({
         await runConnect({
           baseUrl: values.baseUrl.trim(),
           apiToken: values.apiToken.trim(),
-        });
+        })
       } catch (caught) {
-        toastCaughtError(caught, "Cannot reach Aspected");
+        toastCaughtError(caught, "Cannot reach Aspected")
       }
-      return;
+      return
     }
 
     // saveAndConnect
-    const saved = persist(values);
+    const saved = persist(values)
     try {
-      await runConnect(saved);
+      await runConnect(saved)
     } catch (caught) {
-      toastCaughtError(caught, "Cannot reach Aspected");
+      toastCaughtError(caught, "Cannot reach Aspected")
     }
-  });
+  })
 
-  const isSubmitting = form.formState.isSubmitting || connecting;
+  const isSubmitting = form.formState.isSubmitting || connecting
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -257,7 +257,7 @@ export function ConnectionDialog({
               variant="outline"
               disabled={isSubmitting}
               onClick={() => {
-                actionRef.current = "save";
+                actionRef.current = "save"
               }}
             >
               Save
@@ -267,7 +267,7 @@ export function ConnectionDialog({
               variant="secondary"
               disabled={isSubmitting}
               onClick={() => {
-                actionRef.current = "connect";
+                actionRef.current = "connect"
               }}
             >
               Connect
@@ -276,7 +276,7 @@ export function ConnectionDialog({
               type="submit"
               disabled={isSubmitting}
               onClick={() => {
-                actionRef.current = "saveAndConnect";
+                actionRef.current = "saveAndConnect"
               }}
             >
               {isSubmitting ? "Connecting…" : "Save and Connect"}
@@ -285,5 +285,5 @@ export function ConnectionDialog({
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod"
 
 /** React Hook Form schema for the new/edit connection dialog. */
 export const connectionFormSchema = z.object({
@@ -11,69 +11,69 @@ export const connectionFormSchema = z.object({
     .url("Must be a valid URL (include http:// or https://)"),
   /** Bearer token. Leave empty when the server has no staticApiToken. */
   apiToken: z.string(),
-});
+})
 
-export type ConnectionFormValues = z.infer<typeof connectionFormSchema>;
+export type ConnectionFormValues = z.infer<typeof connectionFormSchema>
 
 /** localStorage key for the saved connection list. */
-export const CONNECTIONS_STORAGE_KEY = "aspected-studio.connections";
+export const CONNECTIONS_STORAGE_KEY = "aspected-studio.connections"
 
 /** Legacy single-connection key. Read once for migrate, then ignored. */
-export const LEGACY_CONNECTION_STORAGE_KEY = "aspected-studio.connection";
+export const LEGACY_CONNECTION_STORAGE_KEY = "aspected-studio.connection"
 
 /** Default Aspected URL used by Docker quick start. */
-export const DEFAULT_BASE_URL = "http://localhost:8080";
+export const DEFAULT_BASE_URL = "http://localhost:8080"
 
 /** Same-origin prefix rewritten by the Vite dev proxy. */
-export const LOCAL_API_PREFIX = "/api";
+export const LOCAL_API_PREFIX = "/api"
 
 /** Connection settings used by the live Aspected client. */
 export type ConnectionSettings = {
-  baseUrl: string;
-  apiToken: string;
-};
+  baseUrl: string
+  apiToken: string
+}
 
 /** A named server saved in this browser. */
 export type SavedConnection = {
-  id: string;
-  name: string;
-  baseUrl: string;
-  apiToken: string;
-};
+  id: string
+  name: string
+  baseUrl: string
+  apiToken: string
+}
 
 /** Draft used to create or update a saved connection. */
 export type SavedConnectionInput = {
-  id?: string;
-  name: string;
-  baseUrl: string;
-  apiToken: string;
-};
+  id?: string
+  name: string
+  baseUrl: string
+  apiToken: string
+}
 
 /** Default client settings before the user connects. */
 export const DEFAULT_CONNECTION_SETTINGS: ConnectionSettings = {
   baseUrl: DEFAULT_BASE_URL,
   apiToken: "",
-};
+}
 
 const savedConnectionSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   baseUrl: z.string().min(1),
   apiToken: z.string(),
-});
+})
 
-const savedConnectionsSchema = z.array(savedConnectionSchema);
+const savedConnectionsSchema = z.array(savedConnectionSchema)
 
 const legacyConnectionSchema = z.object({
   baseUrl: z.string(),
   apiToken: z.string().optional(),
-});
+})
 
 /**
  * Creates a unique id for a new saved connection.
  */
 export function newConnectionId(): string {
-  return crypto.randomUUID();
+  return crypto.randomUUID()
 }
 
 /**
@@ -82,7 +82,7 @@ export function newConnectionId(): string {
 export function isSavedConnection(
   target: ConnectionSettings | SavedConnection,
 ): target is SavedConnection {
-  return "id" in target && typeof target.id === "string";
+  return "id" in target && typeof target.id === "string"
 }
 
 /**
@@ -94,7 +94,7 @@ export function toConnectionSettings(
   return {
     baseUrl: connection.baseUrl,
     apiToken: connection.apiToken,
-  };
+  }
 }
 
 /**
@@ -102,16 +102,16 @@ export function toConnectionSettings(
  * Invalid JSON or schema falls back to an empty list.
  */
 export function loadConnections(): SavedConnection[] {
-  const stored = readStoredConnections();
+  const stored = readStoredConnections()
   if (stored !== null) {
-    return stored;
+    return stored
   }
 
-  const migrated = migrateLegacyConnection();
+  const migrated = migrateLegacyConnection()
   if (migrated.length > 0) {
-    saveConnections(migrated);
+    saveConnections(migrated)
   }
-  return migrated;
+  return migrated
 }
 
 /**
@@ -121,7 +121,7 @@ export function saveConnections(connections: SavedConnection[]): void {
   localStorage.setItem(
     CONNECTIONS_STORAGE_KEY,
     JSON.stringify(connections),
-  );
+  )
 }
 
 /**
@@ -131,29 +131,29 @@ export function saveConnections(connections: SavedConnection[]): void {
 export function upsertConnection(
   input: SavedConnectionInput,
 ): SavedConnection {
-  const baseUrl = input.baseUrl.trim() || DEFAULT_BASE_URL;
+  const baseUrl = input.baseUrl.trim() || DEFAULT_BASE_URL
   const saved: SavedConnection = {
     id: input.id ?? newConnectionId(),
     name: input.name.trim() || displayHost(baseUrl),
     baseUrl,
     apiToken: input.apiToken,
-  };
-  const current = loadConnections();
-  const index = current.findIndex((item) => item.id === saved.id);
+  }
+  const current = loadConnections()
+  const index = current.findIndex((item) => item.id === saved.id)
   const next = index === -1
     ? [...current, saved]
-    : current.map((item, itemIndex) => itemIndex === index ? saved : item);
-  saveConnections(next);
-  return saved;
+    : current.map((item, itemIndex) => itemIndex === index ? saved : item)
+  saveConnections(next)
+  return saved
 }
 
 /**
  * Removes a saved connection and returns the remaining list.
  */
 export function removeConnection(id: string): SavedConnection[] {
-  const next = loadConnections().filter((item) => item.id !== id);
-  saveConnections(next);
-  return next;
+  const next = loadConnections().filter((item) => item.id !== id)
+  saveConnections(next)
+  return next
 }
 
 /**
@@ -161,23 +161,23 @@ export function removeConnection(id: string): SavedConnection[] {
  * proxy can avoid CORS. Any other URL is called directly.
  */
 export function resolveApiBase(baseUrl: string): string {
-  const normalized = baseUrl.replace(/\/+$/, "");
+  const normalized = baseUrl.replace(/\/+$/, "")
   if (!normalized || normalized === DEFAULT_BASE_URL) {
-    return LOCAL_API_PREFIX;
+    return LOCAL_API_PREFIX
   }
 
-  return normalized;
+  return normalized
 }
 
 /**
  * Host label for a connection, e.g. `localhost:8080`.
  */
 export function displayHost(baseUrl: string): string {
-  const normalized = baseUrl.replace(/\/+$/, "") || DEFAULT_BASE_URL;
+  const normalized = baseUrl.replace(/\/+$/, "") || DEFAULT_BASE_URL
   try {
-    return new URL(normalized).host;
+    return new URL(normalized).host
   } catch {
-    return normalized;
+    return normalized
   }
 }
 
@@ -185,14 +185,14 @@ export function displayHost(baseUrl: string): string {
  * Server origin to copy, without a trailing slash or API token.
  */
 export function serverUrlForCopy(baseUrl: string): string {
-  return baseUrl.replace(/\/+$/, "") || DEFAULT_BASE_URL;
+  return baseUrl.replace(/\/+$/, "") || DEFAULT_BASE_URL
 }
 
 /**
  * Index REST URL to copy (`GET /indexes/{name}`), without a token.
  */
 export function indexUrlForCopy(baseUrl: string, name: string): string {
-  return `${serverUrlForCopy(baseUrl)}/indexes/${encodeURIComponent(name)}`;
+  return `${serverUrlForCopy(baseUrl)}/indexes/${encodeURIComponent(name)}`
 }
 
 /**
@@ -204,44 +204,44 @@ export function connectionSettingsEqual(
 ): boolean {
   return left.baseUrl.replace(/\/+$/, "") ===
       right.baseUrl.replace(/\/+$/, "") &&
-    left.apiToken === right.apiToken;
+    left.apiToken === right.apiToken
 }
 
 function readStoredConnections(): SavedConnection[] | null {
-  const raw = localStorage.getItem(CONNECTIONS_STORAGE_KEY);
+  const raw = localStorage.getItem(CONNECTIONS_STORAGE_KEY)
   if (raw === null) {
-    return null;
+    return null
   }
 
   try {
-    const parsed = savedConnectionsSchema.safeParse(JSON.parse(raw));
-    return parsed.success ? parsed.data : [];
+    const parsed = savedConnectionsSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? parsed.data : []
   } catch {
-    return [];
+    return []
   }
 }
 
 function migrateLegacyConnection(): SavedConnection[] {
-  const raw = localStorage.getItem(LEGACY_CONNECTION_STORAGE_KEY);
-  localStorage.removeItem(LEGACY_CONNECTION_STORAGE_KEY);
+  const raw = localStorage.getItem(LEGACY_CONNECTION_STORAGE_KEY)
+  localStorage.removeItem(LEGACY_CONNECTION_STORAGE_KEY)
   if (!raw) {
-    return [];
+    return []
   }
 
   try {
-    const parsed = legacyConnectionSchema.safeParse(JSON.parse(raw));
+    const parsed = legacyConnectionSchema.safeParse(JSON.parse(raw))
     if (!parsed.success) {
-      return [];
+      return []
     }
 
-    const baseUrl = parsed.data.baseUrl.trim() || DEFAULT_BASE_URL;
+    const baseUrl = parsed.data.baseUrl.trim() || DEFAULT_BASE_URL
     return [{
       id: newConnectionId(),
       name: displayHost(baseUrl),
       baseUrl,
       apiToken: parsed.data.apiToken ?? "",
-    }];
+    }]
   } catch {
-    return [];
+    return []
   }
 }

@@ -1,4 +1,4 @@
-import type { AspectType } from "@/lib/aspected/types.ts";
+import type { AspectType } from "@/lib/aspected/types.ts"
 
 /**
  * Origin of the Aspected docs server.
@@ -9,7 +9,7 @@ import type { AspectType } from "@/lib/aspected/types.ts";
  */
 export const DOCS_ORIGIN: string = import.meta.env.VITE_DOCS_LOCAL === "true"
   ? "http://localhost:8000"
-  : "https://docs.aspected.com";
+  : "https://docs.aspected.com"
 
 /** Catalog of docs.aspected.com pages Studio can open. */
 export const DOCS_PAGES = {
@@ -84,10 +84,10 @@ export const DOCS_PAGES = {
     title: "Dictionary resolver",
     blurb: "Maps licensed string keys to numbers, then a radial embedding.",
   },
-} as const;
+} as const
 
 /** Key of a page in {@link DOCS_PAGES}. */
-export type DocsPage = keyof typeof DOCS_PAGES;
+export type DocsPage = keyof typeof DOCS_PAGES
 
 /** Heading hashes on docs.aspected.com (Material mkdocs slugs). */
 export const DOCS_HASH = {
@@ -104,13 +104,13 @@ export const DOCS_HASH = {
   accessFiltering: "filtering-search-results",
   accessNull: "including-documents-with-no-access-keys",
   textModels: "using-the-text-resolver-embedding-models",
-} as const;
+} as const
 
 /** Page plus optional heading hash. */
 export type DocsTarget = {
-  page: DocsPage;
-  hash?: string;
-};
+  page: DocsPage
+  hash?: string
+}
 
 /** Help menu entries shown in the site header. */
 export const DOCS_MENU: Array<{ page: DocsPage }> = [
@@ -121,7 +121,7 @@ export const DOCS_MENU: Array<{ page: DocsPage }> = [
   { page: "accessControl" },
   { page: "security" },
   { page: "configuration" },
-];
+]
 
 /** Per-aspect-type docs page. */
 export const ASPECT_TYPE_DOCS: Record<AspectType, DocsPage> = {
@@ -131,7 +131,7 @@ export const ASPECT_TYPE_DOCS: Record<AspectType, DocsPage> = {
   datetime: "resolverDatetime",
   raw: "resolverRaw",
   dict: "resolverDict",
-};
+}
 
 /** Index-level field helpers for schema badges and the create-index form. */
 export const INDEX_FIELD_DOCS = {
@@ -151,7 +151,7 @@ export const INDEX_FIELD_DOCS = {
     label: "Distance",
     blurb: "How neighbours are ranked when searching this index.",
   },
-};
+}
 
 /** HNSW field helpers keyed by the create-index form field name. */
 export const HNSW_FIELD_DOCS: Record<string, { hash: string; blurb: string }> =
@@ -200,29 +200,29 @@ export const HNSW_FIELD_DOCS: Record<string, { hash: string; blurb: string }> =
       blurb:
         "Max vectors per on-disk file. Does not change search results. Default 10000.",
     },
-  };
+  }
 
 /**
  * Absolute docs URL for a catalog page, with an optional heading hash.
  */
 export function docsUrl(page: DocsPage, hash?: string): string {
-  const url = new URL(DOCS_PAGES[page].path, `${DOCS_ORIGIN}/`);
+  const url = new URL(DOCS_PAGES[page].path, `${DOCS_ORIGIN}/`)
   if (hash) {
-    url.hash = hash.startsWith("#") ? hash.slice(1) : hash;
+    url.hash = hash.startsWith("#") ? hash.slice(1) : hash
   }
-  return url.toString();
+  return url.toString()
 }
 
 /**
  * Opens a docs page in a new window. Does not navigate Studio.
  */
 export function openDocs(page: DocsPage, hash?: string): Window | null {
-  return window.open(docsUrl(page, hash), "_blank", "noopener,noreferrer");
+  return window.open(docsUrl(page, hash), "_blank", "noopener,noreferrer")
 }
 
 /**
  * Docs page for an aspect resolver type.
  */
 export function docsPageForAspectType(type: AspectType): DocsPage {
-  return ASPECT_TYPE_DOCS[type];
+  return ASPECT_TYPE_DOCS[type]
 }

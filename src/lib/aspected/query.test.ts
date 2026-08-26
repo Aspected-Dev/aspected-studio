@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { buildSparseSearchRequest, parseAccessFilter } from "./query.ts";
+import { describe, expect, it } from "vitest"
+import { buildSparseSearchRequest, parseAccessFilter } from "./query.ts"
 
 describe("buildSparseSearchRequest", () => {
   it("omits blank aspects", () => {
@@ -14,12 +14,12 @@ describe("buildSparseSearchRequest", () => {
       withDocs: true,
       withVectors: false,
       withExplanation: true,
-    });
+    })
 
-    expect(request.query).toEqual({ category: "electronics" });
-    expect(request.weights).toEqual({ category: 2 });
-    expect(request.accessFilter).toBeUndefined();
-  });
+    expect(request.query).toEqual({ category: "electronics" })
+    expect(request.weights).toEqual({ category: 2 })
+    expect(request.accessFilter).toBeUndefined()
+  })
 
   it("parses numeric aspect values", () => {
     const request = buildSparseSearchRequest({
@@ -30,19 +30,19 @@ describe("buildSparseSearchRequest", () => {
       withDocs: false,
       withVectors: false,
       withExplanation: false,
-    });
+    })
 
-    expect(request.query).toEqual({ price: 12.5 });
-  });
-});
+    expect(request.query).toEqual({ price: 12.5 })
+  })
+})
 
 describe("parseAccessFilter", () => {
   it("returns undefined when empty", () => {
-    expect(parseAccessFilter("", false)).toBeUndefined();
-  });
+    expect(parseAccessFilter("", false)).toBeUndefined()
+  })
 
   it("includes a null entry when requested", () => {
-    expect(parseAccessFilter("team-a", true)).toEqual(["team-a", null]);
-    expect(parseAccessFilter("", true)).toEqual([null]);
-  });
-});
+    expect(parseAccessFilter("team-a", true)).toEqual(["team-a", null])
+    expect(parseAccessFilter("", true)).toEqual([null])
+  })
+})
