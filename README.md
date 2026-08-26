@@ -15,6 +15,8 @@ Agents: start with [`AGENTS.md`](AGENTS.md) and follow `.cursor/rules`.
 - TanStack Table v9
 - Monaco Editor for JSON
 - shadcn/ui + Tailwind CSS v4
+- Recharts (via shadcn chart) for the Playground contribution bars
+- Motion for re-rank animations
 - Vitest + Testing Library
 
 ## Setup
@@ -61,6 +63,45 @@ Refreshing Studio does not reconnect automatically.
 Create an index, upload documents to train it, then search. Schema is set at
 create time and is read-only afterwards. Each mutating or search call shows the
 equivalent curl command.
+
+## Search Playground
+
+`/indexes/:name/playground` is the weight-tuning screen. The Search page stays
+the raw API form; the Playground exists to answer "what happens to my ranking if
+I turn this aspect up".
+
+Compose a sparse query with one control per aspect, then drag the log-scale
+weight sliders. Every search runs with `withExplanation: true`, so Studio can
+divide the request weight back out of each per-aspect distance and re-score the
+results already on screen. Ranking updates on the frame, no server round trip
+and no re-embedding of the query text. A real search follows on a 300ms debounce
+while Auto-run is on.
+
+A badge next to the ranking says where the numbers came from:
+
+| Badge   | Meaning                                                          |
+| ------- | ---------------------------------------------------------------- |
+| Live    | These are the distances the server returned                      |
+| Preview | Re-scored locally at weights the server has not been asked about |
+| Stale   | The query changed, so the recovered grades no longer apply       |
+
+Every metric stacks per-aspect contributions that sum to the total distance, so
+a shorter bar always means a closer match.
+
+Local re-scoring is exact for Manhattan, Euclidean, and DotProduct, because each
+of those accumulates per dimension and an aspect's slice sums into the total.
+Cosine normalises across every dimension at once, so it is computed as a
+weighted mean of the per-aspect distances. That is exact whenever an aspect's
+query and document vectors share a norm, which holds for the radial resolvers
+(`enum`, `number`, `datetime`, `dict`) and is close for `text`. The Preview
+badge reports the measured deviation on Cosine indexes, so the approximation is
+never hidden.
+
+Two limits worth knowing. Only the `k` documents already fetched are re-scored,
+so a document that would enter the top `k` under new weights cannot appear until
+the real search lands. And an aspect sent at weight `0` gets no distance back
+from the server, so raising it again marks the preview stale rather than
+guessing.
 
 ## Tasks
 

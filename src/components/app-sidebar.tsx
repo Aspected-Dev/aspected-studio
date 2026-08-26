@@ -7,6 +7,7 @@ import {
   FileTextIcon,
   LayoutListIcon,
   SearchIcon,
+  SlidersHorizontalIcon,
 } from "lucide-react"
 import { ConnectionFooter } from "@/components/connection-footer.tsx"
 import { NavSecondary } from "@/components/nav-secondary.tsx"
@@ -124,6 +125,18 @@ export function AppSidebar(
                             >
                               <SearchIcon />
                               <span>Search</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton
+                              isActive={location.kind === "index" &&
+                                location.page === "playground"}
+                              render={
+                                <Link to={indexPath(indexName, "playground")} />
+                              }
+                            >
+                              <SlidersHorizontalIcon />
+                              <span>Playground</span>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         </SidebarMenuSub>
