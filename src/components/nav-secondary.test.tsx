@@ -66,7 +66,9 @@ describe("DocsHelpMenu", () => {
     )
 
     await user.click(screen.getByRole("button", { name: "Get Help" }))
-    expect(screen.getByRole("menuitem", { name: /This page/ })).toBeVisible()
+    expect(
+      await screen.findByRole("menuitem", { name: /This page/ }),
+    ).toBeVisible()
     for (const item of DOCS_MENU) {
       expect(
         screen.getByRole("menuitem", { name: DOCS_PAGES[item.page].title }),

@@ -22,6 +22,8 @@ import {
   DocsTextLink,
   PageDocsButton,
 } from "@/components/docs-help.tsx"
+import { MotionTableRow } from "@/components/motion-table-row.tsx"
+import { PlaygroundCompare } from "@/components/playground-compare.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -59,6 +61,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table.tsx"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
 import {
   Tooltip,
@@ -80,6 +88,7 @@ import {
   sliderToWeight,
   weightToSlider,
 } from "@/lib/aspected/playground.ts"
+import type { PinnedRun } from "@/lib/aspected/compare.ts"
 import {
   hasCompleteGrades,
   multipliersFromSchema,
@@ -94,14 +103,6 @@ import type {
   StoredAspect,
 } from "@/lib/aspected/types.ts"
 import { DOCS_HASH, docsPageForAspectType } from "@/lib/docs.ts"
-
-/**
- * Stock table row driven by motion so re-ranks animate.
- *
- * `TableRow` spreads its props onto a `tr`, and React 19 passes `ref` through
- * that spread, so motion can measure the node without the shadcn file changing.
- */
-const MotionTableRow = motion.create(TableRow)
 
 /** Reorder feel: springy enough that fast slider drags interrupt cleanly. */
 const REORDER_TRANSITION = {
@@ -352,6 +353,8 @@ export function IndexPlaygroundPage() {
   const [ranQuerySignature, setRanQuerySignature] = useState<string | null>(
     null,
   )
+  const [ranValues, setRanValues] = useState<PlaygroundFormValues | null>(null)
+  const [pinned, setPinned] = useState<PinnedRun | null>(null)
   const [running, setRunning] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null)
@@ -406,6 +409,8 @@ export function IndexPlaygroundPage() {
       setWeightsUsed(scoringWeights(next))
       setRanSignature(JSON.stringify(body))
       setRanQuerySignature(querySignature(next))
+      // Clone so later form edits cannot mutate the snapshot used by Compare.
+      setRanValues(structuredClone(next))
     } catch (caught) {
       setLastRequest(client.lastRequest)
       toastCaughtError(caught, "Search failed")
@@ -626,136 +631,185 @@ export function IndexPlaygroundPage() {
           </Card>
 
           <div className="grid min-w-0 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Ranking
-                  <StateBadge
-                    state={state}
-                    metric={metric}
-                    deviation={deviation}
-                  />
-                </CardTitle>
-                <CardDescription>
-                  {reranked.length === 0
-                    ? "No results yet."
-                    : `${reranked.length} results, ranked by ${metric} distance.`}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid min-w-0 gap-4">
-                {chartData.length > 0
-                  ? (
-                    <ChartContainer
-                      config={chartConfig}
-                      className="aspect-auto h-72 w-full"
-                    >
-                      <BarChart
-                        accessibilityLayer
-                        data={chartData}
-                        layout="vertical"
-                      >
-                        <XAxis
-                          type="number"
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="id"
-                          width={120}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <ChartLegend content={<ChartLegendContent />} />
-                        {chartedNames.map((aspectName) => (
-                          <Bar
-                            key={aspectName}
-                            dataKey={aspectName}
-                            stackId="contribution"
-                            fill={`var(--color-${aspectName})`}
-                            stroke="var(--card)"
-                            strokeWidth={1}
-                          />
-                        ))}
-                      </BarChart>
-                    </ChartContainer>
-                  )
-                  : null}
+            <Tabs defaultValue="ranking" className="min-w-0 gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <TabsList>
+                  <TabsTrigger value="ranking">Ranking</TabsTrigger>
+                  <TabsTrigger value="compare">Compare</TabsTrigger>
+                </TabsList>
+                <StateBadge
+                  state={state}
+                  metric={metric}
+                  deviation={deviation}
+                />
+              </div>
 
-                <LayoutGroup>
-                  <Table aria-label="Ranking">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">#</TableHead>
-                        <TableHead className="w-16">Move</TableHead>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Distance</TableHead>
-                        {aspectNames.map((aspectName) => (
-                          <TableHead key={aspectName} className="font-mono">
-                            {aspectName}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <AnimatePresence initial={false}>
-                        {reranked.map((item, position) => {
-                          const previous = serverRanks.get(item.row.id)
-                          const delta = previous === undefined
-                            ? 0
-                            : previous - (position + 1)
-                          return (
-                            <MotionTableRow
-                              key={item.row.id}
-                              layout
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              transition={REORDER_TRANSITION}
-                              className="cursor-pointer"
-                              data-state={selectedId === item.row.id
-                                ? "selected"
-                                : undefined}
-                              onClick={() => setSelectedId(item.row.id)}
-                            >
-                              <TableCell className="text-muted-foreground">
-                                {position + 1}
-                              </TableCell>
-                              <TableCell>
-                                <RankDelta delta={delta} />
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {item.row.id}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                <AnimatedNumber value={item.distance} />
-                              </TableCell>
-                              {aspectNames.map((aspectName) => {
-                                const grade = item.grades.find(
-                                  (entry) => entry.name === aspectName,
-                                )
-                                return (
-                                  <TableCell
-                                    key={aspectName}
-                                    className="font-mono text-xs text-muted-foreground"
-                                  >
-                                    {grade?.raw === null ||
-                                        grade?.raw === undefined
-                                      ? "—"
-                                      : grade.raw.toFixed(3)}
+              <TabsContent value="ranking" className="grid min-w-0 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Ranking</CardTitle>
+                    <CardDescription>
+                      {reranked.length === 0
+                        ? "No results yet."
+                        : `${reranked.length} results, ranked by ${metric} distance.`}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid min-w-0 gap-4">
+                    {chartData.length > 0
+                      ? (
+                        <ChartContainer
+                          config={chartConfig}
+                          className="aspect-auto h-72 w-full"
+                        >
+                          <BarChart
+                            accessibilityLayer
+                            data={chartData}
+                            layout="vertical"
+                          >
+                            <XAxis
+                              type="number"
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              type="category"
+                              dataKey="id"
+                              width={120}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <ChartLegend content={<ChartLegendContent />} />
+                            {chartedNames.map((aspectName) => (
+                              <Bar
+                                key={aspectName}
+                                dataKey={aspectName}
+                                stackId="contribution"
+                                fill={`var(--color-${aspectName})`}
+                                stroke="var(--card)"
+                                strokeWidth={1}
+                              />
+                            ))}
+                          </BarChart>
+                        </ChartContainer>
+                      )
+                      : null}
+
+                    <LayoutGroup>
+                      <Table aria-label="Ranking">
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-10">#</TableHead>
+                            <TableHead className="w-16">Move</TableHead>
+                            <TableHead>ID</TableHead>
+                            <TableHead>Distance</TableHead>
+                            {aspectNames.map((aspectName) => (
+                              <TableHead key={aspectName} className="font-mono">
+                                {aspectName}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <AnimatePresence initial={false}>
+                            {reranked.map((item, position) => {
+                              const previous = serverRanks.get(item.row.id)
+                              const delta = previous === undefined
+                                ? 0
+                                : previous - (position + 1)
+                              return (
+                                <MotionTableRow
+                                  key={item.row.id}
+                                  layout
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={REORDER_TRANSITION}
+                                  className="cursor-pointer"
+                                  data-state={selectedId === item.row.id
+                                    ? "selected"
+                                    : undefined}
+                                  onClick={() => setSelectedId(item.row.id)}
+                                >
+                                  <TableCell className="text-muted-foreground">
+                                    {position + 1}
                                   </TableCell>
-                                )
-                              })}
-                            </MotionTableRow>
-                          )
-                        })}
-                      </AnimatePresence>
-                    </TableBody>
-                  </Table>
-                </LayoutGroup>
-              </CardContent>
-            </Card>
+                                  <TableCell>
+                                    <RankDelta delta={delta} />
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
+                                    {item.row.id}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-xs">
+                                    <AnimatedNumber value={item.distance} />
+                                  </TableCell>
+                                  {aspectNames.map((aspectName) => {
+                                    const grade = item.grades.find(
+                                      (entry) => entry.name === aspectName,
+                                    )
+                                    return (
+                                      <TableCell
+                                        key={aspectName}
+                                        className="font-mono text-xs text-muted-foreground"
+                                      >
+                                        {grade?.raw === null ||
+                                            grade?.raw === undefined
+                                          ? "—"
+                                          : grade.raw.toFixed(3)}
+                                      </TableCell>
+                                    )
+                                  })}
+                                </MotionTableRow>
+                              )
+                            })}
+                          </AnimatePresence>
+                        </TableBody>
+                      </Table>
+                    </LayoutGroup>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="compare" className="min-w-0">
+                <PlaygroundCompare
+                  pinned={pinned}
+                  current={reranked.map((item) => ({
+                    id: item.row.id,
+                    distance: item.distance,
+                  }))}
+                  currentValues={values}
+                  metric={metric}
+                  canPin={ranValues !== null && ranSignature !== null}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onPin={() => {
+                    if (ranValues === null) {
+                      return
+                    }
+                    let request
+                    try {
+                      request = buildPlaygroundRequest(ranValues)
+                    } catch (caught) {
+                      toastCaughtError(caught, "Could not pin this search")
+                      return
+                    }
+                    setPinned({
+                      values: structuredClone(ranValues),
+                      rows: structuredClone(rows),
+                      weightsUsed: { ...weightsUsed },
+                      request,
+                    })
+                  }}
+                  onRestore={() => {
+                    if (pinned === null) {
+                      return
+                    }
+                    form.reset(structuredClone(pinned.values))
+                  }}
+                  onClear={() => setPinned(null)}
+                />
+              </TabsContent>
+            </Tabs>
 
             {selected
               ? (

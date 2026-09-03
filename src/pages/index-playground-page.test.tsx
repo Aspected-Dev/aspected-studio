@@ -255,4 +255,57 @@ describe("IndexPlaygroundPage", () => {
     })
     expect(await screen.findByText("title-match")).toBeInTheDocument()
   })
+
+  it("keeps Compare pinning unavailable until a search has run", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByLabelText("Use title")
+
+    await user.click(screen.getByRole("tab", { name: "Compare" }))
+
+    expect(screen.getByRole("button", { name: "Pin current as A" }))
+      .toBeDisabled()
+  })
+
+  it("pins A, then compares a local weight change without a second search", async () => {
+    const user = await setupManual()
+    await fillQuery(user)
+    await user.click(screen.getByRole("button", { name: "Run search" }))
+    await screen.findByText("title-match")
+    expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole("tab", { name: "Compare" }))
+    await user.click(screen.getByRole("button", { name: "Pin current as A" }))
+
+    expect(await screen.findByText("A vs B")).toBeInTheDocument()
+
+    setWeight("price", "2")
+
+    expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
+    expect(screen.getByText("price weight 1 to 2")).toBeInTheDocument()
+
+    const movement = screen.getByRole("table", { name: "Movement" })
+    const ids = within(movement)
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => (row as HTMLTableRowElement).cells[3].textContent ?? "")
+    expect(ids).toEqual(["price-match", "title-match"])
+  })
+
+  it("restores the pinned weights onto the form", async () => {
+    const user = await setupManual()
+    await fillQuery(user)
+    await user.click(screen.getByRole("button", { name: "Run search" }))
+    await screen.findByText("Live")
+
+    await user.click(screen.getByRole("tab", { name: "Compare" }))
+    await user.click(screen.getByRole("button", { name: "Pin current as A" }))
+
+    setWeight("title", "4")
+    expect(screen.getByLabelText("Weight for title")).toHaveValue(4)
+
+    await user.click(screen.getByRole("button", { name: "Restore A" }))
+
+    expect(screen.getByLabelText("Weight for title")).toHaveValue(1)
+  })
 })

@@ -103,6 +103,26 @@ the real search lands. And an aspect sent at weight `0` gets no distance back
 from the server, so raising it again marks the preview stale rather than
 guessing.
 
+### Compare (A/B)
+
+The Compare tab pins the last real search as config A, then lets you keep
+tweaking into B. B is whatever the Ranking tab is already showing, including
+local weight previews, so there is no second request path.
+
+Pinning freezes the form values, result rows, and weights from that search.
+Restore A writes those values back onto the form. Clear drops the pin.
+
+The difference is shown three ways:
+
+| View                          | What it answers                                                                                                                                          |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overlap@depth                 | How many of the shared top-`depth` documents appear in both lists (`depth` is `min(k_A, k_B)`)                                                           |
+| RBO (p 0.9)                   | Rank-biased overlap. Top ranks weigh more than lower ones, so a swap at rank 1 hurts more than a swap at rank 40. Identical prefixes score exactly `1`   |
+| Bump chart and movement table | A's ids down the left axis, B's down the right, lines connecting the same document. Entered and dropped documents show as a single dot on their own side |
+
+Kendall tau is deliberately not used: it treats every pairwise swap equally,
+which is the wrong question for a top-k ranking.
+
 ## Tasks
 
 | Task          | Command                 | Purpose                             |
