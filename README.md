@@ -13,7 +13,7 @@ Agents: start with [`AGENTS.md`](AGENTS.md) and follow `.cursor/rules`.
 - React Router 7
 - Zod v4
 - TanStack Table v9
-- Monaco Editor for JSON
+- Monaco Editor for JSON and shell, themed to Studio's shadcn tokens
 - shadcn/ui + Tailwind CSS v4
 - Recharts (via shadcn chart) for the Playground contribution bars
 - Motion for re-rank animations
@@ -61,8 +61,9 @@ uses a static API token, paste it in the connection dialog. Studio sends
 Refreshing Studio does not reconnect automatically.
 
 Create an index, upload documents to train it, then search. Schema is set at
-create time and is read-only afterwards. Each mutating or search call shows the
-equivalent curl command.
+create time and is read-only afterwards. Each mutating or search call shows a
+Request card with the REST method, path, and JSON body. Curl is one click away
+behind Code, in a side sheet, so the page stays focused on the API payload.
 
 ## Search Playground
 
@@ -117,7 +118,7 @@ The difference is shown three ways:
 | View                          | What it answers                                                                                                                                          |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Overlap@depth                 | How many of the shared top-`depth` documents appear in both lists (`depth` is `min(k_A, k_B)`)                                                           |
-| RBO (p 0.9)                   | Rank-biased overlap. Top ranks weigh more than lower ones, so a swap at rank 1 hurts more than a swap at rank 40. Identical prefixes score exactly `1`   |
+| RBO (p 0.9)                   | Rank-biased overlap. Persistence `p` controls how quickly weight falls off down the list; at `0.9`, roughly the top ten ranks dominate. A swap at rank 1 hurts more than a swap at rank 40. Identical prefixes score exactly `1` |
 | Bump chart and movement table | A's ids down the left axis, B's down the right, lines connecting the same document. Entered and dropped documents show as a single dot on their own side |
 
 Kendall tau is deliberately not used: it treats every pairwise swap equally,

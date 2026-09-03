@@ -1,8 +1,21 @@
 import { useEffect, useRef, useState } from "react"
 import Editor, { type OnMount } from "@monaco-editor/react"
+import { CopyIcon } from "lucide-react"
+import { toast } from "sonner"
 import { useTheme } from "@/components/theme-provider.tsx"
+import { Button } from "@/components/ui/button.tsx"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip.tsx"
 import { jsonEditorFitHeight } from "@/lib/json-editor-height.ts"
-import { configureMonaco } from "@/lib/monaco.ts"
+import { configureMonaco, monaco } from "@/lib/monaco.ts"
+import {
+  aspectedMonacoTheme,
+  defineAspectedThemes,
+} from "@/lib/monaco-theme.ts"
 import { cn } from "@/lib/utils.ts"
 
 configureMonaco()
@@ -11,18 +24,23 @@ const READ_ONLY_MIN_HEIGHT = 40
 const EDITABLE_MIN_HEIGHT = 160
 const DEFAULT_MAX_HEIGHT = 560
 
-/** Props for the theme-aware JSON Monaco editor. */
+/** Languages the Studio Monaco wrapper supports. */
+export type JsonEditorLanguage = "json" | "shell"
+
+/** Props for the theme-aware Monaco editor. */
 export type JsonEditorProps = {
-  /** JSON text shown in the editor. */
+  /** Text shown in the editor. */
   value: string
-  /** Called when the user edits the JSON. Ignored when `readOnly` is true. */
+  /** Called when the user edits. Ignored when `readOnly` is true. */
   onChange?: (value: string) => void
-  /** When true, the editor cannot be edited. */
+  /** When true, the editor cannot be edited and shows a copy control. */
   readOnly?: boolean
+  /** Monaco language mode. Defaults to JSON. */
+  language?: JsonEditorLanguage
   /** Optional class names for the editor wrapper. */
   className?: string
   /**
-   * When true, the editor height tracks the JSON. Defaults to true.
+   * When true, the editor height tracks the content. Defaults to true.
    * Set false to use a fixed `height`.
    */
   fitContent?: boolean
@@ -35,12 +53,17 @@ export type JsonEditorProps = {
 }
 
 /**
- * Theme-aware Monaco editor locked to JSON.
+ * Theme-aware Monaco editor for JSON and shell snippets.
+ *
+ * Uses Studio's `aspected-light` / `aspected-dark` themes so the editor chrome
+ * matches shadcn cards instead of stock VS Code colors. Read-only instances
+ * show a copy button in the top-right corner.
  */
 export function JsonEditor({
   value,
   onChange,
   readOnly = false,
+  language = "json",
   className,
   fitContent = true,
   height = "240px",
@@ -59,6 +82,7 @@ export function JsonEditor({
       ? "dark"
       : "light")
     : theme
+  const monacoTheme = aspectedMonacoTheme(resolved)
 
   useEffect(() => {
     if (!fitContent) {
@@ -67,7 +91,15 @@ export function JsonEditor({
     setFittedHeight(jsonEditorFitHeight(value, { min, max: maxHeight }))
   }, [fitContent, maxHeight, min, value])
 
+  useEffect(() => {
+    defineAspectedThemes(monaco)
+    monaco.editor.setTheme(monacoTheme)
+  }, [monacoTheme])
+
   const onMount: OnMount = (editor) => {
+    defineAspectedThemes(monaco)
+    monaco.editor.setTheme(monacoTheme)
+
     const layoutToContainer = () => {
       const width = containerRef.current?.clientWidth
       if (!width) {
@@ -98,16 +130,42 @@ export function JsonEditor({
     <div
       ref={containerRef}
       className={cn(
-        "w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-input",
+        "relative w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-card",
         "[&_.monaco-editor]:max-w-full [&_.overflow-guard]:max-w-full",
         className,
       )}
     >
+      {readOnly
+        ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant="secondary"
+                    className="absolute top-2 right-2 z-10 border border-border/80 bg-card/90 shadow-sm backdrop-blur-sm"
+                    aria-label="Copy"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(value)
+                      toast.success("Copied")
+                    }}
+                  />
+                }
+              >
+                <CopyIcon />
+              </TooltipTrigger>
+              <TooltipContent>Copy to clipboard</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )
+        : null}
       <Editor
         width="100%"
         height={fitContent ? fittedHeight : height}
-        language="json"
-        theme={resolved === "dark" ? "vs-dark" : "light"}
+        language={language}
+        theme={monacoTheme}
         value={value}
         onChange={(next) => onChange?.(next ?? "")}
         onMount={onMount}
@@ -115,8 +173,10 @@ export function JsonEditor({
           readOnly,
           domReadOnly: readOnly,
           minimap: { enabled: false },
+          glyphMargin: false,
           fontSize: 13,
           lineHeight: 19,
+          // Leave room for the copy control on read-only editors.
           padding: { top: 8, bottom: 8 },
           scrollBeyondLastLine: false,
           wordWrap: "on",

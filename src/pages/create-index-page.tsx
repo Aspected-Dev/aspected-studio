@@ -296,10 +296,7 @@ export function CreateIndexPage() {
         <Button type="submit">Create</Button>
       </div>
 
-      <section className="grid gap-2">
-        <h2 className="text-sm font-medium">Request</h2>
-        <RequestInspector request={lastRequest} />
-      </section>
+      <RequestInspector request={lastRequest} />
     </form>
   )
 }

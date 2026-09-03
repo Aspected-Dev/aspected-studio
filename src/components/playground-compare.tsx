@@ -1,11 +1,11 @@
 import { useMemo } from "react"
 import { AnimatePresence, LayoutGroup } from "motion/react"
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, CircleHelpIcon } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis } from "recharts"
 import { AnimatedNumber } from "@/components/animated-number.tsx"
 import { MotionTableRow } from "@/components/motion-table-row.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
-import { Button } from "@/components/ui/button.tsx"
+import { Button, buttonVariants } from "@/components/ui/button.tsx"
 import {
   Card,
   CardContent,
@@ -20,6 +20,13 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip.tsx"
+import { cn } from "@/lib/utils.ts"
 import {
   Table,
   TableBody,
@@ -209,15 +216,25 @@ function PinnedCompare({
             digits={1}
             suffix="%"
             detail={`${summary.shared} of ${summary.depth}`}
+            help={`Share of the top ${summary.depth} documents that appear in both A and B. Depth is the smaller of the two list lengths.`}
           />
           <StatTile
             label={`RBO (p ${RBO_P})`}
             value={summary.rbo}
             digits={3}
             detail="Top-weighted agreement"
+            help={`Rank-biased overlap. Higher ranks count more than lower ones, so a swap at rank 1 hurts more than one further down. The persistence parameter p (here ${RBO_P}) controls how quickly that weight falls off; at ${RBO_P}, roughly the top ${
+              Math.round(1 / (1 - RBO_P))
+            } ranks dominate the score. Identical prefixes score exactly 1.`}
           />
           <div className="grid gap-1 rounded-lg border p-3">
-            <span className="text-xs text-muted-foreground">Movement</span>
+            <div className="flex min-w-0 items-center gap-1">
+              <span className="text-xs text-muted-foreground">Movement</span>
+              <StatHelp
+                label="Movement"
+                text="How many documents entered or left the compared top-k, and the largest rank change among documents present in both lists."
+              />
+            </div>
             <p className="font-mono text-sm">
               {summary.entered} entered, {summary.left} left
             </p>
@@ -374,22 +391,55 @@ function StatTile({
   digits,
   suffix,
   detail,
+  help,
 }: {
   label: string
   value: number
   digits: number
   suffix?: string
   detail: string
+  help: string
 }) {
   return (
     <div className="grid gap-1 rounded-lg border p-3">
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 items-center gap-1">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <StatHelp label={label} text={help} />
+      </div>
       <p className="font-mono text-lg">
         <AnimatedNumber value={value} digits={digits} />
         {suffix ?? ""}
       </p>
       <p className="text-xs text-muted-foreground">{detail}</p>
     </div>
+  )
+}
+
+/**
+ * Hover-only help for a compare metric. No navigation; focus shows the same
+ * tip as hover so the explanation stays keyboard reachable.
+ */
+function StatHelp({ label, text }: { label: string; text: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <button
+              type="button"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon-xs" }),
+                "text-muted-foreground",
+              )}
+              aria-label={`About ${label}`}
+            />
+          }
+        >
+          <CircleHelpIcon />
+        </TooltipTrigger>
+        <TooltipContent>{text}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 

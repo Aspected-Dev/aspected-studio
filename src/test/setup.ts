@@ -79,18 +79,46 @@ if (!("ResizeObserver" in globalThis)) {
   }
 }
 
-vi.mock("@/components/json-editor.tsx", () => ({
-  JsonEditor: (props: {
-    value: string
-    onChange?: (value: string) => void
-    readOnly?: boolean
-  }) =>
-    createElement("textarea", {
-      "data-testid": "json-editor",
-      "aria-readonly": props.readOnly ? "true" : "false",
-      value: props.value,
-      readOnly: props.readOnly,
-      onChange: (event: { currentTarget: { value: string } }) =>
-        props.onChange?.(event.currentTarget.value),
-    }),
-}))
+vi.mock("@/components/json-editor.tsx", () => {
+  // Resolve the sonner mock once so copy clicks toast synchronously in tests.
+  let toastSuccess: ((message: string) => void) | null = null
+  void import("sonner").then((mod) => {
+    toastSuccess = mod.toast.success
+  })
+
+  return {
+    JsonEditor: (props: {
+      value: string
+      onChange?: (value: string) => void
+      readOnly?: boolean
+      language?: string
+    }) =>
+      createElement(
+        "div",
+        { "data-slot": "json-editor-mock" },
+        createElement("textarea", {
+          "data-testid": "json-editor",
+          "data-language": props.language ?? "json",
+          "aria-readonly": props.readOnly ? "true" : "false",
+          value: props.value,
+          readOnly: props.readOnly,
+          onChange: (event: { currentTarget: { value: string } }) =>
+            props.onChange?.(event.currentTarget.value),
+        }),
+        props.readOnly
+          ? createElement(
+            "button",
+            {
+              type: "button",
+              "aria-label": "Copy",
+              onClick: () => {
+                void navigator.clipboard.writeText(props.value)
+                toastSuccess?.("Copied")
+              },
+            },
+            "Copy",
+          )
+          : null,
+      ),
+  }
+})

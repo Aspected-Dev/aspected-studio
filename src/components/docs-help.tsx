@@ -25,6 +25,11 @@ type DocsPageProps = {
   blurb?: string | null
 }
 
+type DocsHelpIconProps = DocsPageProps & {
+  /** Hit target size. Defaults to `icon-xs`. Use `icon-sm` to match `Button size="sm"`. */
+  size?: "icon-xs" | "icon-sm"
+}
+
 /**
  * Icon button that opens a docs page in a new window.
  * Hover shows a short blurb when one is provided; omit `blurb` to suppress
@@ -33,7 +38,13 @@ type DocsPageProps = {
  * Inside a Badge the control shrinks to the chip height so the icon
  * does not sit in extra left and right gutters.
  */
-export function DocsHelpIcon({ page, hash, label, blurb }: DocsPageProps) {
+export function DocsHelpIcon({
+  page,
+  hash,
+  label,
+  blurb,
+  size = "icon-xs",
+}: DocsHelpIconProps) {
   const title = label ?? DOCS_PAGES[page].title
   // When blurb is explicitly passed use it; otherwise fall back to the catalog.
   // Pass blurb={null} to suppress the tooltip content entirely.
@@ -49,7 +60,7 @@ export function DocsHelpIcon({ page, hash, label, blurb }: DocsPageProps) {
               rel="noopener noreferrer"
               data-docs-help=""
               className={cn(
-                buttonVariants({ variant: "ghost", size: "icon-xs" }),
+                buttonVariants({ variant: "ghost", size }),
                 "in-data-[slot=badge]:size-4 in-data-[slot=badge]:rounded-[min(var(--radius-md),6px)]",
               )}
               aria-label={`Open docs: ${title}`}

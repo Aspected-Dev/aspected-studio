@@ -455,10 +455,7 @@ export function IndexDocsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <section className="grid gap-2">
-        <h2 className="text-sm font-medium">Request</h2>
-        <RequestInspector request={lastRequest} />
-      </section>
+      <RequestInspector request={lastRequest} />
     </div>
   )
 }

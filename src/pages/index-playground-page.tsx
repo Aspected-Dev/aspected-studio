@@ -548,7 +548,7 @@ export function IndexPlaygroundPage() {
           </div>
         </div>
 
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[22rem_1fr]">
+        <div className="grid min-w-0 gap-6 xl:grid-cols-[22rem_1fr] xl:items-start">
           <Card>
             <CardHeader>
               <CardTitle>Query and weights</CardTitle>
@@ -770,7 +770,7 @@ export function IndexPlaygroundPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="compare" className="min-w-0">
+              <TabsContent value="compare" className="min-w-0 flex-none">
                 <PlaygroundCompare
                   pinned={pinned}
                   current={reranked.map((item) => ({
@@ -876,10 +876,7 @@ export function IndexPlaygroundPage() {
               )
               : null}
 
-            <section className="grid gap-2">
-              <h2 className="text-sm font-medium">Request</h2>
-              <RequestInspector request={lastRequest} />
-            </section>
+            <RequestInspector request={lastRequest} density="compact" />
           </div>
         </div>
       </div>

@@ -1,10 +1,12 @@
 import { loader } from "@monaco-editor/react"
 import * as monaco from "monaco-editor"
+import { defineAspectedThemes } from "@/lib/monaco-theme.ts"
 
 let configured = false
 
 /**
- * Bundles Monaco from `node_modules` instead of loading the CDN copy.
+ * Bundles Monaco from `node_modules` instead of loading the CDN copy, and
+ * registers Studio's shadcn-colored themes.
  */
 export function configureMonaco(): void {
   if (configured) {
@@ -33,4 +35,8 @@ export function configureMonaco(): void {
   }
 
   loader.config({ monaco })
+  defineAspectedThemes(monaco)
 }
+
+/** Monaco API used by editors that need to refresh the Studio theme. */
+export { monaco }
