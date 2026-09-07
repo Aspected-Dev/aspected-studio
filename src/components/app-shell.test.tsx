@@ -108,7 +108,7 @@ describe("AppShell", () => {
     renderShell()
     expect(screen.getByRole("button", { name: "Settings" }))
       .toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Get Help" }))
+    expect(screen.getByRole("button", { name: "Get help" }))
       .toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Support" })).toHaveAttribute(
       "href",

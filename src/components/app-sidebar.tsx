@@ -8,6 +8,7 @@ import {
   LayoutListIcon,
   SearchIcon,
   SlidersHorizontalIcon,
+  TargetIcon,
 } from "lucide-react"
 import { ConnectionFooter } from "@/components/connection-footer.tsx"
 import { NavSecondary } from "@/components/nav-secondary.tsx"
@@ -137,6 +138,18 @@ export function AppSidebar(
                             >
                               <SlidersHorizontalIcon />
                               <span>Playground</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton
+                              isActive={location.kind === "index" &&
+                                location.page === "scorecard"}
+                              render={
+                                <Link to={indexPath(indexName, "scorecard")} />
+                              }
+                            >
+                              <TargetIcon />
+                              <span>Scorecard</span>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         </SidebarMenuSub>

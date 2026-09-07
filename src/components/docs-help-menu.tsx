@@ -84,7 +84,7 @@ type DocsHelpMenuProps = {
 }
 
 /**
- * Documentation catalog dropdown used by the sidebar Get Help control.
+ * Documentation catalog dropdown used by the sidebar Get help control.
  */
 export function DocsHelpMenu({
   trigger,

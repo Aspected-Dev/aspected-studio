@@ -66,6 +66,11 @@ const pinned: PinnedRun = {
       ],
     },
   ],
+  ranking: [
+    { id: "title-match", distance: 1 },
+    { id: "price-match", distance: 1.5 },
+    { id: "dropped-doc", distance: 2 },
+  ],
 }
 
 /** B ranking: price-match rises, a new doc enters, dropped-doc leaves. */
@@ -143,6 +148,27 @@ describe("PlaygroundCompare", () => {
     expect(
       screen.getByText("Run a search first so there is something to pin."),
     ).toBeInTheDocument()
+  })
+
+  it("shows no movement when B matches the ranking frozen at pin time", () => {
+    render(
+      <PlaygroundCompare
+        pinned={pinned}
+        current={pinned.ranking}
+        currentValues={pinned.values}
+        metric="Euclidean"
+        canPin
+        selectedId={null}
+        onSelect={vi.fn()}
+        onPin={vi.fn()}
+        onRestore={vi.fn()}
+        onClear={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/0 entered, 0 left/)).toBeInTheDocument()
+    expect(screen.getByText("Max shift")).toBeInTheDocument()
+    expect(screen.getByText("0")).toBeInTheDocument()
   })
 
   it("renders overlap, RBO, movement rows, and New/Dropped badges", () => {

@@ -72,16 +72,18 @@ export function RequestInspector({
           {request
             ? (
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Badge
-                    variant="secondary"
-                    className="font-mono uppercase pt-1.25 h-6 rounded-md"
-                  >
-                    {request.method}
-                  </Badge>
-                  <span className="min-w-0 truncate font-mono text-sm leading-none mt-0.5">
-                    {request.path}
-                  </span>
+                <div className="flex min-w-0 items-center gap-0.5">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Badge
+                      variant="secondary"
+                      className="font-mono uppercase pt-1.25 h-6 rounded-md"
+                    >
+                      {request.method}
+                    </Badge>
+                    <span className="min-w-0 truncate font-mono text-sm leading-none mt-0.5">
+                      {request.path}
+                    </span>
+                  </div>
                   <DocsHelpIcon
                     page="tutorial"
                     hash={DOCS_HASH.tutorialSummary}

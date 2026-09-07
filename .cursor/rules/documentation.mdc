@@ -1,15 +1,44 @@
 ---
-description: README and AGENTS.md documentation conventions when setup or workflows change
-globs: README.md,AGENTS.md
+description: README and docs/ conventions when setup, features, or workflows change
+globs: docs/**/*.md,README.md,AGENTS.md
 alwaysApply: false
 ---
 
 # Documentation
 
-- README is the only long-form project doc. Do not create a `docs/` folder unless
-  the user explicitly asks
-- Update README when tasks, setup steps, or user-facing workflows change
-- Keep AGENTS.md short: point to README and `.cursor/rules`; do not duplicate
-  long manuals there
-- Prefer tables and concrete commands over prose
-- Match the repo voice: direct, no em dashes
+## Where things live
+
+- [`README.md`](README.md) is the developer **entry point**: setup, run, tasks,
+  Definition of Done, links into `docs/`
+- [`docs/`](docs/README.md) is long-form **Studio** documentation: overview,
+  architecture, features, contributing, tutorials, demos
+- Aspected **product** docs (resolvers, HTTP API) live in the sibling
+  `aspects.dev` repo (`deno task dev:docs`). Do not confuse that tree with
+  `docs/`
+
+## When you change the product
+
+- Update the matching page under `docs/` when user-facing behavior, workflows,
+  metrics, or design decisions change
+- Update step-by-step tutorials under `docs/tutorials/` when button labels,
+  order of steps, or expected results change
+- Update README when setup, tasks, env vars, or the entry checklist change
+- Link new major pages from `docs/README.md`
+- Prefer focused pages and links over duplicating the same manual in two files
+
+## Voice
+
+- Direct, concrete commands and button names in tutorials
+- Prefer tables where they clarify
+- Early tutorials (connect, documents, search): lean steps; spare the “why”
+  prose. Depth belongs on Playground Compare and Scorecard metrics (how to
+  interpret numbers while optimizing indexes)
+- No em dashes, en dashes, or `--` as punctuation (hyphens in flags and compound
+  words are fine)
+
+## Do not
+
+- Do not dump Playground / Scorecard / metrics manuals back into the README
+- Do not leave `docs/` stale after shipping a user-visible behavior change
+- Keep [`AGENTS.md`](AGENTS.md) short: point at README, `docs/README.md`, and
+  `.cursor/rules`

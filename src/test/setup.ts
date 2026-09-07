@@ -3,6 +3,53 @@ import { vi } from "vitest"
 import "@testing-library/jest-dom/vitest"
 
 /**
+ * Per-file `localStorage`.
+ *
+ * The runtime hands every worker the same storage, so one file calling
+ * `clear()` could wipe what another file had just written. Each file gets its
+ * own in-memory copy instead, which keeps storage-backed suites independent.
+ */
+class MemoryStorage implements Storage {
+  #entries = new Map<string, string>()
+
+  get length() {
+    return this.#entries.size
+  }
+
+  key(index: number) {
+    return [...this.#entries.keys()][index] ?? null
+  }
+
+  getItem(key: string) {
+    return this.#entries.get(key) ?? null
+  }
+
+  setItem(key: string, value: string) {
+    this.#entries.set(key, String(value))
+  }
+
+  removeItem(key: string) {
+    this.#entries.delete(key)
+  }
+
+  clear() {
+    this.#entries.clear()
+  }
+}
+
+for (const key of ["localStorage", "sessionStorage"] as const) {
+  const storage = new MemoryStorage()
+  for (const target of [globalThis, globalThis.window]) {
+    if (target) {
+      Object.defineProperty(target, key, {
+        configurable: true,
+        get: () => storage,
+      })
+    }
+  }
+}
+
+/**
  * Base UI menus and floating UI call these in jsdom, which does not implement
  * them. Without the stubs, a trigger click can no-op or throw mid-open.
  */

@@ -1,11 +1,12 @@
 import { useMemo } from "react"
 import { AnimatePresence, LayoutGroup } from "motion/react"
-import { ArrowDownIcon, ArrowUpIcon, CircleHelpIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { Line, LineChart, XAxis, YAxis } from "recharts"
 import { AnimatedNumber } from "@/components/animated-number.tsx"
+import { MetricHelp, MetricTile } from "@/components/metric-tile.tsx"
 import { MotionTableRow } from "@/components/motion-table-row.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
-import { Button, buttonVariants } from "@/components/ui/button.tsx"
+import { Button } from "@/components/ui/button.tsx"
 import {
   Card,
   CardContent,
@@ -20,13 +21,6 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip.tsx"
-import { cn } from "@/lib/utils.ts"
 import {
   Table,
   TableBody,
@@ -133,13 +127,7 @@ function PinnedCompare({
   onRestore,
   onClear,
 }: PlaygroundCompareProps & { pinned: PinnedRun }) {
-  const a = useMemo(
-    () =>
-      [...pinned.rows]
-        .sort((left, right) => left.distance - right.distance)
-        .map((row) => ({ id: row.id, distance: row.distance })),
-    [pinned.rows],
-  )
+  const a = useMemo(() => pinned.ranking, [pinned.ranking])
   const compared = useMemo(
     () => compareRankings(a, current),
     [a, current],
@@ -210,7 +198,7 @@ function PinnedCompare({
       </CardHeader>
       <CardContent className="grid min-w-0 gap-6">
         <div className="grid gap-4 sm:grid-cols-3">
-          <StatTile
+          <MetricTile
             label={`Overlap@${summary.depth}`}
             value={summary.fraction * 100}
             digits={1}
@@ -218,7 +206,7 @@ function PinnedCompare({
             detail={`${summary.shared} of ${summary.depth}`}
             help={`Share of the top ${summary.depth} documents that appear in both A and B. Depth is the smaller of the two list lengths.`}
           />
-          <StatTile
+          <MetricTile
             label={`RBO (p ${RBO_P})`}
             value={summary.rbo}
             digits={3}
@@ -228,9 +216,9 @@ function PinnedCompare({
             } ranks dominate the score. Identical prefixes score exactly 1.`}
           />
           <div className="grid gap-1 rounded-lg border p-3">
-            <div className="flex min-w-0 items-center gap-1">
+            <div className="flex min-w-0 items-center">
               <span className="text-xs text-muted-foreground">Movement</span>
-              <StatHelp
+              <MetricHelp
                 label="Movement"
                 text="How many documents entered or left the compared top-k, and the largest rank change among documents present in both lists."
               />
@@ -381,65 +369,6 @@ function PinnedCompare({
         </LayoutGroup>
       </CardContent>
     </Card>
-  )
-}
-
-/** One summary figure with an animated value. */
-function StatTile({
-  label,
-  value,
-  digits,
-  suffix,
-  detail,
-  help,
-}: {
-  label: string
-  value: number
-  digits: number
-  suffix?: string
-  detail: string
-  help: string
-}) {
-  return (
-    <div className="grid gap-1 rounded-lg border p-3">
-      <div className="flex min-w-0 items-center gap-1">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <StatHelp label={label} text={help} />
-      </div>
-      <p className="font-mono text-lg">
-        <AnimatedNumber value={value} digits={digits} />
-        {suffix ?? ""}
-      </p>
-      <p className="text-xs text-muted-foreground">{detail}</p>
-    </div>
-  )
-}
-
-/**
- * Hover-only help for a compare metric. No navigation; focus shows the same
- * tip as hover so the explanation stays keyboard reachable.
- */
-function StatHelp({ label, text }: { label: string; text: string }) {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <button
-              type="button"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon-xs" }),
-                "text-muted-foreground",
-              )}
-              aria-label={`About ${label}`}
-            />
-          }
-        >
-          <CircleHelpIcon />
-        </TooltipTrigger>
-        <TooltipContent>{text}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   )
 }
 

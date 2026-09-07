@@ -235,7 +235,7 @@ export function IndexDocsPage() {
     }),
     columnHelper.accessor("accessList", {
       header: () => (
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center">
           Access
           <DocsHelpIcon
             page="accessControl"

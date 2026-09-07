@@ -166,7 +166,7 @@ export function DocsField({
 }: DocsFieldProps) {
   return (
     <Field data-invalid={error ? true : undefined}>
-      <div className="flex min-w-0 items-center gap-1">
+      <div className="flex min-w-0 items-center">
         <FieldLabel htmlFor={htmlFor}>
           {mono
             ? <span className="font-mono leading-none">{label}</span>

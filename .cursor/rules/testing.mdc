@@ -5,6 +5,8 @@ alwaysApply: false
 
 # Testing
 
+See also [`docs/contributing.md`](docs/contributing.md).
+
 - Use Vitest + Testing Library + jsdom
 - Co-locate tests as `*.test.ts` or `*.test.tsx` next to the source
 - Prefer testing pure logic and data mappers; keep component tests light

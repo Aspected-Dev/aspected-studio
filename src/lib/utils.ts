@@ -13,6 +13,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * A count with its noun, pluralised by adding `s` unless `plural` is given.
+ *
+ * @example
+ * countLabel(1, "case") // "1 case"
+ * countLabel(3, "case") // "3 cases"
+ */
+export function countLabel(
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+): string {
+  return `${count} ${count === 1 ? singular : plural}`
+}
+
+/**
  * Writes text to the clipboard. Callers should toast success or map failures.
  */
 export async function copyToClipboard(value: string): Promise<void> {

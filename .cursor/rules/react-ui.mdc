@@ -6,6 +6,9 @@ alwaysApply: false
 
 # React and UI
 
+See also [`docs/contributing.md`](docs/contributing.md) for stack and Definition
+of Done.
+
 - Functional components and TypeScript only
 - Tailwind CSS v4 utility classes; no new CSS frameworks
 - Prefer shadcn/ui from `@/components/ui/*`; do not hand-roll duplicates

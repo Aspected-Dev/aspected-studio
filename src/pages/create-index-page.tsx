@@ -317,7 +317,7 @@ function AspectCard({
   return (
     <div className="grid gap-3 rounded-xl border p-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center">
           <p className="text-sm font-medium">Aspect {index + 1}</p>
           <DocsHelpIcon
             page={docsPageForAspectType(type)}
@@ -512,45 +512,40 @@ function AspectSettings({
     case "datetime":
       return (
         <div className="grid gap-3">
-          <div className="flex flex-wrap items-center gap-1">
-            <p className="text-sm text-muted-foreground">Granularities</p>
-            <DocsHelpIcon
-              page="resolverDatetime"
-              label="DateTime granularities"
-              blurb="timestamp and weekday need Aspected 0.3.0 or later. format is only used in the legacy single-granularity mode."
-            />
-          </div>
-          {aspectErrors?.granularities?.message && (
-            <p className="text-sm text-destructive">
-              {aspectErrors.granularities.message}
-            </p>
-          )}
-          <div className="flex flex-wrap gap-3">
-            {DATETIME_GRANULARITIES.map((item) => (
-              <Controller
-                key={item}
-                control={form.control}
-                name={`aspects.${index}.granularities`}
-                render={({ field }) => (
-                  <Field orientation="horizontal">
-                    <Checkbox
-                      checked={field.value.includes(item)}
-                      onCheckedChange={(checked) => {
-                        const selected = new Set(field.value)
-                        if (checked) {
-                          selected.add(item)
-                        } else {
-                          selected.delete(item)
-                        }
-                        field.onChange([...selected])
-                      }}
-                    />
-                    <FieldLabel className="font-mono">{item}</FieldLabel>
-                  </Field>
-                )}
-              />
-            ))}
-          </div>
+          <DocsField
+            label="Granularities"
+            page="resolverDatetime"
+            docsLabel="DateTime granularities"
+            blurb="timestamp and weekday need Aspected 0.3.0 or later. format is only used in the legacy single-granularity mode."
+            error={aspectErrors?.granularities?.message}
+          >
+            <div className="flex flex-wrap gap-3">
+              {DATETIME_GRANULARITIES.map((item) => (
+                <Controller
+                  key={item}
+                  control={form.control}
+                  name={`aspects.${index}.granularities`}
+                  render={({ field }) => (
+                    <Field orientation="horizontal">
+                      <Checkbox
+                        checked={field.value.includes(item)}
+                        onCheckedChange={(checked) => {
+                          const selected = new Set(field.value)
+                          if (checked) {
+                            selected.add(item)
+                          } else {
+                            selected.delete(item)
+                          }
+                          field.onChange([...selected])
+                        }}
+                      />
+                      <FieldLabel className="font-mono">{item}</FieldLabel>
+                    </Field>
+                  )}
+                />
+              ))}
+            </div>
+          </DocsField>
           <div className="grid gap-3 sm:grid-cols-3">
             <DocsField
               label="format (legacy)"

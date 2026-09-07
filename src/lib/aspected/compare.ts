@@ -14,6 +14,14 @@ export const RBO_P = 0.9
 export type PinnedRun = {
   values: PlaygroundFormValues
   rows: SearchResultRow[]
+  /**
+   * Ranking as shown on the Ranking tab when A was pinned.
+   *
+   * Compare must use this instead of sorting `rows` by the server's total
+   * distance: for Cosine, client re-score at the same weights can reorder the
+   * list, and B is always that re-scored ranking.
+   */
+  ranking: Array<{ id: string; distance: number }>
   weightsUsed: Record<string, number>
   request: SearchIndexRequest
 }

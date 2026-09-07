@@ -1,7 +1,12 @@
 import { DOCS_HASH, type DocsTarget } from "@/lib/docs.ts"
 
 /** Page within an index: schema is the index root. */
-export type IndexPage = "schema" | "docs" | "search" | "playground"
+export type IndexPage =
+  | "schema"
+  | "docs"
+  | "search"
+  | "playground"
+  | "scorecard"
 
 /** Parsed Studio location used by the sidebar and breadcrumbs. */
 export type StudioLocation =
@@ -29,6 +34,9 @@ export function indexPath(name: string, page: IndexPage = "schema"): string {
   if (page === "playground") {
     return `/indexes/${encoded}/playground`
   }
+  if (page === "scorecard") {
+    return `/indexes/${encoded}/scorecard`
+  }
   return `/indexes/${encoded}`
 }
 
@@ -52,7 +60,7 @@ export function parseStudioLocation(pathname: string): StudioLocation {
   }
 
   const match = pathname.match(
-    /^\/indexes\/([^/]+)(?:\/(docs|search|playground))?\/?$/,
+    /^\/indexes\/([^/]+)(?:\/(docs|search|playground|scorecard))?\/?$/,
   )
   if (!match) {
     return { kind: "indexes" }
@@ -64,6 +72,8 @@ export function parseStudioLocation(pathname: string): StudioLocation {
     ? "search"
     : match[2] === "playground"
     ? "playground"
+    : match[2] === "scorecard"
+    ? "scorecard"
     : "schema"
 
   return {
@@ -82,6 +92,9 @@ function indexPageLabel(page: IndexPage): string {
   }
   if (page === "playground") {
     return "Playground"
+  }
+  if (page === "scorecard") {
+    return "Scorecard"
   }
   return "Schema"
 }
@@ -109,7 +122,9 @@ export function docsTargetForLocation(
     if (location.page === "search") {
       return { page: "resolvers", hash: DOCS_HASH.combiningResolvers }
     }
-    if (location.page === "playground") {
+    if (
+      location.page === "playground" || location.page === "scorecard"
+    ) {
       return { page: "resolvers", hash: DOCS_HASH.inspectingResolvers }
     }
     return { page: "resolvers" }

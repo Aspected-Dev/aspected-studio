@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { IndexPlaygroundPage } from "./index-playground-page.tsx"
+import { GOLDEN_SET_VERSION, saveGoldenSets } from "@/lib/aspected/golden.ts"
 import type { IndexDetail, SearchResultRow } from "@/lib/aspected/types.ts"
 
 const index: IndexDetail = {
@@ -134,6 +135,7 @@ describe("IndexPlaygroundPage", () => {
 
   afterEach(() => {
     cleanup()
+    localStorage.clear()
     connection.client.getIndex.mockReset()
     connection.client.searchIndex.mockReset()
   })
@@ -205,6 +207,54 @@ describe("IndexPlaygroundPage", () => {
 
     expect(rankedIds()).toEqual(["price-match", "title-match"])
     expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps Move arrows after a weight change becomes Live", async () => {
+    const user = await setupManual()
+    await fillQuery(user)
+    await user.click(screen.getByRole("button", { name: "Run search" }))
+    await screen.findByText("title-match")
+
+    setWeight("price", "2")
+    expect(screen.getByText("Preview")).toBeInTheDocument()
+    expect(rankedIds()).toEqual(["price-match", "title-match"])
+
+    // Mock a Live response that already prefers price, as a real server would
+    // under the new weights. The fixture explanations are not weight-aware.
+    connection.client.searchIndex.mockResolvedValueOnce({
+      data: [
+        {
+          id: "price-match",
+          distance: 0.4,
+          explanation: [
+            { name: "title", value: "hose", distance: 3.6 },
+            { name: "price", value: 20, distance: 0.4 },
+          ],
+        },
+        {
+          id: "title-match",
+          distance: 1.6,
+          explanation: [
+            { name: "title", value: "rake", distance: 0.4 },
+            { name: "price", value: 90, distance: 3.6 },
+          ],
+        },
+      ],
+    })
+
+    await user.click(screen.getByRole("button", { name: "Run search" }))
+    await waitFor(() => {
+      expect(screen.getByText("Live")).toBeInTheDocument()
+    })
+    expect(rankedIds()).toEqual(["price-match", "title-match"])
+
+    const table = screen.getByRole("table", { name: "Ranking" })
+    const priceRow = within(table).getByText("price-match").closest("tr")
+    expect(priceRow).not.toBeNull()
+    const cells = within(priceRow as HTMLElement).getAllByRole("cell")
+    // Rank #1, Move +1 vs the pre-tweak baseline where it sat at #2.
+    expect(cells[0]).toHaveTextContent("1")
+    expect(cells[1]).toHaveTextContent("1")
   })
 
   it("marks the ranking as a preview once weights drift from the run", async () => {
@@ -307,5 +357,76 @@ describe("IndexPlaygroundPage", () => {
     await user.click(screen.getByRole("button", { name: "Restore A" }))
 
     expect(screen.getByLabelText("Weight for title")).toHaveValue(1)
+  })
+
+  it("points the Scorecard tab at the page when no golden set exists", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByLabelText("Use title")
+
+    await user.click(screen.getByRole("tab", { name: "Scorecard" }))
+
+    expect(
+      await screen.findByText("No golden set for this index yet.", {
+        exact: false,
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Create a golden set" }))
+      .toHaveAttribute("href", "/indexes/products/scorecard")
+  })
+
+  it("grades a golden set and sweeps a weight without extra searches", async () => {
+    saveGoldenSets([{
+      version: GOLDEN_SET_VERSION,
+      id: "set-1",
+      name: "Garden set",
+      indexName: "products",
+      k: 2,
+      thresholds: { metric: "ndcg", green: 0.8, amber: 0.5 },
+      cases: [{
+        id: "case-1",
+        name: "rakes",
+        aspects: [
+          { name: "title", type: "text", enabled: true, value: "rake" },
+          { name: "price", type: "number", enabled: true, value: "20" },
+        ],
+        expected: [{ id: "price-match", gain: 1 }],
+        forbidden: [],
+        k: null,
+        notes: "",
+        tags: [],
+        enabled: true,
+      }],
+      updatedAt: 1,
+    }])
+
+    const user = await setupManual()
+    await user.click(screen.getByRole("tab", { name: "Scorecard" }))
+    await user.click(
+      await screen.findByRole("button", { name: "Run set" }, { timeout: 5000 }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Live")).toBeInTheDocument()
+    })
+    expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
+
+    // `price-match` sits second at equal weights, so nDCG is 0.5 until the
+    // sweep finds a better weight. The sweep defaults to the first schema
+    // aspect (`title`); lowering it promotes `price-match` the same way
+    // raising `price` would. Avoid opening the Base UI Select portal here:
+    // jsdom sometimes never mounts its listbox options.
+    const table = screen.getByRole("table", { name: "Case scores" })
+    expect(within(table).getByText("amber")).toBeInTheDocument()
+    expect(screen.getByRole("combobox", { name: "Sweep aspect" }))
+      .toHaveTextContent("title")
+
+    const useBest = await screen.findByRole("button", { name: /Use best/ })
+    await user.click(useBest)
+
+    await waitFor(() => {
+      expect(within(table).getByText("green")).toBeInTheDocument()
+    })
+    expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
   })
 })

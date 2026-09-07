@@ -45,7 +45,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("distance", {
     header: () => (
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center">
         Distance
         <DocsHelpIcon
           page="resolvers"
@@ -58,7 +58,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("explanation", {
     header: () => (
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center">
         Explanation
         <DocsHelpIcon
           page="resolvers"
@@ -305,11 +305,13 @@ export function IndexSearchPage() {
                     />
                     <FieldLabel className="font-mono">
                       withExplanation
-                      <DocsHelpIcon
-                        page="resolvers"
-                        hash={DOCS_HASH.inspectingResolvers}
-                        label="withExplanation"
-                      />
+                      <span className="-ml-1.5">
+                        <DocsHelpIcon
+                          page="resolvers"
+                          hash={DOCS_HASH.inspectingResolvers}
+                          label="withExplanation"
+                        />
+                      </span>
                     </FieldLabel>
                   </Field>
                 )}
@@ -369,11 +371,13 @@ export function IndexSearchPage() {
                       />
                       <FieldLabel>
                         Include documents with no access keys
-                        <DocsHelpIcon
-                          page="accessControl"
-                          hash={DOCS_HASH.accessNull}
-                          label="Documents with no access keys"
-                        />
+                        <span className="-ml-1.5">
+                          <DocsHelpIcon
+                            page="accessControl"
+                            hash={DOCS_HASH.accessNull}
+                            label="Documents with no access keys"
+                          />
+                        </span>
                       </FieldLabel>
                     </Field>
                   )}

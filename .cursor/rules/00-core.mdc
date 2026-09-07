@@ -25,12 +25,15 @@ Before finishing a change:
 
 1. TSDoc on exported functions, hooks, types, and classes
 2. Tests updated for behavior changes; `deno task test` passes
-3. README updated if setup, tasks, or workflows changed
+3. `docs/` updated when user-facing behavior, workflows, tutorials, or design
+   decisions change; README updated when setup, tasks, or the entry checklist
+   change
 4. `deno task fmt`, `deno task lint`, and `deno task check` are clean
 
 ## Scope
 
 - Prefer editing existing files over new ones
 - No drive-by refactors unrelated to the request
-- Do not invent a `docs/` folder unless asked
 - Do not edit generated `dist/`
+- Studio long-form docs live in `docs/`; do not reintroduce feature manuals into
+  the README

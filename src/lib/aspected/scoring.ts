@@ -56,6 +56,17 @@ function weightExponent(metric: DistanceType): number {
   return metric === "Manhattan" ? 1 : 2
 }
 
+/**
+ * Collapses float noise around zero without erasing real DotProduct scores.
+ *
+ * Perfect Cosine matches often arrive as ±1e-7 from the server. Those values
+ * are not meaningful distance, but they print as `-0.000` and blow out chart
+ * axes if left alone.
+ */
+function snapFloatNoise(value: number): number {
+  return Math.abs(value) < 1e-6 ? 0 : value
+}
+
 /** Reads the aspect name from an explanation entry, tolerating either field. */
 function explanationName(
   entry: { name?: string; aspectName?: string },
@@ -96,7 +107,7 @@ export function recoverGrades(
     }
 
     if (!isAdditive(metric)) {
-      return [{ ...grade, raw: entry.distance }]
+      return [{ ...grade, raw: snapFloatNoise(entry.distance) }]
     }
 
     const weight = weightsUsed[name] ?? 1
@@ -104,7 +115,10 @@ export function recoverGrades(
       return [grade]
     }
 
-    return [{ ...grade, raw: entry.distance / weight ** exponent }]
+    return [{
+      ...grade,
+      raw: snapFloatNoise(entry.distance / weight ** exponent),
+    }]
   })
 }
 
@@ -127,9 +141,9 @@ function effectiveScale(
 /**
  * Re-scores one result's grades under a candidate set of weights.
  *
- * Every metric produces a stack of non-negative amounts that sums to the total
- * distance, so one chart shape works for all four and a shorter bar always
- * means a closer match.
+ * Every metric produces a stack of amounts that sums to the total distance, so
+ * one chart shape works for all four and a shorter bar always means a closer
+ * match (or, for DotProduct, a stronger hit when more negative).
  *
  * Additive metrics reassemble the total exactly. Cosine is a weighted mean of
  * per-aspect distances, which is exact when each aspect's query and document
@@ -166,7 +180,7 @@ function scoreGrades(
 
   const contributions = active.map((grade, position) => ({
     name: grade.name,
-    amount: shares[position] * (grade.raw as number),
+    amount: snapFloatNoise(shares[position] * (grade.raw as number)),
   }))
 
   return {
@@ -216,7 +230,7 @@ export function rerank(
       return {
         row,
         distance: scored.distance,
-        serverDistance: row.distance,
+        serverDistance: snapFloatNoise(row.distance),
         grades,
         contributions: scored.contributions,
       }

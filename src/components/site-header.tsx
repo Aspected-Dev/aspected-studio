@@ -5,7 +5,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar.tsx"
 
 /**
  * Inset header with the sidebar trigger and breadcrumbs.
- * Page docs shortcut (`?`) stays here; Get Help lives in the sidebar.
+ * Page docs shortcut (`?`) stays here; Get help lives in the sidebar.
  */
 export function SiteHeader() {
   usePageDocsShortcut()

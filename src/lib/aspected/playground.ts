@@ -101,6 +101,32 @@ export function aspectRowsFromSchema(
 }
 
 /**
+ * Closed set of values an aspect accepts, when its resolver defines one.
+ *
+ * Enum settings carry an array of values, dictionary settings carry an object
+ * keyed by the accepted strings. Everything else is free input.
+ */
+export function aspectOptionValues(aspect: StoredAspect): string[] {
+  const values = aspect.settings.values
+  if (Array.isArray(values)) {
+    return values.filter((value): value is string => typeof value === "string")
+  }
+  if (values !== null && typeof values === "object") {
+    return Object.keys(values)
+  }
+  return []
+}
+
+/** Reads a numeric resolver setting, ignoring anything that is not a number. */
+export function aspectNumberSetting(
+  aspect: StoredAspect,
+  key: "min" | "max",
+): number | undefined {
+  const value = aspect.settings[key]
+  return typeof value === "number" ? value : undefined
+}
+
+/**
  * Coerces a form string into the JSON shape the resolver for `type` expects.
  *
  * @throws SyntaxError when a `raw` aspect does not hold a JSON number array.
@@ -173,6 +199,21 @@ export function scoringWeights(
       aspect.name,
       active.has(aspect.name) ? clampWeight(aspect.weight) : 0,
     ]),
+  )
+}
+
+/**
+ * Slider weight per aspect, ignoring whether the aspect is being queried.
+ *
+ * This is the config under test rather than the request being described, which
+ * is what a golden set needs: each case brings its own query, so an aspect
+ * left blank on the playground form still has a weight worth measuring.
+ */
+export function formWeights(
+  values: PlaygroundFormValues,
+): Record<string, number> {
+  return Object.fromEntries(
+    values.aspects.map((aspect) => [aspect.name, clampWeight(aspect.weight)]),
   )
 }
 

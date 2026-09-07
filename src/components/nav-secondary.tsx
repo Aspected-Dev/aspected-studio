@@ -14,7 +14,7 @@ import {
 
 /**
  * Utility links below the main Studio navigation (dashboard-01 NavSecondary
- * pattern): Settings, Get Help, and Support.
+ * pattern): Settings, Get help, and Support.
  */
 export function NavSecondary({
   ...props
@@ -41,10 +41,10 @@ export function NavSecondary({
               <DocsHelpMenu
                 side={isMobile ? "bottom" : "right"}
                 align="end"
-                trigger={<SidebarMenuButton tooltip="Get Help" />}
+                trigger={<SidebarMenuButton tooltip="Get help" />}
               >
                 <CircleHelpIcon />
-                <span>Get Help</span>
+                <span>Get help</span>
               </DocsHelpMenu>
             </SidebarMenuItem>
             <SidebarMenuItem>

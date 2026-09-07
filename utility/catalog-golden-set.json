@@ -1,0 +1,347 @@
+{
+  "version": 1,
+  "name": "Catalog baseline",
+  "indexName": "catalog",
+  "k": 5,
+  "thresholds": {
+    "metric": "ndcg",
+    "green": 0.8,
+    "amber": 0.5
+  },
+  "cases": [
+    {
+      "name": "Gaming laptop around 900",
+      "notes": "At equal weights the 1499 model outranks the 899 one, so this sits just under green. Leaning on price fixes the order without a new search.",
+      "tags": ["laptop", "price"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "gaming laptop"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "laptop"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": true, "value": "900" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "laptop-quanta-play-15", "gain": 3 },
+        { "id": "laptop-nimbus-play-15", "gain": 1 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Student laptop under 600",
+      "notes": "A printer lands in the top five because enum aspects steer rather than filter. It is on the forbidden list, so this case is red however good the numbers look. Raise the category weight to clear it.",
+      "tags": ["laptop", "policy"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "laptop for a student, email and homework"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "laptop"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": true, "value": "600" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "laptop-vertex-book-14", "gain": 3 },
+        { "id": "laptop-quanta-value-15", "gain": 2 }
+      ],
+      "forbidden": ["printer-nimbus-inkjet"]
+    },
+    {
+      "name": "Noise cancelling headphones for flights",
+      "notes": "The easy case. If this one is not green, something is wrong with the index rather than the weights.",
+      "tags": ["headphones"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "noise cancelling headphones for long flights"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "headphones"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": false, "value": "" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "headphones-lumen-quiet-pro", "gain": 3 },
+        { "id": "headphones-lumen-quiet", "gain": 2 },
+        { "id": "headphones-nimbus-quiet-air", "gain": 1 },
+        { "id": "headphones-lumen-buds-pro", "gain": 1 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "4K monitor for design work",
+      "notes": "Three right answers, all from one brand. A brand weight should not be needed to find them.",
+      "tags": ["monitor"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "4K monitor for photo and design work"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "monitor"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": false, "value": "" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "monitor-lumen-4k-27", "gain": 3 },
+        { "id": "monitor-lumen-5k-27", "gain": 2 },
+        { "id": "monitor-lumen-4k-32", "gain": 2 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Compact mechanical keyboard",
+      "notes": "Two answers are equally right, so their order between themselves does not matter much. The full size board is a partial match at best.",
+      "tags": ["keyboard"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "compact mechanical keyboard"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "keyboard"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": false, "value": "" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "keyboard-vertex-mech-tkl", "gain": 3 },
+        { "id": "keyboard-vertex-mech-60", "gain": 3 },
+        { "id": "keyboard-vertex-mech-full", "gain": 1 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Cheap tablet for children",
+      "notes": "Price and text agree here, which is what a case looks like when the config is already right.",
+      "tags": ["tablet", "price"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "cheap tablet for children"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "tablet"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": true, "value": "150" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "tablet-quanta-kids-8", "gain": 3 },
+        { "id": "tablet-quanta-tab-10", "gain": 2 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Phone camera for low light",
+      "notes": "Aurora One arrives unjudged in the top five. Decide with Mark relevant whether a dual camera phone belongs here, which is how a set grows.",
+      "tags": ["phone", "rating"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "phone with the best camera for low light photography"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "phone"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": false, "value": "" },
+        { "name": "rating", "type": "number", "enabled": true, "value": "4.8" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "phone-nimbus-shot-pro", "gain": 3 },
+        { "id": "phone-aurora-one-pro", "gain": 2 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Mirrorless camera for portraits",
+      "notes": "The wildlife body is a near miss rather than a wrong answer, so it earns a gain of 1 instead of being left out.",
+      "tags": ["camera", "price"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "mirrorless camera for portrait photography"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "camera"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": true, "value": "1400" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "camera-lumen-r5", "gain": 3 },
+        { "id": "camera-lumen-r7", "gain": 1 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Small wireless mouse for travel",
+      "notes": "Two travel mice, one folding. Watch what a heavy rating weight does to this case: the highest rated mouse is not the most portable one.",
+      "tags": ["mouse"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "small wireless mouse for travel"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "mouse"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": false, "value": "" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "mouse-aurora-travel", "gain": 3 },
+        { "id": "mouse-lumen-travel-fold", "gain": 2 }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "Portable bluetooth speaker",
+      "notes": "The smart speaker and the desk speakers are deliberately unjudged: they are neither right nor forbidden, so they only cost precision.",
+      "tags": ["speaker"],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "portable waterproof bluetooth speaker"
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "enabled": true,
+          "value": "speaker"
+        },
+        { "name": "brand", "type": "enum", "enabled": false, "value": "" },
+        { "name": "price", "type": "number", "enabled": false, "value": "" },
+        { "name": "rating", "type": "number", "enabled": false, "value": "" },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        { "id": "speaker-aurora-move", "gain": 3 },
+        { "id": "speaker-quanta-mini", "gain": 1 }
+      ],
+      "forbidden": []
+    }
+  ]
+}

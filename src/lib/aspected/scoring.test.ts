@@ -244,6 +244,26 @@ describe("rerank on Cosine", () => {
     expect(scored.distance).toBeCloseTo(1, 10)
     expect(scored.contributions.every((entry) => entry.amount >= 0)).toBe(true)
   })
+
+  it("clamps float noise below zero up to a perfect match", () => {
+    const [scored] = rerank(
+      [row("tie", -1.1920928955078125e-7, [[
+        "category",
+        -1.1920928955078125e-7,
+      ]])],
+      "Cosine",
+      { category: 1 },
+      { category: 1 },
+      {},
+    )
+
+    expect(scored.distance).toBe(0)
+    expect(scored.serverDistance).toBe(0)
+    expect(scored.grades.map((grade) => [grade.name, grade.raw])).toEqual([
+      ["category", 0],
+    ])
+    expect(scored.contributions).toEqual([{ name: "category", amount: 0 }])
+  })
 })
 
 describe("rerank ordering", () => {

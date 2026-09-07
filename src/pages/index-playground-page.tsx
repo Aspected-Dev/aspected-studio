@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import {
   type Control,
   Controller,
@@ -24,6 +31,7 @@ import {
 } from "@/components/docs-help.tsx"
 import { MotionTableRow } from "@/components/motion-table-row.tsx"
 import { PlaygroundCompare } from "@/components/playground-compare.tsx"
+import { PlaygroundScorecard } from "@/components/playground-scorecard.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -78,9 +86,12 @@ import { useConnection } from "@/hooks/use-connection.tsx"
 import { type RecordedRequest } from "@/lib/aspected/client.ts"
 import {
   activeAspects,
+  aspectNumberSetting,
+  aspectOptionValues,
   aspectRowsFromSchema,
   buildPlaygroundRequest,
   coerceAspectValue,
+  formWeights,
   playgroundFormSchema,
   type PlaygroundFormValues,
   scoringWeights,
@@ -103,6 +114,7 @@ import type {
   StoredAspect,
 } from "@/lib/aspected/types.ts"
 import { DOCS_HASH, docsPageForAspectType } from "@/lib/docs.ts"
+import { countLabel } from "@/lib/utils.ts"
 
 /** Reorder feel: springy enough that fast slider drags interrupt cleanly. */
 const REORDER_TRANSITION = {
@@ -130,30 +142,10 @@ const CHART_COLORS = [
 const CHART_ROWS = 10
 
 /**
- * Closed set of values an aspect accepts, when its resolver defines one.
- *
- * Enum settings carry an array of values, dictionary settings carry an object
- * keyed by the accepted strings. Everything else is free input.
+ * Below this, stacked distances are float noise (or a perfect match) and the
+ * chart only confuses. Hide the bars rather than drawing a micro-axis.
  */
-function optionValues(aspect: StoredAspect): string[] {
-  const values = aspect.settings.values
-  if (Array.isArray(values)) {
-    return values.filter((value): value is string => typeof value === "string")
-  }
-  if (values !== null && typeof values === "object") {
-    return Object.keys(values)
-  }
-  return []
-}
-
-/** Reads a numeric resolver setting, ignoring anything that is not a number. */
-function numberSetting(
-  aspect: StoredAspect,
-  key: "min" | "max",
-): number | undefined {
-  const value = aspect.settings[key]
-  return typeof value === "number" ? value : undefined
-}
+const CHART_DISTANCE_EPSILON = 1e-6
 
 /**
  * Identity of the query itself, ignoring weights.
@@ -199,30 +191,32 @@ function AspectControl({
   index: number
   aspect: StoredAspect
 }) {
-  const options = optionValues(aspect)
+  const options = aspectOptionValues(aspect)
   const multiplier = aspect.multiplier ?? 1
   const valueId = `playground-value-${index}`
   const weightId = `playground-weight-${index}`
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Controller
-          control={control}
-          name={`aspects.${index}.enabled`}
-          render={({ field }) => (
-            <Switch
-              checked={field.value}
-              onCheckedChange={(checked) => field.onChange(Boolean(checked))}
-              aria-label={`Use ${aspect.name}`}
-            />
-          )}
-        />
-        <span className="font-mono text-sm">{aspect.name}</span>
-        <Badge variant="secondary">{aspect.type}</Badge>
-        {multiplier !== 1
-          ? <Badge variant="outline">multiplier {multiplier}</Badge>
-          : null}
+      <div className="flex flex-wrap items-center gap-0.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <Controller
+            control={control}
+            name={`aspects.${index}.enabled`}
+            render={({ field }) => (
+              <Switch
+                checked={field.value}
+                onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                aria-label={`Use ${aspect.name}`}
+              />
+            )}
+          />
+          <span className="font-mono text-sm">{aspect.name}</span>
+          <Badge variant="secondary">{aspect.type}</Badge>
+          {multiplier !== 1
+            ? <Badge variant="outline">multiplier {multiplier}</Badge>
+            : null}
+        </div>
         <DocsHelpIcon
           page={docsPageForAspectType(aspect.type)}
           label={aspect.name}
@@ -282,8 +276,8 @@ function AspectControl({
                 <Input
                   id={valueId}
                   type={aspect.type === "number" ? "number" : "text"}
-                  min={numberSetting(aspect, "min")}
-                  max={numberSetting(aspect, "max")}
+                  min={aspectNumberSetting(aspect, "min")}
+                  max={aspectNumberSetting(aspect, "max")}
                   {...field}
                   aria-label={`${aspect.name} value`}
                 />
@@ -449,11 +443,77 @@ export function IndexPlaygroundPage() {
     [rows, metric, weightsUsed, multipliers],
   )
 
-  // Ranks from the last real search, so rows can show how far they moved.
-  const serverRanks = useMemo(() => {
-    const ordered = [...rows].sort((a, b) => a.distance - b.distance)
-    return new Map(ordered.map((row, position) => [row.id, position + 1]))
-  }, [rows])
+  // Move baseline is the ranking before the latest weight tweak, frozen on
+  // Live → Preview. It stays put when Auto-run / Run search returns Live so
+  // the arrows still show how the new neighbourhood moved. Synced again only
+  // on the first Live result, or when Live matches that frozen config.
+  const moveBaselineRef = useRef<Map<string, number>>(new Map())
+  const moveBaselineSigRef = useRef<string | null>(null)
+  const rankingStateRef = useRef(state)
+  const [moveBaselineVersion, setMoveBaselineVersion] = useState(0)
+
+  useLayoutEffect(() => {
+    const previousState = rankingStateRef.current
+    rankingStateRef.current = state
+
+    const replaceBaseline = (
+      next: Map<string, number>,
+      signature: string | null,
+    ) => {
+      const changed = !rankMapsEqual(moveBaselineRef.current, next) ||
+        moveBaselineSigRef.current !== signature
+      moveBaselineRef.current = next
+      moveBaselineSigRef.current = signature
+      if (changed) {
+        setMoveBaselineVersion((version) => version + 1)
+      }
+    }
+
+    if (state === "empty" || state === "stale") {
+      replaceBaseline(new Map(), null)
+      return
+    }
+
+    if (previousState === "live" && state === "preview" && rows.length > 0) {
+      const ordered = rerank(
+        rows,
+        metric,
+        weightsUsed,
+        weightsUsed,
+        multipliers,
+      )
+      replaceBaseline(
+        new Map(ordered.map((item, position) => [item.row.id, position + 1])),
+        ranSignature,
+      )
+      return
+    }
+
+    if (state === "live" && reranked.length > 0 && ranSignature !== null) {
+      if (
+        moveBaselineSigRef.current === null ||
+        moveBaselineSigRef.current === ranSignature
+      ) {
+        replaceBaseline(
+          new Map(
+            reranked.map((item, position) => [item.row.id, position + 1]),
+          ),
+          ranSignature,
+        )
+      }
+    }
+  }, [
+    state,
+    rows,
+    metric,
+    weightsUsed,
+    multipliers,
+    ranSignature,
+    reranked,
+  ])
+
+  const baselineRanks = moveBaselineRef.current
+  void moveBaselineVersion
 
   useEffect(() => {
     if (!values.autoRun || index === null) {
@@ -508,6 +568,21 @@ export function IndexPlaygroundPage() {
       item.contributions.map((entry) => [entry.name, entry.amount]),
     ),
   }))
+
+  const chartMaxAmount = chartRows.reduce(
+    (max, item) =>
+      Math.max(
+        max,
+        ...item.contributions.map((entry) => Math.abs(entry.amount)),
+        0,
+      ),
+    0,
+  )
+  const chartHasNegatives = chartRows.some((item) =>
+    item.contributions.some((entry) => entry.amount < 0)
+  )
+  const showContributionChart = chartData.length > 0 &&
+    chartMaxAmount > CHART_DISTANCE_EPSILON
 
   const selected = reranked.find((item) => item.row.id === selectedId) ?? null
   const selectedTotal = selected
@@ -595,14 +670,16 @@ export function IndexPlaygroundPage() {
                 control={form.control}
                 name="autoRun"
                 render={({ field }) => (
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={(checked) =>
-                        field.onChange(Boolean(checked))}
-                      aria-label="Auto-run searches"
-                    />
-                    <span className="text-sm">Auto-run</span>
+                  <div className="flex items-center gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(checked) =>
+                          field.onChange(Boolean(checked))}
+                        aria-label="Auto-run searches"
+                      />
+                      <span className="text-sm">Auto-run</span>
+                    </div>
                     <DocsHelpIcon
                       page="resolvers"
                       hash={DOCS_HASH.inspectingResolvers}
@@ -636,6 +713,7 @@ export function IndexPlaygroundPage() {
                 <TabsList>
                   <TabsTrigger value="ranking">Ranking</TabsTrigger>
                   <TabsTrigger value="compare">Compare</TabsTrigger>
+                  <TabsTrigger value="scorecard">Scorecard</TabsTrigger>
                 </TabsList>
                 <StateBadge
                   state={state}
@@ -651,11 +729,13 @@ export function IndexPlaygroundPage() {
                     <CardDescription>
                       {reranked.length === 0
                         ? "No results yet."
-                        : `${reranked.length} results, ranked by ${metric} distance.`}
+                        : `${
+                          countLabel(reranked.length, "result")
+                        }, ranked by ${metric} distance.`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="grid min-w-0 gap-4">
-                    {chartData.length > 0
+                    {showContributionChart
                       ? (
                         <ChartContainer
                           config={chartConfig}
@@ -668,6 +748,10 @@ export function IndexPlaygroundPage() {
                           >
                             <XAxis
                               type="number"
+                              domain={chartHasNegatives
+                                ? ["auto", "auto"]
+                                : [0, "auto"]}
+                              allowDataOverflow={false}
                               tickLine={false}
                               axisLine={false}
                             />
@@ -675,6 +759,7 @@ export function IndexPlaygroundPage() {
                               type="category"
                               dataKey="id"
                               width={120}
+                              interval={0}
                               tickLine={false}
                               axisLine={false}
                             />
@@ -713,7 +798,7 @@ export function IndexPlaygroundPage() {
                         <TableBody>
                           <AnimatePresence initial={false}>
                             {reranked.map((item, position) => {
-                              const previous = serverRanks.get(item.row.id)
+                              const previous = baselineRanks.get(item.row.id)
                               const delta = previous === undefined
                                 ? 0
                                 : previous - (position + 1)
@@ -793,12 +878,20 @@ export function IndexPlaygroundPage() {
                       toastCaughtError(caught, "Could not pin this search")
                       return
                     }
-                    setPinned({
+                    const snapshot = {
                       values: structuredClone(ranValues),
                       rows: structuredClone(rows),
+                      // Freeze the Ranking-tab order (client re-score), not the
+                      // raw server totals. Cosine preview distances diverge from
+                      // server totals even at identical weights; B uses re-score.
+                      ranking: reranked.map((item) => ({
+                        id: item.row.id,
+                        distance: item.distance,
+                      })),
                       weightsUsed: { ...weightsUsed },
                       request,
-                    })
+                    }
+                    setPinned(snapshot)
                   }}
                   onRestore={() => {
                     if (pinned === null) {
@@ -808,6 +901,30 @@ export function IndexPlaygroundPage() {
                   }}
                   onClear={() => setPinned(null)}
                 />
+              </TabsContent>
+
+              <TabsContent value="scorecard" className="min-w-0 flex-none">
+                {name
+                  ? (
+                    <PlaygroundScorecard
+                      indexName={name}
+                      schema={schema}
+                      metric={metric}
+                      weights={formWeights(values)}
+                      baselineWeights={pinned
+                        ? formWeights(pinned.values)
+                        : null}
+                      onUseWeight={(aspectName, weight) => {
+                        const position = values.aspects.findIndex((aspect) =>
+                          aspect.name === aspectName
+                        )
+                        if (position !== -1) {
+                          form.setValue(`aspects.${position}.weight`, weight)
+                        }
+                      }}
+                    />
+                  )
+                  : null}
               </TabsContent>
             </Tabs>
 
@@ -884,7 +1001,7 @@ export function IndexPlaygroundPage() {
   )
 }
 
-/** Rank movement against the last real search. */
+/** Rank movement against the frozen pre-tweak ranking (survives Live refresh). */
 function RankDelta({ delta }: { delta: number }) {
   return (
     <AnimatePresence initial={false} mode="wait">
@@ -903,6 +1020,22 @@ function RankDelta({ delta }: { delta: number }) {
       )}
     </AnimatePresence>
   )
+}
+
+/** True when two id→rank maps list the same documents at the same ranks. */
+function rankMapsEqual(
+  left: Map<string, number>,
+  right: Map<string, number>,
+): boolean {
+  if (left.size !== right.size) {
+    return false
+  }
+  for (const [id, rank] of left) {
+    if (right.get(id) !== rank) {
+      return false
+    }
+  }
+  return true
 }
 
 /** Whether the ranking on screen is server truth, a local preview, or stale. */

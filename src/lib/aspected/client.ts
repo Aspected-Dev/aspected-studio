@@ -149,35 +149,62 @@ export class AspectedClient {
     })
   }
 
-  private async request<T>(
+  /**
+   * Describes a call without sending it, for the request inspector.
+   *
+   * Callers that fire several requests at once cannot rely on
+   * {@link AspectedClient.lastRequest}, because whichever call started last
+   * owns it. Those callers keep their own body and describe it here instead.
+   */
+  describeRequest(
     path: string,
-    options: RequestOptions<T>,
-  ): Promise<T> {
+    options: {
+      method?: string
+      query?: Record<string, string | number | undefined>
+      body?: unknown
+    } = {},
+  ): RecordedRequest {
     const method = options.method ?? "GET"
-    const url = this.buildUrl(path, options.query)
     const headers: Record<string, string> = {}
 
     if (this.connection.apiToken) {
       headers.Authorization = `Bearer ${this.connection.apiToken}`
     }
+    if (options.body !== undefined) {
+      headers["Content-Type"] = "application/json"
+    }
+
+    return {
+      method,
+      path,
+      url: this.buildUrl(path, options.query),
+      headers,
+      body: options.body,
+    }
+  }
+
+  private async request<T>(
+    path: string,
+    options: RequestOptions<T>,
+  ): Promise<T> {
+    const method = options.method ?? "GET"
+    const recorded = this.describeRequest(path, {
+      method,
+      query: options.query,
+      body: options.body,
+    })
+    const headers = { ...recorded.headers }
 
     const init: RequestInit = { method, headers }
     if (options.body !== undefined) {
-      headers["Content-Type"] = "application/json"
       init.body = JSON.stringify(options.body)
     }
 
-    this.lastRequest = {
-      method,
-      path,
-      url,
-      headers: { ...headers },
-      body: options.body,
-    }
+    this.lastRequest = recorded
 
     let response: Response
     try {
-      response = await fetch(url, init)
+      response = await fetch(recorded.url, init)
     } catch (caught) {
       this.options.onNetworkError?.()
       const message = caught instanceof Error

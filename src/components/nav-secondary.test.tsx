@@ -125,7 +125,7 @@ describe("NavSecondary chrome via SidebarProvider", () => {
     stubMatchMedia()
   })
 
-  it("renders Settings, Get Help, and Support", async () => {
+  it("renders Settings, Get help, and Support", async () => {
     const { NavSecondary } = await import("./nav-secondary.tsx")
     const router = createMemoryRouter([
       {
@@ -143,7 +143,7 @@ describe("NavSecondary chrome via SidebarProvider", () => {
 
     expect(screen.getByText("General")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Get Help" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Get help" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Support" })).toHaveAttribute(
       "href",
       "#",

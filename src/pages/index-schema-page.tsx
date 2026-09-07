@@ -22,7 +22,7 @@ const columns = columnHelper.columns([
     cell: ({ getValue }) => {
       const type = getValue()
       return (
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center">
           {type}
           <DocsHelpIcon
             page={docsPageForAspectType(type)}

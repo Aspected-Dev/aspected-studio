@@ -18,6 +18,9 @@ describe("indexPath", () => {
     expect(indexPath("my index", "playground")).toBe(
       "/indexes/my%20index/playground",
     )
+    expect(indexPath("my index", "scorecard")).toBe(
+      "/indexes/my%20index/scorecard",
+    )
   })
 })
 
@@ -71,6 +74,11 @@ describe("parseStudioLocation", () => {
       name: "movies",
       page: "playground",
     })
+    expect(parseStudioLocation("/indexes/movies/scorecard")).toEqual({
+      kind: "index",
+      name: "movies",
+      page: "scorecard",
+    })
   })
 })
 
@@ -97,6 +105,10 @@ describe("docsTargetForLocation", () => {
       hash: DOCS_HASH.combiningResolvers,
     })
     expect(docsTargetForLocation("/indexes/movies/playground")).toEqual({
+      page: "resolvers",
+      hash: DOCS_HASH.inspectingResolvers,
+    })
+    expect(docsTargetForLocation("/indexes/movies/scorecard")).toEqual({
       page: "resolvers",
       hash: DOCS_HASH.inspectingResolvers,
     })
@@ -135,6 +147,11 @@ describe("breadcrumbsForLocation", () => {
       { label: "Indexes", href: "/" },
       { label: "movies", href: "/indexes/movies" },
       { label: "Playground" },
+    ])
+    expect(breadcrumbsForLocation("/indexes/movies/scorecard")).toEqual([
+      { label: "Indexes", href: "/" },
+      { label: "movies", href: "/indexes/movies" },
+      { label: "Scorecard" },
     ])
   })
 })
