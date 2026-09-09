@@ -922,6 +922,21 @@ export function IndexPlaygroundPage() {
                           form.setValue(`aspects.${position}.weight`, weight)
                         }
                       }}
+                      onUseWeights={(next) => {
+                        for (
+                          const [aspectName, weight] of Object.entries(next)
+                        ) {
+                          const position = values.aspects.findIndex((aspect) =>
+                            aspect.name === aspectName
+                          )
+                          if (position !== -1) {
+                            form.setValue(
+                              `aspects.${position}.weight`,
+                              weight,
+                            )
+                          }
+                        }
+                      }}
                     />
                   )
                   : null}

@@ -42,6 +42,7 @@ can re-score cached rows when a weight moves, without re-embedding the query.
 | `/indexes/:name/search`     | Raw sparse search form                         |
 | `/indexes/:name/playground` | Weight tuning: Ranking, Compare, Scorecard tab |
 | `/indexes/:name/scorecard`  | Golden sets: edit, run, import/export          |
+| `/indexes/:name/auto-tune`  | Budgeted Live weight / on-off / depth search   |
 
 Sidebar chrome also holds Settings, Get help (product docs catalog), Support,
 and the connection list.
@@ -52,7 +53,7 @@ and the connection list.
 - Indexes and the Request Inspector: [Indexes](indexes.md)
 - Live weight previews: [Playground](playground.md)
 - Measured quality: [Scorecard](scorecard.md)
+- Budgeted Live optimizer: [Auto-tune](auto-tune.md)
 - Why preview and scorecard work the way they do:
   [Architecture](architecture.md)
-- Demo talk track:
-  [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md)
+- Demo talk track: [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md)

@@ -46,6 +46,8 @@ type RequestOptions<T> = {
   query?: Record<string, string | number | undefined>
   body?: unknown
   schema: z.ZodType<T>
+  /** When aborted, the underlying fetch rejects and the call stops. */
+  signal?: AbortSignal
 }
 
 type ClientOptions = {
@@ -108,11 +110,16 @@ export class AspectedClient {
   }
 
   /** `POST /indexes/{name}/search` */
-  searchIndex(name: string, body: SearchIndexRequest) {
+  searchIndex(
+    name: string,
+    body: SearchIndexRequest,
+    options: { signal?: AbortSignal } = {},
+  ) {
     return this.request(`/indexes/${encodeURIComponent(name)}/search`, {
       method: "POST",
       body: searchIndexRequestSchema.parse(body),
       schema: searchIndexResponseSchema,
+      signal: options.signal,
     })
   }
 
@@ -199,6 +206,9 @@ export class AspectedClient {
     if (options.body !== undefined) {
       init.body = JSON.stringify(options.body)
     }
+    if (options.signal) {
+      init.signal = options.signal
+    }
 
     this.lastRequest = recorded
 
@@ -206,6 +216,9 @@ export class AspectedClient {
     try {
       response = await fetch(recorded.url, init)
     } catch (caught) {
+      if (options.signal?.aborted) {
+        throw caught
+      }
       this.options.onNetworkError?.()
       const message = caught instanceof Error
         ? caught.message

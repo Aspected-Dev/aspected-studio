@@ -75,20 +75,26 @@ Limits:
 
 ## Playground Scorecard tab
 
-| Control                     | Role                                                    |
-| --------------------------- | ------------------------------------------------------- |
-| Weight sliders (left panel) | Config under test for Ranking _and_ this tab            |
-| Run set                     | Server fetch; fills the cache used by preview and sweep |
-| Pin A (Compare tab)         | Optional baseline for metric deltas                     |
-| Weight sweep + Use best     | nDCG vs one aspect’s weight; write peak to the form     |
+| Control                            | Role                                                    |
+| ---------------------------------- | ------------------------------------------------------- |
+| Weight sliders (left panel)        | Config under test for Ranking _and_ this tab            |
+| Run set                            | Server fetch; fills the cache used by preview and sweep |
+| Pin A (Compare tab)                | Optional baseline for metric deltas                     |
+| Weight sweep + Use best / Use peak | nDCG vs one aspect; interior vs edge peak write         |
+| Rank vs weight                     | Expected/forbidden ranks vs swept weight                |
+| Quick suggest (preview)            | Cache coordinate ascent (Preview nDCG)                  |
+| Verify with Run set                | Live re-fetch at suggested weights; Keep / Revert       |
+| Load tuned config                  | Apply a saved Auto-tune champion onto the sliders       |
+| Auto-tune (separate page)          | Budgeted Live search; see [Auto-tune](auto-tune.md)     |
 
 Create/edit/import stay on the Scorecard page. Deeper demo:
-[Catalog scorecard](tutorials/05-catalog-scorecard-demo.md). Pipeline
-detail: [Architecture](architecture.md#scorecard-runner).
+[Catalog scorecard](tutorials/05-catalog-scorecard-demo.md). Pipeline detail:
+[Architecture](architecture.md#scorecard-runner).
 
 ## Related
 
 - [Playground](playground.md)
+- [Auto-tune](auto-tune.md)
 - [Architecture](architecture.md)
 - Seed + golden JSON: `utility/seed-catalog.ts`,
   `utility/catalog-golden-set.json`

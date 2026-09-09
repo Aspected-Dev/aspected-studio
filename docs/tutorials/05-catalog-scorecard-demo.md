@@ -230,13 +230,13 @@ starting from a blank scoreboard.
 Expect approximately (Cosine can nudge the tiles a little between runs; chips
 matter more than the third decimal):
 
-| Metric      | Value  | How to read it here                          |
-| ----------- | ------ | -------------------------------------------- |
-| nDCG@5      | ~0.95  | Strong overall order; two cases still soft   |
+| Metric      | Value      | How to read it here                          |
+| ----------- | ---------- | -------------------------------------------- |
+| nDCG@5      | ~0.95      | Strong overall order; two cases still soft   |
 | Precision@5 | ~0.46–0.48 | Many top-5 slots are unjudged / not expected |
-| Recall@5    | ~0.95  | Almost every expected doc is on the page     |
-| MRR         | ~1.000 | Every case’s **first** hit is relevant       |
-| MAP         | ~0.93–0.95 | Hits tend to sit early                    |
+| Recall@5    | ~0.95      | Almost every expected doc is on the page     |
+| MRR         | ~1.000     | Every case’s **first** hit is relevant       |
+| MAP         | ~0.93–0.95 | Hits tend to sit early                       |
 
 Hover each tile’s help icon once. Notice Precision can look “low” while Recall
 and MRR look great: with `k=5` and only a few expected ids per case, unused
@@ -377,13 +377,15 @@ quickly, see quality move, and find a peak without hand-dragging forever.
 
 ### How the Playground Scorecard differs from the Scorecard page
 
-|                              | Scorecard **page**     | Playground **Scorecard tab**                        |
-| ---------------------------- | ---------------------- | --------------------------------------------------- |
-| Create / import / edit cases | Yes                    | No (link out only)                                  |
-| Weight sliders               | Own column on the page | Shared left panel (also drives Ranking and Compare) |
-| **Run set**                  | Searches each case     | Same: searches each case once, then caches rows     |
-| After a weight drag          | Preview re-grade       | Preview re-grade, optional **deltas** vs pinned A   |
-| Weight sweep                 | Not on this page       | Chart nDCG vs one aspect’s weight; **Use best**     |
+|                                 | Scorecard **page**     | Playground **Scorecard tab**                            |
+| ------------------------------- | ---------------------- | ------------------------------------------------------- |
+| Create / import / edit cases    | Yes                    | No (link out only)                                      |
+| Weight sliders                  | Own column on the page | Shared left panel (also drives Ranking and Compare)     |
+| **Run set**                     | Searches each case     | Same: searches each case once, then caches rows         |
+| After a weight drag             | Preview re-grade       | Preview re-grade, optional **deltas** vs pinned A       |
+| Weight sweep + rank vs weight   | Not on this page       | nDCG vs one aspect; rank vs weight; edge-aware Use best |
+| Suggest weights / Quick suggest | Not on this page       | Cache ascent → Verify; prefer Auto-tune for Live        |
+| Auto-tune                       | Dedicated page         | Budgeted Live weights, on/off, depth                    |
 
 Critical mental model: the left-hand sliders are the config under test for
 **Ranking**, **Compare**, and **Scorecard**. There is no hidden second weight
@@ -496,36 +498,68 @@ Scorecard answered “is quality better?” Compare answered “how violently di
 list shuffle?” Ranking showed one query’s movement. You did not need ten new
 case searches for the Preview grades.
 
-### Step 20: Read the weight sweep
+### Step 20: Read the weight sweep and rank vs weight
 
 The sweep answers: for **one** aspect, holding the others fixed, where does set
-nDCG peak?
+nDCG peak? It is conditional on the other sliders. Chaining **Use best** across
+aspects is not multi-aspect optimize.
 
 1. Still on the Scorecard tab, find **Weight sweep**
 2. **Sweep aspect** defaults to the first schema aspect (`title`). Leave it on
    `title`, or choose **price**
-3. Read the chart: horizontal = weight, vertical = nDCG for the whole set
+3. Read the nDCG chart: horizontal = weight, vertical = nDCG for the whole set.
+   The peak is marked on the curve
 4. After an all-`1` **Run set**, typical shape for `title`:
    - Peak around weights **0.6–2.5**
    - Over-weight past ~**3.6** and nDCG falls toward ~0.95
-5. Click **Use best (…)** when shown
-6. Confirm the left-hand slider for that aspect jumps to the peak weight
-7. Scorecard Preview updates immediately (cached rows)
+5. Read **Rank vs weight** under the nDCG chart: expected (and forbidden) ids
+   for the selected case (or the first enabled case) vs weight. Rank 1 is at the
+   top
+6. If the button says **Use best (… · nDCG …)**, the peak is interior. Click it
+   only when you want that single-axis write
+7. If it says **Use peak (edge …)**, the max sits on a slider rail. Prefer
+   **Quick suggest** / **Auto-tune** or a manual drag; edge peaks are often
+   Preview artifacts
+8. Confirm the left-hand slider for that aspect jumps when you apply a peak
+9. Scorecard Preview updates immediately (cached rows)
 
 How to interpret the curve:
 
 | Curve shape                   | Meaning                                                                              |
 | ----------------------------- | ------------------------------------------------------------------------------------ |
 | Flat                          | That aspect barely moves this set at current other weights                           |
-| Clear peak                    | A useful band; prefer the peak over maxing the slider                                |
+| Clear interior peak           | A useful band; prefer that over maxing the slider                                    |
 | Peak then long decline        | More is worse; common for text when it drowns price / category                       |
+| Peak only at 0.01 or 100      | Edge peak: often a Preview artifact; do not chain these as an optimizer              |
 | Peak only after Preview fixes | Sweep still cannot eject forbidden docs; clear reds with **Run set** first if needed |
 
 The sweep is arithmetic over rows already fetched. It is **not** one search per
 sample. If a document would only enter under a different neighbourhood, the
 curve cannot see it until you **Run set** again.
 
-### Step 21: Clear the red case from Playground
+### Step 21: Quick suggest, then prefer Auto-tune
+
+**Quick suggest (preview)** is a cache-only multi-aspect starting point. For the
+real Live optimizer, open [Auto-tune](06-auto-tune.md) (Tutorial 6).
+
+If you still want the Preview path here:
+
+1. After a completed **Run set**, click **Quick suggest**
+2. Read the card: Preview nDCG start → suggested, and any per-aspect deltas
+3. If it warns about an edge peak, treat the suggestion as provisional
+4. Click **Apply preview** to write the candidate onto the left-hand sliders
+   (Preview grades update from cache)
+5. Click **Verify with Run set** so the server re-fetches at those weights
+6. Read **Live after verify** nDCG vs the start snapshot
+7. **Keep** if Live held or improved; **Revert** if Live dropped and you do not
+   accept the trade-off
+
+Quick suggest is cache-only coordinate ascent (Preview nDCG). Verify is the real
+gate on this tab. Cosine Preview can disagree with Live server order. When you
+want weights, on/off, and depth searched against the server under a budget, use
+**Auto-tune** instead.
+
+### Step 22: Clear the red case from Playground
 
 Preview left the student case red. Finish the same fix as Part 6, driven from
 here:
@@ -539,7 +573,7 @@ here:
 Optional: open Compare after the re-run. Overlap may drop and documents may
 enter/leave; that matches “new neighbourhood,” not just re-sort.
 
-### Step 22: Optional second pin (new baseline)
+### Step 23: Optional second pin (new baseline)
 
 When you are happy with a weight mix:
 
@@ -559,7 +593,10 @@ Use this when the all-`1` pin is no longer the comparison you care about.
 3. Preview reorders the fetched window; **Run set** fetches a new one
 4. Compare measures shuffle; Scorecard measures quality
 5. Pin A if you want deltas; fill a Ranking query before you can pin
-6. Sweep finds a peak for one aspect; it cannot invent documents outside `k`
+6. Single-aspect sweep is conditional; edge **Use peak** is a warning, not a
+   one-click optimizer
+7. **Quick suggest** → Verify is a Preview path; **Auto-tune** is the Live
+   multi-aspect optimizer
 
 ---
 
@@ -575,8 +612,9 @@ Use this on your own indexes after the catalog walkthrough:
 4. Change one aspect at a time on the shared sliders
 5. If Overlap stays high: trust Preview grades; chase nDCG / primary metric
 6. If Overlap drops or forbidden enters: **Run set** again before deciding
-7. Sweep the contested aspect; **Use best** only if the peak is stable for the
-   cases you care about
+7. Use the sweep as a one-axis diagnostic (rank vs weight + interior peak).
+   Prefer **Auto-tune** for Live search, or **Quick suggest** then **Verify with
+   Run set**, then **Keep** or **Revert**
 8. Export the set and record the final weights next to it in your repo
 
 ---

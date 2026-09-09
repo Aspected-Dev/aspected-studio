@@ -76,8 +76,19 @@ After a run, `scoreSet` can grade **as returned** (Scorecard page default) or
 **at candidate weights** via `rerank` (Playground tab and weight previews).
 
 The weight sweep samples the log-scale slider, re-grades the whole set locally
-at each point, and plots nDCG. **Use best** writes the peak onto the form. That
-is arithmetic on cached rows, not a search per sample.
+at each point, and plots nDCG plus a rank-vs-weight chart for tracked case ids.
+`pickSweepPeak` prefers an interior sample near the absolute max; edge peaks
+surface as **Use peak (edge)** so chaining rail maxima is not mistaken for
+optimize. **Quick suggest (preview)** (`auto-tune.ts`) runs coordinate ascent on
+the cached rows (Preview nDCG only). **Verify with Run set** re-fetches at the
+candidate weights and grades Live (server order) before Keep or Revert. All
+sweep and Preview ascent arithmetic is on cached rows, not a search per sample.
+
+**Auto-tune** (`/indexes/:name/auto-tune`) is the Live path: a budgeted planner
+(`tuner.ts`) proposes configs; `use-auto-tune.ts` evaluates them with real
+`searchIndex` calls, a global case-signature cache, AbortSignal cancel, optional
+holdout, and saved tuned configs in localStorage. Preview Suggest remains a
+diagnostic; Auto-tune is what you use when the objective must match the server.
 
 ## Request Inspector and concurrent runs
 
@@ -101,12 +112,15 @@ there. Do not invent a second copy in a component without updating that module.
 | ------------------- | -------------------------- | ----------------------------- |
 | Connections         | localStorage               | Yes (does not auto-reconnect) |
 | Golden sets         | localStorage               | Yes                           |
+| Tuned configs       | localStorage               | Yes                           |
 | Playground pin A    | React state                | No                            |
 | Scorecard run cache | React state (hook)         | No                            |
+| Auto-tune run state | React state (hook)         | No                            |
 | Theme / settings    | As implemented in Settings | See settings code             |
 
 ## Related pages
 
-- Feature detail: [Playground](playground.md), [Scorecard](scorecard.md)
+- Feature detail: [Playground](playground.md), [Scorecard](scorecard.md),
+  [Auto-tune](auto-tune.md)
 - Demo of these limits:
   [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md)

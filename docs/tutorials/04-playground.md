@@ -180,7 +180,10 @@ Formula-level reference: [Playground](../playground.md#compare-tab-ab).
    `/indexes/catalog/scorecard`
 
 Do not invent cases here. Full quality story (nDCG, Precision, Recall, MRR, MAP,
-chips, sweep): [Catalog scorecard](05-catalog-scorecard-demo.md).
+chips, sweep, Quick suggest → Verify):
+[Catalog scorecard](05-catalog-scorecard-demo.md). On the Playground Scorecard
+tab, **Quick suggest** runs a cache-only ascent; always **Verify with Run set**
+before Keep. For Live multi-aspect search, open [Auto-tune](06-auto-tune.md).
 
 ## Checkpoint
 

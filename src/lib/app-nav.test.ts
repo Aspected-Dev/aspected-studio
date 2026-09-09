@@ -21,6 +21,9 @@ describe("indexPath", () => {
     expect(indexPath("my index", "scorecard")).toBe(
       "/indexes/my%20index/scorecard",
     )
+    expect(indexPath("my index", "auto-tune")).toBe(
+      "/indexes/my%20index/auto-tune",
+    )
   })
 })
 
@@ -79,6 +82,11 @@ describe("parseStudioLocation", () => {
       name: "movies",
       page: "scorecard",
     })
+    expect(parseStudioLocation("/indexes/movies/auto-tune")).toEqual({
+      kind: "index",
+      name: "movies",
+      page: "auto-tune",
+    })
   })
 })
 
@@ -109,6 +117,10 @@ describe("docsTargetForLocation", () => {
       hash: DOCS_HASH.inspectingResolvers,
     })
     expect(docsTargetForLocation("/indexes/movies/scorecard")).toEqual({
+      page: "resolvers",
+      hash: DOCS_HASH.inspectingResolvers,
+    })
+    expect(docsTargetForLocation("/indexes/movies/auto-tune")).toEqual({
       page: "resolvers",
       hash: DOCS_HASH.inspectingResolvers,
     })
@@ -152,6 +164,11 @@ describe("breadcrumbsForLocation", () => {
       { label: "Indexes", href: "/" },
       { label: "movies", href: "/indexes/movies" },
       { label: "Scorecard" },
+    ])
+    expect(breadcrumbsForLocation("/indexes/movies/auto-tune")).toEqual([
+      { label: "Indexes", href: "/" },
+      { label: "movies", href: "/indexes/movies" },
+      { label: "Auto-tune" },
     ])
   })
 })

@@ -8,6 +8,7 @@ import {
   LayoutListIcon,
   SearchIcon,
   SlidersHorizontalIcon,
+  SparklesIcon,
   TargetIcon,
 } from "lucide-react"
 import { ConnectionFooter } from "@/components/connection-footer.tsx"
@@ -150,6 +151,18 @@ export function AppSidebar(
                             >
                               <TargetIcon />
                               <span>Scorecard</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton
+                              isActive={location.kind === "index" &&
+                                location.page === "auto-tune"}
+                              render={
+                                <Link to={indexPath(indexName, "auto-tune")} />
+                              }
+                            >
+                              <SparklesIcon />
+                              <span>Auto-tune</span>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         </SidebarMenuSub>

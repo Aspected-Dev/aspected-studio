@@ -422,11 +422,92 @@ describe("IndexPlaygroundPage", () => {
       .toHaveTextContent("title")
 
     const useBest = await screen.findByRole("button", { name: /Use best/ })
+    expect(useBest).toHaveTextContent(/nDCG/)
     await user.click(useBest)
 
     await waitFor(() => {
       expect(within(table).getByText("green")).toBeInTheDocument()
     })
     expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
+
+    expect(screen.getByText(/Rank vs weight/)).toBeInTheDocument()
+  })
+
+  it("suggests weights, verifies with Run set, and can revert", async () => {
+    saveGoldenSets([{
+      version: GOLDEN_SET_VERSION,
+      id: "set-1",
+      name: "Garden set",
+      indexName: "products",
+      k: 2,
+      thresholds: { metric: "ndcg", green: 0.8, amber: 0.5 },
+      cases: [{
+        id: "case-1",
+        name: "rakes",
+        aspects: [
+          { name: "title", type: "text", enabled: true, value: "rake" },
+          { name: "price", type: "number", enabled: true, value: "20" },
+        ],
+        expected: [{ id: "price-match", gain: 1 }],
+        forbidden: [],
+        k: null,
+        notes: "",
+        tags: [],
+        enabled: true,
+      }],
+      updatedAt: 1,
+    }])
+
+    const user = await setupManual()
+    await user.click(screen.getByRole("tab", { name: "Scorecard" }))
+    await user.click(
+      await screen.findByRole("button", { name: "Run set" }, { timeout: 5000 }),
+    )
+    await waitFor(() => {
+      expect(screen.getByText("Live")).toBeInTheDocument()
+    })
+    expect(connection.client.searchIndex).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole("button", { name: "Quick suggest" }))
+
+    expect(await screen.findByText(/Preview nDCG/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Apply preview" }))
+      .toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Verify with Run set" }))
+      .toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Apply preview" }))
+
+    await waitFor(() => {
+      const title = screen.getByLabelText(
+        "Weight for title",
+      ) as HTMLInputElement
+      const price = screen.getByLabelText(
+        "Weight for price",
+      ) as HTMLInputElement
+      expect(
+        Number(title.value) !== 1 || Number(price.value) !== 1,
+      ).toBe(true)
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "Verify with Run set" }),
+    )
+    await waitFor(() => {
+      expect(connection.client.searchIndex.mock.calls.length).toBeGreaterThan(1)
+    })
+    await waitFor(() => {
+      expect(screen.getByText(/Live after verify/)).toBeInTheDocument()
+    })
+
+    const titleBeforeRevert =
+      (screen.getByLabelText("Weight for title") as HTMLInputElement).value
+    await user.click(screen.getByRole("button", { name: "Revert" }))
+    await waitFor(() => {
+      expect(screen.getByLabelText("Weight for title")).toHaveValue(1)
+      expect(screen.getByLabelText("Weight for price")).toHaveValue(1)
+    })
+    expect(titleBeforeRevert).not.toBe("1")
+    expect(screen.queryByText(/Preview nDCG/)).not.toBeInTheDocument()
   })
 })

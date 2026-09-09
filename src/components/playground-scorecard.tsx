@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router"
-import { Line, LineChart, XAxis, YAxis } from "recharts"
+import { Line, LineChart, ReferenceDot, XAxis, YAxis } from "recharts"
 import { MetricHelp } from "@/components/metric-tile.tsx"
 import {
   CaseChips,
@@ -34,21 +34,52 @@ import { Separator } from "@/components/ui/separator.tsx"
 import { useScorecard } from "@/hooks/use-scorecard.ts"
 import { indexPath } from "@/lib/app-nav.ts"
 import {
+  DEFAULT_SWEEP_STRIDE,
+  pickSweepPeak,
+  rankVsWeightIds,
+  suggestWeights,
+  type SuggestWeightsResult,
+  sweepAspectNdcg,
+  sweepRankVsWeight,
+} from "@/lib/aspected/auto-tune.ts"
+import {
   type GoldenSet,
   goldenSetDisplayName,
   goldenSetsForIndex,
 } from "@/lib/aspected/golden.ts"
-import { SLIDER_STEPS, sliderToWeight } from "@/lib/aspected/playground.ts"
 import { summariseScorecard } from "@/lib/aspected/relevance.ts"
 import { sameWeights, scoreSet } from "@/lib/aspected/scorecard.ts"
+import { tunedConfigsForIndex } from "@/lib/aspected/tuned-config.ts"
 import type { DistanceType, StoredAspect } from "@/lib/aspected/types.ts"
+import { TunedConfigLoader } from "@/components/tuned-config-loader.tsx"
 
-/** Slider positions sampled by the sweep. Every fourth step reads smoothly. */
-const SWEEP_STRIDE = 4
+/** Stroke colours for rank-vs-weight lines. */
+const RANK_VS_WEIGHT_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+]
 
-/** Tooltip for the sweep chart. */
+/** Tooltip for the nDCG sweep chart. */
 const SWEEP_HELP =
-  "nDCG across the whole golden set at every weight on the slider, holding the other aspects where they are. The rows are already on the client, so the curve is arithmetic rather than a hundred searches. Read the peak as the best weight for this aspect given the documents each case has already fetched."
+  "nDCG across the whole golden set at every weight on the slider, holding the other aspects where they are. The curve is conditional on the other sliders: chaining Use best across aspects is not multi-aspect optimize. Prefer Auto-tune for Live multi-aspect search, or Quick suggest for a fast Preview pass. Edge peaks at the slider rails are often Preview artifacts."
+
+/** Tooltip for the rank-vs-weight chart. */
+const RANK_VS_WEIGHT_HELP =
+  "How expected (and forbidden) documents for the selected case move in rank as the swept aspect changes. Rank 1 is at the top. Absent ranks mean the document left the cached top-k window."
+
+/** Tooltip for Quick suggest (preview). */
+const SUGGEST_HELP =
+  "Fast Preview coordinate ascent on the cached golden-set window only. It tunes aspects used by the golden set, not Ranking toggles. Cosine Preview can disagree with Live. For real server-backed search of weights, on/off, and depth, use Auto-tune."
+
+/** Pending Suggest weights session. */
+type SuggestSession = {
+  snapshot: Record<string, number>
+  result: SuggestWeightsResult
+  liveNdcg: number | null
+}
 
 /** Props for {@link PlaygroundScorecard}. */
 export type PlaygroundScorecardProps = {
@@ -61,6 +92,8 @@ export type PlaygroundScorecardProps = {
   baselineWeights: Record<string, number> | null
   /** Writes a swept weight back onto the form. */
   onUseWeight: (aspectName: string, weight: number) => void
+  /** Writes many weights in one pass (Suggest apply / revert). */
+  onUseWeights: (next: Record<string, number>) => void
 }
 
 /**
@@ -77,6 +110,7 @@ export function PlaygroundScorecard({
   weights,
   baselineWeights,
   onUseWeight,
+  onUseWeights,
 }: PlaygroundScorecardProps) {
   const [sets, setSets] = useState<GoldenSet[]>([])
   const [activeSetId, setActiveSetId] = useState<string | null>(null)
@@ -84,6 +118,7 @@ export function PlaygroundScorecard({
   const [sweepAspect, setSweepAspect] = useState<string | null>(
     () => schema[0]?.name ?? null,
   )
+  const [suggest, setSuggest] = useState<SuggestSession | null>(null)
 
   const scorecard = useScorecard(indexName)
 
@@ -158,9 +193,7 @@ export function PlaygroundScorecard({
     const at = scoreSet(
       activeSet,
       scorecard.runs,
-      baselineMatchesRun
-        ? {}
-        : { metric, weights: baselineWeights, schema },
+      baselineMatchesRun ? {} : { metric, weights: baselineWeights, schema },
     )
     return summariseScorecard(
       at.filter((entry) => entry.score !== null).map((entry) => entry.score!),
@@ -179,38 +212,94 @@ export function PlaygroundScorecard({
     if (!activeSet || sweepAspect === null || scorecard.runs.size === 0) {
       return []
     }
-
-    const points: Array<{ weight: number; ndcg: number }> = []
-    for (let step = 0; step <= SLIDER_STEPS; step += SWEEP_STRIDE) {
-      const weight = sliderToWeight(step)
-      const candidate = { ...weights, [sweepAspect]: weight }
-      const at = scoreSet(activeSet, scorecard.runs, {
-        metric,
-        weights: candidate,
-        schema,
-      })
-      points.push({
-        weight,
-        ndcg: summariseScorecard(
-          at.filter((entry) => entry.score !== null).map((entry) =>
-            entry.score!
-          ),
-          activeSet.thresholds,
-        ).ndcg,
-      })
-    }
-    return points
+    return sweepAspectNdcg(
+      activeSet,
+      scorecard.runs,
+      metric,
+      weights,
+      schema,
+      sweepAspect,
+      DEFAULT_SWEEP_STRIDE,
+    )
   }, [activeSet, sweepAspect, scorecard.runs, weights, metric, schema])
 
-  const best = sweep.reduce<{ weight: number; ndcg: number } | null>(
-    (winner, point) =>
-      winner === null || point.ndcg > winner.ndcg ? point : winner,
-    null,
-  )
+  const peak = useMemo(() => pickSweepPeak(sweep), [sweep])
+
+  const rankCase = useMemo(() => {
+    if (!activeSet) {
+      return null
+    }
+    if (selectedCaseId !== null) {
+      return activeSet.cases.find((item) => item.id === selectedCaseId) ?? null
+    }
+    return activeSet.cases.find((item) => item.enabled) ?? null
+  }, [activeSet, selectedCaseId])
+
+  const trackedIds = useMemo(() => {
+    if (!rankCase) {
+      return []
+    }
+    return rankVsWeightIds(
+      rankCase.expected.map((entry) => entry.id),
+      rankCase.forbidden,
+    )
+  }, [rankCase])
+
+  const rankVsWeight = useMemo(() => {
+    if (
+      !activeSet || !rankCase || sweepAspect === null ||
+      scorecard.runs.size === 0 || trackedIds.length === 0
+    ) {
+      return []
+    }
+    return sweepRankVsWeight(
+      activeSet,
+      scorecard.runs,
+      metric,
+      weights,
+      schema,
+      sweepAspect,
+      rankCase.id,
+      trackedIds,
+      DEFAULT_SWEEP_STRIDE,
+    )
+  }, [
+    activeSet,
+    rankCase,
+    sweepAspect,
+    scorecard.runs,
+    metric,
+    weights,
+    schema,
+    trackedIds,
+  ])
 
   const chartConfig: ChartConfig = {
     ndcg: { label: "nDCG", color: "var(--chart-2)" },
   }
+
+  const rankVsWeightConfig: ChartConfig = Object.fromEntries(
+    trackedIds.map((id, index) => [
+      id,
+      {
+        label: id,
+        color: RANK_VS_WEIGHT_COLORS[index % RANK_VS_WEIGHT_COLORS.length],
+      },
+    ]),
+  )
+
+  const axisDepth = useMemo(() => {
+    let max = 1
+    for (const point of rankVsWeight) {
+      for (const id of trackedIds) {
+        const rank = point[id]
+        if (typeof rank === "number" && rank > max) {
+          max = rank
+        }
+      }
+    }
+    return max
+  }, [rankVsWeight, trackedIds])
 
   if (sets.length === 0) {
     return (
@@ -236,6 +325,9 @@ export function PlaygroundScorecard({
     )
   }
 
+  const canTune = activeSet !== null && scorecard.runs.size > 0 &&
+    !scorecard.running
+
   return (
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
@@ -250,6 +342,10 @@ export function PlaygroundScorecard({
           </CardDescription>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <TunedConfigLoader
+            configs={tunedConfigsForIndex(indexName)}
+            onLoad={(config) => onUseWeights(config.weights)}
+          />
           {scorecard.ranAt === null
             ? null
             : (
@@ -266,6 +362,7 @@ export function PlaygroundScorecard({
               if (typeof next === "string") {
                 setActiveSetId(next)
                 setSelectedCaseId(null)
+                setSuggest(null)
                 scorecard.clear()
               }
             }}
@@ -350,18 +447,34 @@ export function PlaygroundScorecard({
                 ))}
               </SelectContent>
             </Select>
-            {best && sweepAspect
+            {peak && sweepAspect
               ? (
                 <Button
                   type="button"
-                  variant="secondary"
-                  onClick={() => onUseWeight(sweepAspect, best.weight)}
+                  variant={peak.kind === "edge" ? "outline" : "secondary"}
+                  onClick={() => onUseWeight(sweepAspect, peak.weight)}
                 >
-                  Use best ({best.weight})
+                  {peak.kind === "edge"
+                    ? `Use peak (edge ${peak.weight} · nDCG ${
+                      peak.ndcg.toFixed(3)
+                    })`
+                    : `Use best (${peak.weight} · nDCG ${
+                      peak.ndcg.toFixed(3)
+                    })`}
                 </Button>
               )
               : null}
           </div>
+
+          {peak?.kind === "edge"
+            ? (
+              <p className="text-sm text-muted-foreground">
+                Peak sits at a slider rail. Edge peaks are often Preview
+                artifacts; prefer Auto-tune or a manual drag, then Verify with
+                Run set.
+              </p>
+            )
+            : null}
 
           {sweep.length > 0
             ? (
@@ -398,6 +511,17 @@ export function PlaygroundScorecard({
                     dot={false}
                     isAnimationActive={false}
                   />
+                  {peak
+                    ? (
+                      <ReferenceDot
+                        x={peak.weight}
+                        y={peak.ndcg}
+                        r={4}
+                        fill="var(--color-ndcg)"
+                        stroke="var(--background)"
+                      />
+                    )
+                    : null}
                 </LineChart>
               </ChartContainer>
             )
@@ -406,6 +530,226 @@ export function PlaygroundScorecard({
                 {scorecard.ranAt === null
                   ? "Run the set to sweep a weight."
                   : "Pick an aspect to sweep."}
+              </p>
+            )}
+
+          {rankVsWeight.length > 0
+            ? (
+              <div className="grid min-w-0 gap-2">
+                <div className="flex min-w-0 items-center gap-1">
+                  <span className="text-sm font-medium">
+                    Rank vs weight
+                    {rankCase ? ` · ${rankCase.name}` : ""}
+                  </span>
+                  <MetricHelp
+                    label="rank vs weight"
+                    text={RANK_VS_WEIGHT_HELP}
+                  />
+                </div>
+                <ChartContainer
+                  config={rankVsWeightConfig}
+                  className="aspect-auto h-56 w-full"
+                >
+                  <LineChart
+                    accessibilityLayer
+                    data={rankVsWeight}
+                    margin={{ left: 8, right: 8, top: 8, bottom: 8 }}
+                  >
+                    <XAxis
+                      dataKey="weight"
+                      type="number"
+                      scale="log"
+                      domain={["dataMin", "dataMax"]}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => String(value)}
+                    />
+                    <YAxis
+                      reversed
+                      domain={[0.5, axisDepth + 0.5]}
+                      width={36}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    {trackedIds.map((id) => (
+                      <Line
+                        key={id}
+                        dataKey={id}
+                        name={id}
+                        type="monotone"
+                        stroke={`var(--color-${id})`}
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={false}
+                        isAnimationActive={false}
+                      />
+                    ))}
+                  </LineChart>
+                </ChartContainer>
+              </div>
+            )
+            : null}
+        </div>
+
+        <Separator />
+
+        <div className="grid min-w-0 gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex min-w-0 items-center">
+              <span className="text-sm font-medium">
+                Quick suggest (preview)
+              </span>
+              <MetricHelp label="quick suggest" text={SUGGEST_HELP} />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!canTune || activeSet === null}
+              onClick={() => {
+                if (!activeSet) {
+                  return
+                }
+                const result = suggestWeights({
+                  set: activeSet,
+                  runs: scorecard.runs,
+                  metric,
+                  schema,
+                  startWeights: weights,
+                })
+                setSuggest({
+                  snapshot: { ...weights },
+                  result,
+                  liveNdcg: null,
+                })
+              }}
+            >
+              Quick suggest
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              render={<Link to={indexPath(indexName, "auto-tune")} />}
+            >
+              Open Auto-tune
+            </Button>
+          </div>
+
+          {suggest
+            ? (
+              <div className="grid min-w-0 gap-3 rounded-lg border p-3">
+                <p className="text-sm">
+                  Preview nDCG {suggest.result.startNdcg.toFixed(3)} →{" "}
+                  {suggest.result.previewNdcg.toFixed(3)}
+                  {suggest.liveNdcg !== null
+                    ? ` · Live after verify ${suggest.liveNdcg.toFixed(3)}`
+                    : ""}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Preview only, on aspects the golden set queries. Prefer{" "}
+                  <Link
+                    className="underline underline-offset-2"
+                    to={indexPath(indexName, "auto-tune")}
+                  >
+                    Auto-tune
+                  </Link>{" "}
+                  for Live search of weights, on/off, and depth.
+                </p>
+                {suggest.result.usedEdgePeak
+                  ? (
+                    <p className="text-sm text-muted-foreground">
+                      At least one ascent step used an edge peak. Verify with
+                      Run set before keeping.
+                    </p>
+                  )
+                  : null}
+                {suggest.liveNdcg !== null &&
+                    suggest.liveNdcg + 1e-9 < suggest.result.startNdcg
+                  ? (
+                    <p className="text-sm text-muted-foreground">
+                      Live nDCG dropped versus the start snapshot. Prefer Revert
+                      unless you accept the trade-off.
+                    </p>
+                  )
+                  : null}
+                <ul className="grid gap-1 font-mono text-xs text-muted-foreground">
+                  {Object.keys(suggest.result.weights).map((name) => {
+                    const from = suggest.snapshot[name] ?? 1
+                    const to = suggest.result.weights[name] ?? 1
+                    if (from === to) {
+                      return null
+                    }
+                    return (
+                      <li key={name}>
+                        {name}: {from} → {to}
+                      </li>
+                    )
+                  })}
+                </ul>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => onUseWeights(suggest.result.weights)}
+                  >
+                    Apply preview
+                  </Button>
+                  <Button
+                    type="button"
+                    disabled={!canTune || activeSet === null ||
+                      scorecard.running}
+                    onClick={() => {
+                      if (!activeSet) {
+                        return
+                      }
+                      const candidate = suggest.result.weights
+                      onUseWeights(candidate)
+                      void scorecard.run(activeSet, candidate).then(
+                        (collected) => {
+                          const live = summariseScorecard(
+                            scoreSet(activeSet, collected)
+                              .filter((entry) => entry.score !== null)
+                              .map((entry) => entry.score!),
+                            activeSet.thresholds,
+                          ).ndcg
+                          setSuggest((current) =>
+                            current ? { ...current, liveNdcg: live } : current
+                          )
+                        },
+                      )
+                    }}
+                  >
+                    Verify with Run set
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      onUseWeights(suggest.result.weights)
+                      setSuggest(null)
+                    }}
+                  >
+                    Keep
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      onUseWeights(suggest.snapshot)
+                      setSuggest(null)
+                    }}
+                  >
+                    Revert
+                  </Button>
+                </div>
+              </div>
+            )
+            : (
+              <p className="text-sm text-muted-foreground">
+                {scorecard.ranAt === null
+                  ? "Run the set before suggesting weights."
+                  : "Search the weight vector on the cache, then verify with a real Run set."}
               </p>
             )}
         </div>

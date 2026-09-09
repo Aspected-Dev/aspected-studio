@@ -12,7 +12,8 @@ here. That site ships from the sibling `aspects.dev` repo and is what
 ## Start here (tutorials)
 
 Hands-on walkthroughs. Tutorials 1–3 stay lean; 4–5 go deep on how to
-**interpret** Compare and Scorecard metrics while tuning weights:
+**interpret** Compare and Scorecard metrics while tuning weights; 6 runs Live
+Auto-tune:
 
 | # | Tutorial                                                         | Time       |
 | - | ---------------------------------------------------------------- | ---------- |
@@ -20,7 +21,8 @@ Hands-on walkthroughs. Tutorials 1–3 stay lean; 4–5 go deep on how to
 | 2 | [Indexes and documents](tutorials/02-indexes-and-documents.md)   | ~15 min    |
 | 3 | [Search](tutorials/03-search.md)                                 | ~10 min    |
 | 4 | [Playground](tutorials/04-playground.md)                         | ~25 min    |
-| 5 | [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md) | ~40–50 min |
+| 5 | [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md)      | ~40–50 min |
+| 6 | [Auto-tune the catalog](tutorials/06-auto-tune.md)               | ~15–25 min |
 
 Index of tutorials: [tutorials/README.md](tutorials/README.md).
 
@@ -34,6 +36,7 @@ Index of tutorials: [tutorials/README.md](tutorials/README.md).
 | [Indexes](indexes.md)           | Create, schema, documents, search, Request Inspector    |
 | [Playground](playground.md)     | Ranking, Live/Preview/Stale, Compare A/B                |
 | [Scorecard](scorecard.md)       | Golden sets, metrics, Scorecard page and Playground tab |
+| [Auto-tune](auto-tune.md)       | Budgeted Live weight / on-off / depth search            |
 | [Contributing](contributing.md) | Stack, code guidelines, when to update which docs       |
 
 ## Keeping docs current

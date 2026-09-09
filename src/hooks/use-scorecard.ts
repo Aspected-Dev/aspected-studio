@@ -34,7 +34,10 @@ export type ScorecardState = {
   /** Weights the last run was executed with. */
   ranWeights: Record<string, number> | null
   /** Runs the enabled cases in a set, skipping ones whose request is unchanged. */
-  run: (set: GoldenSet, weights: Record<string, number>) => Promise<void>
+  run: (
+    set: GoldenSet,
+    weights: Record<string, number>,
+  ) => Promise<Map<string, CaseRun>>
   /** Abandons the run in flight. Results already collected are kept. */
   cancel: () => void
   /** Drops every cached run. */
@@ -93,7 +96,7 @@ export function useScorecard(indexName: string): ScorecardState {
         setRunning(false)
         setRanAt(Date.now())
         setRanWeights({ ...weights })
-        return
+        return new Map(runs)
       }
 
       const collected = new Map<string, CaseRun>()
@@ -148,7 +151,7 @@ export function useScorecard(indexName: string): ScorecardState {
       )
 
       if (runIdRef.current !== runId) {
-        return
+        return collected
       }
 
       setRuns(collected)
@@ -159,6 +162,8 @@ export function useScorecard(indexName: string): ScorecardState {
       if (firstFailure !== null) {
         toastCaughtError(firstFailure, "Scorecard run failed")
       }
+
+      return collected
     },
     [client, indexName, runs],
   )

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell.tsx"
 import { IndexLayout } from "@/components/index-layout.tsx"
 import { ConnectionProvider } from "@/hooks/use-connection.tsx"
 import { CreateIndexPage } from "@/pages/create-index-page.tsx"
+import { IndexAutoTunePage } from "@/pages/index-auto-tune-page.tsx"
 import { IndexDocsPage } from "@/pages/index-docs-page.tsx"
 import { IndexPlaygroundPage } from "@/pages/index-playground-page.tsx"
 import { IndexSchemaPage } from "@/pages/index-schema-page.tsx"
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
           { path: "search", element: <IndexSearchPage /> },
           { path: "playground", element: <IndexPlaygroundPage /> },
           { path: "scorecard", element: <IndexScorecardPage /> },
+          { path: "auto-tune", element: <IndexAutoTunePage /> },
         ],
       },
     ],

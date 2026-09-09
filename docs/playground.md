@@ -61,8 +61,12 @@ Pinned weights also feed deltas on the Scorecard tab. See
 
 Grades a golden set at the **same** weight sliders as Ranking. Run the set once,
 then every weight change re-grades locally and can show a delta against pinned
-A. The weight sweep charts nDCG across the slider for one aspect; **Use best**
-writes the peak back onto the form.
+A. The weight sweep charts nDCG across the slider for one aspect; **Rank vs
+weight** shows how tracked case ids move; **Use best** / **Use peak (edge)**
+writes a single-axis peak (edge peaks warn). **Quick suggest (preview)** runs
+client-side coordinate ascent on the cache, then **Verify with Run set** before
+Keep or Revert. For Live multi-aspect search (weights, on/off, depth), open
+[Auto-tune](auto-tune.md).
 
 Sets are created and edited on the Scorecard **page**. This tab only selects and
 grades them. Full detail: [Scorecard](scorecard.md). Demo talk track:
@@ -72,3 +76,4 @@ grades them. Full detail: [Scorecard](scorecard.md). Demo talk track:
 
 - Design rationale: [Architecture](architecture.md)
 - Golden sets and metrics: [Scorecard](scorecard.md)
+- Live optimizer: [Auto-tune](auto-tune.md)

@@ -90,6 +90,8 @@ import {
 } from "@/lib/aspected/playground.ts"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
 import type { IndexDetail } from "@/lib/aspected/types.ts"
+import { tunedConfigsForIndex } from "@/lib/aspected/tuned-config.ts"
+import { TunedConfigLoader } from "@/components/tuned-config-loader.tsx"
 import { DOCS_HASH } from "@/lib/docs.ts"
 import { countLabel } from "@/lib/utils.ts"
 import { toast } from "sonner"
@@ -616,9 +618,19 @@ export function IndexScorecardPage() {
                     <Separator />
 
                     <div className="grid gap-3">
-                      <span className="text-sm font-medium">
-                        Weights under test
-                      </span>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-medium">
+                          Weights under test
+                        </span>
+                        <TunedConfigLoader
+                          configs={tunedConfigsForIndex(name ?? "")}
+                          onLoad={(config) =>
+                            setWeights((previous) => ({
+                              ...previous,
+                              ...config.weights,
+                            }))}
+                        />
+                      </div>
                       {schema.map((aspect) => (
                         <div key={aspect.name} className="grid gap-1.5">
                           <span className="font-mono text-xs text-muted-foreground">

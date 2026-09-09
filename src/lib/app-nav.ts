@@ -7,6 +7,7 @@ export type IndexPage =
   | "search"
   | "playground"
   | "scorecard"
+  | "auto-tune"
 
 /** Parsed Studio location used by the sidebar and breadcrumbs. */
 export type StudioLocation =
@@ -37,6 +38,9 @@ export function indexPath(name: string, page: IndexPage = "schema"): string {
   if (page === "scorecard") {
     return `/indexes/${encoded}/scorecard`
   }
+  if (page === "auto-tune") {
+    return `/indexes/${encoded}/auto-tune`
+  }
   return `/indexes/${encoded}`
 }
 
@@ -60,7 +64,7 @@ export function parseStudioLocation(pathname: string): StudioLocation {
   }
 
   const match = pathname.match(
-    /^\/indexes\/([^/]+)(?:\/(docs|search|playground|scorecard))?\/?$/,
+    /^\/indexes\/([^/]+)(?:\/(docs|search|playground|scorecard|auto-tune))?\/?$/,
   )
   if (!match) {
     return { kind: "indexes" }
@@ -74,6 +78,8 @@ export function parseStudioLocation(pathname: string): StudioLocation {
     ? "playground"
     : match[2] === "scorecard"
     ? "scorecard"
+    : match[2] === "auto-tune"
+    ? "auto-tune"
     : "schema"
 
   return {
@@ -95,6 +101,9 @@ function indexPageLabel(page: IndexPage): string {
   }
   if (page === "scorecard") {
     return "Scorecard"
+  }
+  if (page === "auto-tune") {
+    return "Auto-tune"
   }
   return "Schema"
 }
@@ -123,7 +132,8 @@ export function docsTargetForLocation(
       return { page: "resolvers", hash: DOCS_HASH.combiningResolvers }
     }
     if (
-      location.page === "playground" || location.page === "scorecard"
+      location.page === "playground" || location.page === "scorecard" ||
+      location.page === "auto-tune"
     ) {
       return { page: "resolvers", hash: DOCS_HASH.inspectingResolvers }
     }
