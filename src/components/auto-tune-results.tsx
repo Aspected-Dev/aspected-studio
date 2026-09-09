@@ -18,6 +18,25 @@ export type AutoTuneResultsProps = {
 }
 
 /**
+ * Explains the Holdout tile. A run only scores the holdout in the confirm
+ * stage, so an unmeasured split has to read differently from no split at all.
+ */
+export function holdoutHint(
+  holdoutValue: number | null,
+  championValue: number,
+  holdoutCases: number,
+): string {
+  if (holdoutValue !== null) {
+    const delta = holdoutValue - championValue
+    return `${delta >= 0 ? "+" : ""}${delta.toFixed(3)} vs train champion`
+  }
+  if (holdoutCases === 0) {
+    return "Holdout was off or the set was too small"
+  }
+  return `Run ended before the confirm stage scored the ${holdoutCases} held-out cases`
+}
+
+/**
  * Champion card: deltas, holdout, rationale, leaderboard, actions.
  */
 export function AutoTuneResults({
@@ -35,6 +54,7 @@ export function AutoTuneResults({
     noiseFloor,
     stopped,
     exhausted,
+    holdoutIds,
   } = snapshot
 
   if (!champion || !baseline) {
@@ -72,15 +92,11 @@ export function AutoTuneResults({
           <MetricTile
             label="Holdout"
             value={holdoutObjective ? holdoutObjective.value.toFixed(3) : "n/a"}
-            hint={holdoutObjective
-              ? `${
-                (holdoutObjective.value - champion.objective.value) >= 0
-                  ? "+"
-                  : ""
-              }${
-                (holdoutObjective.value - champion.objective.value).toFixed(3)
-              } vs train champion`
-              : "Holdout was off or the set was too small"}
+            hint={holdoutHint(
+              holdoutObjective?.value ?? null,
+              champion.objective.value,
+              holdoutIds.length,
+            )}
           />
         </div>
 

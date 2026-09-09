@@ -22,11 +22,17 @@ for Auto-tune itself.
 1. Leave aspect space defaults (tune weight + allow off for aspects the set
    uses)
 2. Budget: **Standard** (1000 searches) for this walkthrough
-3. Keep **Train / holdout split** on (the catalog set is large enough)
+3. Keep **Train / holdout split** on (the catalog set is large enough at 10
+   runnable cases, so 7 train and 3 holdout)
 4. Click **Start auto-tune**
 5. Watch **Progress**: stage badges, searches used, cache hits, trial feed
 
 You can **Stop** at any time. Best-so-far is kept.
+
+Stay on Standard if you want to see the whole tutorial. **Quick** (250) spends
+its whole budget inside the Coarse stage on this set, so Refine, Depth, and
+Confirm never run. Because the holdout is only scored in Confirm, the Holdout
+tile stays `n/a` and Step 3's holdout check has nothing to read.
 
 ## Step 3: Read the champion
 

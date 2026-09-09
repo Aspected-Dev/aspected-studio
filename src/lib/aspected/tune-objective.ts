@@ -1,11 +1,13 @@
-import { caseK } from "./golden.ts"
+import { caseK, judgementMap } from "./golden.ts"
 import type { GoldenCase, GoldenMetricKey, GoldenSet } from "./golden.ts"
 import {
+  type CaseScore,
   metricValue,
   type ScorecardSummary,
+  scoreCase,
   summariseScorecard,
 } from "./relevance.ts"
-import { type CaseRun, scoreSet } from "./scorecard.ts"
+import { type CaseRun, runnableCases, scoreSet } from "./scorecard.ts"
 
 /** Penalty weight per forbidden case fraction in the objective. */
 export const FORBIDDEN_PENALTY = 0.2
@@ -50,7 +52,22 @@ export function summaryPrimary(
 }
 
 /**
+ * Score for a case that produced no usable ranking.
+ *
+ * Grading an empty ranking gives zero on every metric, which keeps a trial
+ * measured over its full scope instead of quietly shrinking the denominator.
+ */
+function zeroScore(set: GoldenSet, item: GoldenCase): CaseScore {
+  return scoreCase([], judgementMap(item), caseK(set, item), item.forbidden)
+}
+
+/**
  * Live objective from cached runs graded in server order.
+ *
+ * Cases in scope that errored, or that never ran because the candidate config
+ * left them nothing to query, score zero rather than dropping out. Macro means
+ * weight every case equally, so dropping the hardest case would raise the
+ * score and let a transient server failure win the champion slot.
  *
  * @param caseIds - When set, only these cases contribute (train or holdout).
  */
@@ -67,9 +84,9 @@ export function liveObjective(
     : set
 
   const scored = scoreSet(scoped, runs, {})
-  const scores = scored
-    .filter((entry) => entry.score !== null)
-    .map((entry) => entry.score!)
+  const scores = scored.map((entry) =>
+    entry.score ?? zeroScore(scoped, entry.item)
+  )
   const summary = summariseScorecard(scores, scoped.thresholds)
   const primary = summaryPrimary(summary, scoped.thresholds.metric)
   const cases = Math.max(1, summary.cases)
@@ -98,6 +115,43 @@ export function casePrimaries(
       name: entry.item.name,
       primary: metricValue(entry.score, set.thresholds.metric),
       forbidden: entry.score.forbiddenHits.length > 0,
+    }]
+  })
+}
+
+/** One case's primary metric before and after, for the results delta table. */
+export type CaseDelta = CasePrimary & {
+  /** Primary metric on the baseline runs. */
+  baseline: number
+  /** Champion primary minus baseline primary. */
+  delta: number
+}
+
+/**
+ * Per-case primary metric change between two sets of runs.
+ *
+ * Both maps have to cover the same scope. Comparing the baseline against a
+ * holdout trial's runs returns nothing, because the case ids are disjoint.
+ */
+export function caseDeltas(
+  set: GoldenSet,
+  baselineRuns: Map<string, CaseRun>,
+  championRuns: Map<string, CaseRun>,
+): CaseDelta[] {
+  const before = casePrimaries(set, baselineRuns)
+  const after = new Map(
+    casePrimaries(set, championRuns).map((item) => [item.caseId, item]),
+  )
+
+  return before.flatMap((item) => {
+    const next = after.get(item.caseId)
+    if (!next) {
+      return []
+    }
+    return [{
+      ...next,
+      baseline: item.primary,
+      delta: next.primary - item.primary,
     }]
   })
 }
@@ -277,10 +331,85 @@ export function splitHoldout(
 }
 
 /**
+ * Deterministic train/holdout split over the cases a run can actually search.
+ *
+ * Splitting every enabled case would let unrunnable ones land in the holdout,
+ * which is what the setup card's runnable count already promises against.
+ *
+ * @param weights - Start weights, used to decide what each case can query.
+ */
+export function splitRunnableHoldout(
+  set: GoldenSet,
+  weights: Record<string, number>,
+  seed: number,
+  options: {
+    minCases?: number
+    fraction?: number
+    minHoldout?: number
+  } = {},
+): HoldoutSplit | null {
+  return splitHoldout(runnableCases(set, weights), seed, options)
+}
+
+/**
  * Ensures grading depth stays at the set case k even when fetchK is larger.
  *
  * Callers pass this into UI copy; scoring already uses {@link caseK}.
  */
 export function gradingK(set: GoldenSet, item: GoldenCase): number {
   return caseK(set, item)
+}
+
+/**
+ * Deepest grading cut-off across the cases a run will actually search.
+ *
+ * Retrieval depth candidates are built from this rather than the set `k`, so
+ * every candidate is at least as deep as every case's cut-off. Basing them on
+ * the set `k` would offer depths that are already too shallow for a case that
+ * overrides `k` upward.
+ *
+ * @param weights - Start weights, used to decide what each case can query.
+ */
+export function deepestGradingK(
+  set: GoldenSet,
+  weights: Record<string, number>,
+): number {
+  let deepest = set.k
+  for (const item of runnableCases(set, weights)) {
+    deepest = Math.max(deepest, caseK(set, item))
+  }
+  return deepest
+}
+
+/** One case a trial should search, with the depth its request must use. */
+export type TrialCase = {
+  item: GoldenCase
+  /** Documents to fetch. Never shallower than the case grading cut-off. */
+  fetchK: number
+}
+
+/**
+ * Cases one trial should search, in set order, with per-case fetch depth.
+ *
+ * Two rules that the raw config cannot express on its own. A case with
+ * nothing left to query under these weights is skipped rather than searched
+ * with an empty query. A case graded deeper than `fetchK`, because it
+ * overrides the set `k`, is fetched at its own cut-off so grading never reads
+ * past the rows that were retrieved.
+ *
+ * @param caseIds - Scope for this trial, either train or holdout.
+ */
+export function trialCases(
+  set: GoldenSet,
+  weights: Record<string, number>,
+  caseIds: readonly string[],
+  fetchK: number,
+): TrialCase[] {
+  const scope = new Set(caseIds)
+  return runnableCases(set, weights)
+    .filter((item) => scope.has(item.id))
+    .map((item) => ({
+      item,
+      fetchK: Math.max(fetchK, caseK(set, item)),
+    }))
 }

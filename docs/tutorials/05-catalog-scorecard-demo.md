@@ -164,7 +164,7 @@ Full definitions: [Scorecard](../scorecard.md).
 1. Studio is connected ([Tutorial 1](01-connect-and-seed.md))
 2. Index **catalog** exists with 100 documents
 3. Sidebar shows **Schema**, **Documents**, **Search**, **Playground**,
-   **Scorecard**
+   **Scorecard**, **Auto-tune**
 
 If `catalog` is missing:
 
@@ -232,7 +232,7 @@ matter more than the third decimal):
 
 | Metric      | Value      | How to read it here                          |
 | ----------- | ---------- | -------------------------------------------- |
-| nDCG@5      | ~0.95      | Strong overall order; two cases still soft   |
+| nDCG@5      | ~0.94      | Strong overall order; two cases still soft   |
 | Precision@5 | ~0.46–0.48 | Many top-5 slots are unjudged / not expected |
 | Recall@5    | ~0.95      | Almost every expected doc is on the page     |
 | MRR         | ~1.000     | Every case’s **first** hit is relevant       |
@@ -341,6 +341,11 @@ you would also have seen Overlap drop and documents enter/leave.
 
 Labelling in context beats a separate spreadsheet. Gains are how nDCG learns
 preference. Remove the judgement in the editor if you do not want to keep it.
+
+This judgement sticks in `localStorage`, so it also changes the numbers earlier
+in this tutorial. Keeping it takes the all-`1` board to nDCG ≈ 0.95 with
+Precision ≈ 0.48, because the phone case now scores a perfect 1.00. Remove it
+(or re-import the set) before you compare against the cheat sheet below.
 
 ---
 
@@ -464,7 +469,7 @@ run on the Scorecard page does not automatically fill this tab’s cache.
 3. Wait for tiles and chips
 
 Expect the same teaching board as Part 2: about **8 green / 1 amber / 1 red**,
-nDCG ≈ **0.95**.
+nDCG ≈ **0.94**.
 
 If A was pinned at all-`1`, deltas should be near **0** (current weights ≈ A).
 
@@ -510,7 +515,8 @@ aspects is not multi-aspect optimize.
 3. Read the nDCG chart: horizontal = weight, vertical = nDCG for the whole set.
    The peak is marked on the curve
 4. After an all-`1` **Run set**, typical shape for `title`:
-   - Peak around weights **0.6–2.5**
+   - Peak around weights **0.575–2.5** (the button names the grid point, so it
+     reads `0.575` rather than a rounded `0.6`)
    - Over-weight past ~**3.6** and nDCG falls toward ~0.95
 5. Read **Rank vs weight** under the nDCG chart: expected (and forbidden) ids
    for the selected case (or the first enabled case) vs weight. Rank 1 is at the
@@ -623,6 +629,12 @@ Use this on your own indexes after the catalog walkthrough:
 
 Small Cosine Preview differences can appear; chip colours are what matter.
 
+`deno task verify:tutorials` grades this set at all three weight configs
+straight from the terminal, using the same scoring modules the pages call. Run
+it to regenerate these figures against your own server. It grades every config
+Live, so its `price 8` numbers are the re-run ones rather than the Preview ones
+listed below.
+
 ### Run set at all weights 1
 
 | Case                                    | Chip  | nDCG (approx.) | Why                                    |
@@ -638,7 +650,7 @@ Small Cosine Preview differences can appear; chip colours are what matter.
 | Small wireless mouse for travel         | green | 1.00           |                                        |
 | Portable bluetooth speaker              | green | 1.00           |                                        |
 
-Summary: nDCG ≈ 0.95 · 8 green · 1 amber · 1 red
+Summary: nDCG ≈ 0.94 · 8 green · 1 amber · 1 red
 
 ### Preview: price ~8 (no re-run)
 
@@ -660,7 +672,7 @@ Summary: nDCG ≈ 0.95 · 8 green · 1 amber · 1 red
 | Aspect   | Peak weight (approx.) | Peak nDCG | Note                                      |
 | -------- | --------------------- | --------- | ----------------------------------------- |
 | price    | 0.3–1.2               | ~0.970    | Very high price flattens near 0.963       |
-| title    | 0.6–2.5               | ~0.970    | Above ~3.6 falls toward ~0.95             |
+| title    | 0.575–2.5             | ~0.970    | Above ~3.6 falls toward ~0.95             |
 | category | ≥ ~0.6                | ~0.970    | Clearing the printer still needs a re-run |
 
 ---

@@ -2,6 +2,7 @@ import { tunableAspectNames } from "./auto-tune.ts"
 import type { GoldenSet } from "./golden.ts"
 import { clampWeight, SLIDER_STEPS, sliderToWeight } from "./playground.ts"
 import {
+  deepestGradingK,
   enabledAspectCount,
   isBetterConfig,
   measuredNoiseFloor,
@@ -24,7 +25,7 @@ export const COARSE_WEIGHT_GRID = [
 /** Local refine multipliers around a winner. */
 export const REFINE_FACTORS = [1.5, 1.25] as const
 
-/** Fetch depth multiples of the set k. */
+/** Fetch depth multiples of the deepest case grading k. */
 export const DEPTH_MULTIPLES = [1, 2, 4] as const
 
 /** Budget presets counted in individual searches. */
@@ -245,9 +246,27 @@ export function createTunerState(options: TunerOptions): TunerState {
 }
 
 /**
- * Returns the next batch of pending trial requests (does not clear them).
+ * True when the run has spent its search budget.
+ *
+ * Trial cost is only known once a trial has been evaluated, so the budget
+ * bounds where the next trial may start rather than where the last one ends.
+ * Overshoot is therefore capped at a single trial.
+ */
+export function budgetExhausted(state: TunerState): boolean {
+  return state.searchesUsed >= state.options.maxSearches
+}
+
+/**
+ * Returns the pending trial requests, newest batch last (does not clear them).
+ *
+ * Empty once the budget is spent, so an executor that re-reads this after each
+ * trial cannot work through the rest of a batch that was queued while budget
+ * still remained.
  */
 export function nextCandidates(state: TunerState): TuneTrialRequest[] {
+  if (budgetExhausted(state)) {
+    return []
+  }
   return [...state.pending]
 }
 
@@ -276,6 +295,9 @@ export function recordTrial(
   next.trials.push(recorded)
   next.pending = next.pending.filter((item) => item.id !== id)
   next.searchesUsed += recorded.searches
+  if (budgetExhausted(next)) {
+    next.exhausted = true
+  }
 
   if (recorded.stage === "baseline" && recorded.label === "start") {
     next.baseline = recorded
@@ -442,10 +464,15 @@ function finishBatch(state: TunerState): void {
     return
   }
 
-  // Screen: adopt off only when within noise of current working (parsimony).
+  // Screen: adopt off only when within noise of the start config (parsimony).
+  //
+  // The reference is the baseline, not the champion, because every screen
+  // trial is built from the current working config and so carries the drops
+  // already adopted. Measuring against a reference that each adoption lowers
+  // would let several within-noise losses compound into one large one.
   if (state.stage === "screen" && state.batchAspect) {
     const off = batch[0]
-    const reference = state.champion ?? state.baseline
+    const reference = state.baseline
     if (
       off && reference &&
       off.objective.value + state.noiseFloor >= reference.objective.value
@@ -484,18 +511,10 @@ function finishBatch(state: TunerState): void {
         best = trial
       }
     }
-    // Also compare against keeping the current working weight (not in batch).
-    const currentWeight = state.working.weights[state.batchAspect] ?? 1
-    const improved = best.config.weights[state.batchAspect] !== currentWeight &&
-      (state.champion === null ||
-        best.objective.value + state.noiseFloor >=
-          (state.champion?.objective.value ?? -Infinity) ||
-        best.objective.value >
-          (referenceValue(state) - state.noiseFloor))
-    if (
-      improved &&
-      best.objective.value >= referenceValue(state) - state.noiseFloor
-    ) {
+    // Every queued candidate already differs from the working weight, so the
+    // only question left is whether the batch winner holds up against the
+    // reference within the noise floor.
+    if (best.objective.value >= referenceValue(state) - state.noiseFloor) {
       state.working = cloneConfig(best.config)
       maybeAdoptChampion(state, best)
     }
@@ -768,7 +787,10 @@ function queueNextRefine(state: TunerState): boolean {
 }
 
 function queueNextDepth(state: TunerState): boolean {
-  const baseK = state.options.set.k
+  const baseK = deepestGradingK(
+    state.options.set,
+    state.options.start.weights,
+  )
   const ids: number[] = []
   while (state.depthIndex < DEPTH_MULTIPLES.length) {
     if (budgetLeft(state) <= 0) {

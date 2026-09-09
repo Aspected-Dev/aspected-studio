@@ -4,6 +4,7 @@ import type { GoldenCase, GoldenSet } from "./golden.ts"
 import type { TuneObjective } from "./tune-objective.ts"
 import {
   BUDGET_PRESETS,
+  budgetExhausted,
   championOf,
   createTunerState,
   defaultTuneSpace,
@@ -113,6 +114,157 @@ function drain(
   return current
 }
 
+/** Seven train cases, matching the audited budget scenario. */
+const BUDGET_TRAIN_IDS = Array.from(
+  { length: 7 },
+  (_, index) => `c${index}`,
+)
+
+function budgetState(maxSearches: number): TunerState {
+  const golden = set(
+    BUDGET_TRAIN_IDS.map((id) => testCase({ id, name: id })),
+  )
+  const start: TuneConfig = { weights: { title: 1, price: 1 }, fetchK: 5 }
+  return createTunerState({
+    set: golden,
+    start,
+    space: defaultTuneSpace(golden, start.weights),
+    trainIds: BUDGET_TRAIN_IDS,
+    holdoutIds: [],
+    maxSearches,
+  })
+}
+
+/**
+ * Two aspects that are individually redundant but jointly necessary: dropping
+ * either one costs less than the noise floor, dropping both is a collapse.
+ */
+function jointlyRedundantValue(config: TuneConfig): number {
+  const title = (config.weights.title ?? 1) > 0
+  const price = (config.weights.price ?? 1) > 0
+  if (title && price) {
+    return 1
+  }
+  if (title || price) {
+    return 0.999
+  }
+  return 0.5
+}
+
+/**
+ * Three aspects that each cost 0.0015 to disable, under a 0.002 noise floor.
+ *
+ * No single drop clears the floor, so a moving reference would let all three
+ * go and land well below the start config.
+ */
+function steadyDropValue(config: TuneConfig): number {
+  const off =
+    ["title", "price", "brand"].filter((name) =>
+      (config.weights[name] ?? 1) <= 0
+    ).length
+  return 1 - 0.0015 * off
+}
+
+/** Drains one trial at a time, capturing state as the screen stage ends. */
+function drainWith(
+  value: (config: TuneConfig) => number,
+  state: TunerState,
+  maxSteps = 500,
+): { final: TunerState; afterScreen: TunerState | null } {
+  let current = state
+  let afterScreen: TunerState | null = null
+  let sawScreen = false
+
+  for (let step = 0; step < maxSteps; step += 1) {
+    if (current.stage === "done" || current.stopped) {
+      break
+    }
+    const [request] = nextCandidates(current)
+    if (!request) {
+      break
+    }
+    current = recordTrial(current, {
+      id: request.id,
+      config: request.config,
+      objective: objective(value(request.config)),
+      scope: request.scope,
+      stage: request.stage,
+      searches: 1,
+      label: request.label,
+      bypassCache: request.bypassCache,
+    })
+    if (current.stage === "screen") {
+      sawScreen = true
+    } else if (sawScreen && afterScreen === null) {
+      afterScreen = current
+    }
+  }
+
+  return { final: current, afterScreen }
+}
+
+describe("screen stage", () => {
+  function screenState(): TunerState {
+    const golden = set([testCase()])
+    const start: TuneConfig = { weights: { title: 1, price: 1 }, fetchK: 5 }
+    return createTunerState({
+      set: golden,
+      start,
+      space: defaultTuneSpace(golden, start.weights),
+      trainIds: ["case-1"],
+      holdoutIds: [],
+      maxSearches: BUDGET_PRESETS.standard,
+    })
+  }
+
+  it("does not turn off two aspects that are only jointly redundant", () => {
+    const { afterScreen } = drainWith(jointlyRedundantValue, screenState())
+
+    expect(afterScreen).not.toBeNull()
+    const weights = afterScreen!.working.weights
+    const off = Object.values(weights).filter((weight) => weight <= 0)
+    expect(off).toHaveLength(1)
+  })
+
+  it("does not compound several within-noise losses", () => {
+    const golden = set([
+      testCase({
+        aspects: [
+          { name: "title", type: "text", enabled: true, value: "rake" },
+          { name: "price", type: "number", enabled: true, value: "30" },
+          { name: "brand", type: "text", enabled: true, value: "acme" },
+        ],
+      }),
+    ])
+    const start: TuneConfig = {
+      weights: { title: 1, price: 1, brand: 1 },
+      fetchK: 5,
+    }
+    const { afterScreen } = drainWith(
+      steadyDropValue,
+      createTunerState({
+        set: golden,
+        start,
+        space: defaultTuneSpace(golden, start.weights),
+        trainIds: ["case-1"],
+        holdoutIds: [],
+        maxSearches: BUDGET_PRESETS.standard,
+      }),
+    )
+
+    expect(afterScreen).not.toBeNull()
+    const state = afterScreen!
+    const off = Object.values(state.working.weights).filter(
+      (weight) => weight <= 0,
+    )
+    expect(off).toHaveLength(1)
+    // Drift from the start config stays inside a single noise floor.
+    expect(steadyDropValue(state.working)).toBeGreaterThanOrEqual(
+      state.baseline!.objective.value - state.noiseFloor,
+    )
+  })
+})
+
 describe("snapWeight", () => {
   it("maps positive weights onto the slider grid", () => {
     expect(snapWeight(1)).toBe(1)
@@ -218,6 +370,105 @@ describe("createTunerState and stages", () => {
     expect(state.stage).toBe("done")
     expect(state.exhausted || state.searchesUsed <= 3 + 20).toBe(true)
     expect(championOf(state)).not.toBeNull()
+  })
+
+  it("marks the run exhausted as soon as the budget is spent", () => {
+    let state = budgetState(10)
+    const [first] = nextCandidates(state)
+    state = recordTrial(state, {
+      id: first.id,
+      config: first.config,
+      objective: objective(oracleValue(first.config)),
+      scope: first.scope,
+      stage: first.stage,
+      searches: 10,
+      label: first.label,
+    })
+
+    expect(budgetExhausted(state)).toBe(true)
+    expect(state.exhausted).toBe(true)
+  })
+
+  it("stops handing out candidates once the budget is spent", () => {
+    let state = budgetState(10)
+    const [first] = nextCandidates(state)
+    expect(state.pending.length).toBeGreaterThan(1)
+
+    state = recordTrial(state, {
+      id: first.id,
+      config: first.config,
+      objective: objective(oracleValue(first.config)),
+      scope: first.scope,
+      stage: first.stage,
+      searches: 10,
+      label: first.label,
+    })
+
+    expect(state.pending.length).toBeGreaterThan(0)
+    expect(nextCandidates(state)).toEqual([])
+  })
+
+  it("never exceeds maxSearches across a full coarse batch", () => {
+    const searchesPerTrial = BUDGET_TRAIN_IDS.length
+    const maxSearches = 250
+    let state = budgetState(maxSearches)
+
+    for (let step = 0; step < 500; step += 1) {
+      const [request] = nextCandidates(state)
+      if (!request) {
+        break
+      }
+      state = recordTrial(state, {
+        id: request.id,
+        config: request.config,
+        objective: objective(oracleValue(request.config)),
+        scope: request.scope,
+        stage: request.stage,
+        searches: searchesPerTrial,
+        label: request.label,
+        bypassCache: request.bypassCache,
+      })
+    }
+
+    // The budget must actually bind: the full space is far wider than 250.
+    expect(state.searchesUsed).toBeGreaterThan(maxSearches - searchesPerTrial)
+    // Overshoot is bounded by the one trial that was already in flight.
+    expect(state.searchesUsed).toBeLessThanOrEqual(
+      maxSearches + searchesPerTrial,
+    )
+    expect(state.trials.length * searchesPerTrial).toBe(state.searchesUsed)
+    expect(championOf(state)).not.toBeNull()
+  })
+
+  it("bases depth candidates on the deepest case grading k", () => {
+    const golden = set([
+      testCase({ id: "shallow" }),
+      testCase({ id: "deep", name: "deep", k: 12 }),
+    ])
+    const start: TuneConfig = {
+      weights: { title: 1, price: 1 },
+      fetchK: golden.k,
+    }
+    let state = createTunerState({
+      set: golden,
+      start,
+      space: defaultTuneSpace(golden, start.weights),
+      trainIds: ["shallow", "deep"],
+      holdoutIds: [],
+      maxSearches: BUDGET_PRESETS.thorough,
+    })
+    state = drain(state)
+
+    const depths = [
+      ...new Set(
+        state.trials
+          .filter((trial) => trial.stage === "depth")
+          .map((trial) => trial.config.fetchK),
+      ),
+    ].sort((left, right) => left - right)
+
+    // Deepest grading k is 12, not the set k of 5.
+    expect(depths).toEqual([12, 24, 48])
   })
 
   it("scores holdout when holdout ids are provided", () => {

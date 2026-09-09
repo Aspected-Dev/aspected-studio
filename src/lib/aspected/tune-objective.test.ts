@@ -3,6 +3,7 @@ import { emptyGoldenSet } from "./golden.ts"
 import type { GoldenCase, GoldenSet } from "./golden.ts"
 import type { CaseRun } from "./scorecard.ts"
 import {
+  caseDeltas,
   casePrimaries,
   enabledAspectCount,
   isBetterConfig,
@@ -10,6 +11,8 @@ import {
   measuredNoiseFloor,
   noiseLabel,
   splitHoldout,
+  splitRunnableHoldout,
+  trialCases,
   weightDistance,
 } from "./tune-objective.ts"
 import type { SearchResultRow, StoredAspect } from "./types.ts"
@@ -112,6 +115,165 @@ describe("liveObjective", () => {
     const train = liveObjective(golden, runs, new Set(["train"]))
     expect(train.primary).toBeCloseTo(1)
     expect(train.summary.cases).toBe(1)
+  })
+
+  it("does not reward a trial whose hardest case errored", () => {
+    const golden = set([
+      testCase({ id: "easy", expected: [{ id: "a", gain: 1 }] }),
+      testCase({
+        id: "hard",
+        name: "hard",
+        expected: [{ id: "z", gain: 1 }],
+      }),
+    ])
+    const scope = new Set(["easy", "hard"])
+    const healthy = new Map([
+      ["easy", run("easy", [{ id: "a", distance: 0.1 }])],
+      ["hard", run("hard", [{ id: "q", distance: 0.1 }])],
+    ])
+    const errored = new Map([
+      ["easy", run("easy", [{ id: "a", distance: 0.1 }])],
+      ["hard", { ...run("hard", []), error: "Case failed" }],
+    ])
+
+    const good = liveObjective(golden, healthy, scope)
+    const broken = liveObjective(golden, errored, scope)
+
+    expect(good.summary.cases).toBe(2)
+    expect(good.primary).toBeCloseTo(0.5)
+    expect(broken.summary.cases).toBe(2)
+    expect(broken.primary).toBeCloseTo(0.5)
+    expect(broken.value).toBeLessThanOrEqual(good.value)
+  })
+
+  it("scores a case with no run as zero rather than dropping it", () => {
+    const golden = set([
+      testCase({ id: "ran", expected: [{ id: "a", gain: 1 }] }),
+      testCase({
+        id: "never-ran",
+        name: "never ran",
+        expected: [{ id: "a", gain: 1 }],
+      }),
+    ])
+    const runs = new Map([
+      ["ran", run("ran", [{ id: "a", distance: 0.1 }])],
+    ])
+
+    const objective = liveObjective(golden, runs, new Set(["ran", "never-ran"]))
+    expect(objective.summary.cases).toBe(2)
+    expect(objective.primary).toBeCloseTo(0.5)
+  })
+})
+
+describe("trialCases", () => {
+  const weights = { title: 1, price: 1 }
+
+  it("never fetches shallower than the case grading k", () => {
+    const golden = set([
+      testCase({ id: "shallow" }),
+      testCase({ id: "deep", name: "deep", k: 50 }),
+    ], { k: 20 })
+
+    expect(
+      trialCases(golden, weights, ["shallow", "deep"], 20).map((entry) => [
+        entry.item.id,
+        entry.fetchK,
+      ]),
+    ).toEqual([["shallow", 20], ["deep", 50]])
+  })
+
+  it("keeps a fetchK that is already deeper than the grading k", () => {
+    const golden = set([testCase({ id: "deep", k: 50 })], { k: 20 })
+
+    expect(trialCases(golden, weights, ["deep"], 80)[0].fetchK).toBe(80)
+  })
+
+  it("skips cases with no active aspects instead of searching an empty query", () => {
+    const golden = set([
+      testCase({ id: "queryable" }),
+      testCase({
+        id: "brand-only",
+        name: "brand only",
+        aspects: [
+          { name: "brand", type: "text", enabled: true, value: "acme" },
+        ],
+      }),
+    ])
+
+    expect(
+      trialCases(golden, { ...weights, brand: 0 }, [
+        "queryable",
+        "brand-only",
+      ], 20).map((entry) => entry.item.id),
+    ).toEqual(["queryable"])
+  })
+
+  it("keeps only cases in scope", () => {
+    const golden = set([
+      testCase({ id: "train" }),
+      testCase({ id: "hold", name: "hold" }),
+    ])
+
+    expect(
+      trialCases(golden, weights, ["hold"], 20).map((entry) => entry.item.id),
+    ).toEqual(["hold"])
+  })
+})
+
+describe("caseDeltas", () => {
+  const golden = set([
+    testCase({ id: "train", expected: [{ id: "a", gain: 1 }] }),
+    testCase({ id: "hold", name: "hold", expected: [{ id: "a", gain: 1 }] }),
+  ])
+  const baseline = new Map([
+    ["train", run("train", [{ id: "x", distance: 0.1 }])],
+  ])
+
+  it("computes case deltas against the champion runs, not the last trial", () => {
+    const championRuns = new Map([
+      ["train", run("train", [{ id: "a", distance: 0.1 }])],
+    ])
+
+    const deltas = caseDeltas(golden, baseline, championRuns)
+
+    expect(deltas).toHaveLength(1)
+    expect(deltas[0].caseId).toBe("train")
+    expect(deltas[0].baseline).toBeCloseTo(0)
+    expect(deltas[0].primary).toBeCloseTo(1)
+    expect(deltas[0].delta).toBeCloseTo(1)
+  })
+
+  it("returns nothing when the compared runs are a disjoint holdout scope", () => {
+    const holdoutRuns = new Map([
+      ["hold", run("hold", [{ id: "a", distance: 0.1 }])],
+    ])
+
+    expect(caseDeltas(golden, baseline, holdoutRuns)).toEqual([])
+  })
+})
+
+describe("splitRunnableHoldout", () => {
+  it("splits only runnable cases", () => {
+    const runnable = Array.from(
+      { length: 9 },
+      (_, index) => testCase({ id: `r${index}`, name: `r${index}` }),
+    )
+    const blank = Array.from({ length: 3 }, (_, index) =>
+      testCase({
+        id: `blank${index}`,
+        name: `blank${index}`,
+        aspects: [
+          { name: "title", type: "text", enabled: true, value: "" },
+        ],
+      }))
+    const golden = set([...runnable, ...blank])
+
+    const split = splitRunnableHoldout(golden, { title: 1, price: 1 }, 42)
+
+    expect(split).not.toBeNull()
+    const all = [...split!.trainIds, ...split!.holdoutIds]
+    expect(all).toHaveLength(9)
+    expect(all.some((id) => id.startsWith("blank"))).toBe(false)
   })
 })
 

@@ -61,23 +61,35 @@ Builds a 100-document `catalog` index for Playground and Scorecard demos. Import
 Full talk track:
 [`docs/tutorials/05-catalog-scorecard-demo.md`](docs/tutorials/05-catalog-scorecard-demo.md).
 
+To check that tutorial's numbers without a browser:
+
+```bash
+deno task verify:tutorials
+```
+
+Grades the same golden set at all weights 1, price 8, and price 8 with category
+6, then prints the chips and metric tiles for each. It asserts nothing and exits
+non-zero only when the server is unreachable or a case fails, so the comparison
+against the cheat sheet stays a human read.
+
 ## Tasks
 
-| Task                | Command                  | Purpose                             |
-| ------------------- | ------------------------ | ----------------------------------- |
-| Dev (browser)       | `deno task dev`          | Vite HMR at localhost               |
-| Dev (Aspected docs) | `deno task dev:docs`     | MkDocs from `aspects.dev` at :8000  |
-| Dev (all)           | `deno task dev:all`      | Vite + MkDocs together              |
-| Dev (desktop)       | `deno task dev:desktop`  | `deno desktop --hmr .`              |
-| Seed demo           | `deno task seed:catalog` | 100 document `catalog` index        |
-| Build               | `deno task build`        | Production assets in `dist/`        |
-| Preview             | `deno task preview`      | Serve production build              |
-| Test                | `deno task test`         | Vitest once                         |
-| Test watch          | `deno task test:watch`   | Vitest watch mode                   |
-| Lint                | `deno task lint`         | `deno lint`                         |
-| Format              | `deno task fmt`          | `deno fmt`                          |
-| Typecheck           | `deno task check`        | `deno check src/main.tsx`           |
-| CI locally          | `deno task ci`           | fmt check, lint, check, test, build |
+| Task                | Command                      | Purpose                             |
+| ------------------- | ---------------------------- | ----------------------------------- |
+| Dev (browser)       | `deno task dev`              | Vite HMR at localhost               |
+| Dev (Aspected docs) | `deno task dev:docs`         | MkDocs from `aspects.dev` at :8000  |
+| Dev (all)           | `deno task dev:all`          | Vite + MkDocs together              |
+| Dev (desktop)       | `deno task dev:desktop`      | `deno desktop --hmr .`              |
+| Seed demo           | `deno task seed:catalog`     | 100 document `catalog` index        |
+| Verify tutorial 5   | `deno task verify:tutorials` | Grade the demo set headless         |
+| Build               | `deno task build`            | Production assets in `dist/`        |
+| Preview             | `deno task preview`          | Serve production build              |
+| Test                | `deno task test`             | Vitest once                         |
+| Test watch          | `deno task test:watch`       | Vitest watch mode                   |
+| Lint                | `deno task lint`             | `deno lint`                         |
+| Format              | `deno task fmt`              | `deno fmt`                          |
+| Typecheck           | `deno task check`            | `src/main.tsx` + `utility/`         |
+| CI locally          | `deno task ci`               | fmt check, lint, check, test, build |
 
 `deno task preview` and production builds do not include the Vite proxy. Use a
 server with CORS enabled, or put Studio behind a reverse proxy to `/api`.

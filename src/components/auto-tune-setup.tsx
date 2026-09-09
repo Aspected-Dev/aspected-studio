@@ -190,8 +190,8 @@ export function AutoTuneSetup({
                   space: { ...values.space, tuneDepth: checked === true },
                 })}
             />
-            Also try deeper retrieval (1× / 2× / 4× set k). Grading k stays
-            fixed.
+            Also try deeper retrieval (1× / 2× / 4× the deepest case grading k).
+            Grading k stays fixed.
           </label>
         </div>
 
@@ -253,9 +253,10 @@ export function AutoTuneSetup({
               )
               : null}
             <p className="text-sm text-muted-foreground">
-              Up to {maxSearches}{" "}
+              About {maxSearches}{" "}
               searches. Signature cache reuses unchanged cases, so a trial often
-              costs far fewer.
+              costs far fewer. A run stops at the first trial past the budget,
+              so it can finish slightly over.
             </p>
           </div>
 
@@ -319,7 +320,7 @@ export function AutoTuneSetup({
             Start auto-tune
           </Button>
           <p className="text-sm text-muted-foreground">
-            Estimated ceiling: {maxSearches} searches · concurrency{" "}
+            Budget: {maxSearches} searches · concurrency{" "}
             {values.concurrency || DEFAULT_TUNE_CONCURRENCY}
           </p>
         </div>

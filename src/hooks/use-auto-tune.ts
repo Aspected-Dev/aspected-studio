@@ -7,14 +7,17 @@ import {
   type CaseRun,
   caseScoringWeights,
   caseSignature,
+  runnableCases,
 } from "@/lib/aspected/scorecard.ts"
 import {
-  casePrimaries,
-  type CasePrimary,
+  type CaseDelta,
+  caseDeltas,
   liveObjective,
-  splitHoldout,
+  splitRunnableHoldout,
+  trialCases,
 } from "@/lib/aspected/tune-objective.ts"
 import {
+  budgetExhausted,
   championOf,
   createTunerState,
   explainChampion,
@@ -32,6 +35,7 @@ import {
   toastCaughtError,
   toUserFacingError,
 } from "@/lib/aspected/user-error.ts"
+import type { SearchIndexRequest } from "@/lib/aspected/types.ts"
 
 /** Default worker pool size while evaluating one trial's cases. */
 export const DEFAULT_TUNE_CONCURRENCY = 4
@@ -60,7 +64,7 @@ export type AutoTuneSnapshot = {
   noiseFloor: number
   rationale: string[]
   leaderboard: TuneTrial[]
-  caseDeltas: Array<CasePrimary & { baseline: number; delta: number }>
+  caseDeltas: CaseDelta[]
   stopped: boolean
   exhausted: boolean
   stage: TuneStage
@@ -137,7 +141,7 @@ export function useAutoTune(indexName: string): AutoTuneState {
   const hitsRef = useRef(0)
   const missesRef = useRef(0)
   const stateRef = useRef<TunerState | null>(null)
-  const lastRunsRef = useRef(new Map<string, CaseRun>())
+  const championRunsRef = useRef(new Map<string, CaseRun>())
   const baselineRunsRef = useRef(new Map<string, CaseRun>())
 
   const stop = useCallback(() => {
@@ -153,7 +157,7 @@ export function useAutoTune(indexName: string): AutoTuneState {
         startedAt: startedAtRef.current,
         latencies: latencyRef.current,
         baselineRuns: baselineRunsRef.current,
-        championRuns: lastRunsRef.current,
+        championRuns: championRunsRef.current,
       }))
     } else {
       setSnapshot((current) => ({ ...current, running: false, stopped: true }))
@@ -169,7 +173,7 @@ export function useAutoTune(indexName: string): AutoTuneState {
     hitsRef.current = 0
     missesRef.current = 0
     stateRef.current = null
-    lastRunsRef.current = new Map()
+    championRunsRef.current = new Map()
     baselineRunsRef.current = new Map()
     setSnapshot(EMPTY_SNAPSHOT)
   }, [])
@@ -187,14 +191,16 @@ export function useAutoTune(indexName: string): AutoTuneState {
       hitsRef.current = 0
       missesRef.current = 0
       startedAtRef.current = Date.now()
-      lastRunsRef.current = new Map()
+      championRunsRef.current = new Map()
       baselineRunsRef.current = new Map()
 
       const seed = options.holdoutSeed ?? Date.now()
       const useHoldout = options.useHoldout !== false
-      const split = useHoldout ? splitHoldout(options.set.cases, seed) : null
+      const split = useHoldout
+        ? splitRunnableHoldout(options.set, options.start.weights, seed)
+        : null
       const trainIds = split?.trainIds ??
-        options.set.cases.filter((item) => item.enabled).map((item) => item.id)
+        runnableCases(options.set, options.start.weights).map((item) => item.id)
       const holdoutIds = split?.holdoutIds ?? []
 
       let state = createTunerState({
@@ -230,7 +236,8 @@ export function useAutoTune(indexName: string): AutoTuneState {
         while (
           runIdRef.current === runId &&
           state.stage !== "done" &&
-          !state.stopped
+          !state.stopped &&
+          !budgetExhausted(state)
         ) {
           if (
             wallClockMs !== null &&
@@ -241,76 +248,76 @@ export function useAutoTune(indexName: string): AutoTuneState {
             break
           }
 
-          const pending = nextCandidates(state)
-          if (pending.length === 0) {
+          // One trial per iteration, so the budget and the wall clock are
+          // re-checked before each trial rather than once per queued batch.
+          const [request] = nextCandidates(state)
+          if (!request || abort.signal.aborted) {
             break
           }
 
-          for (const request of pending) {
-            if (runIdRef.current !== runId || abort.signal.aborted) {
-              break
-            }
+          const caseIds = request.scope === "holdout" ? holdoutIds : trainIds
+          const { runs, searches } = await evaluateConfig({
+            client,
+            indexName,
+            set: options.set,
+            config: request.config,
+            caseIds,
+            cache: cacheRef.current,
+            signal: abort.signal,
+            concurrency,
+            bypassCache: request.bypassCache === true,
+            onHit: () => {
+              hitsRef.current += 1
+            },
+            onMiss: (ms) => {
+              missesRef.current += 1
+              latencyRef.current.push(ms)
+            },
+          })
 
-            const caseIds = request.scope === "holdout" ? holdoutIds : trainIds
-            const { runs, searches } = await evaluateConfig({
-              client,
-              indexName,
-              set: options.set,
-              config: request.config,
-              caseIds,
-              cache: cacheRef.current,
-              signal: abort.signal,
-              concurrency,
-              bypassCache: request.bypassCache === true,
-              onHit: () => {
-                hitsRef.current += 1
-              },
-              onMiss: (ms) => {
-                missesRef.current += 1
-                latencyRef.current.push(ms)
-              },
-            })
-
-            if (runIdRef.current !== runId) {
-              return
-            }
-
-            lastRunsRef.current = runs
-            if (request.label === "start") {
-              baselineRunsRef.current = runs
-            }
-
-            const objective = liveObjective(
-              options.set,
-              runs,
-              new Set(caseIds),
-            )
-
-            state = recordTrial(state, {
-              id: request.id,
-              config: request.config,
-              objective,
-              scope: request.scope,
-              stage: request.stage,
-              searches,
-              label: request.label,
-              bypassCache: request.bypassCache,
-            })
-            stateRef.current = state
-
-            setSnapshot(snapshotFromState(state, {
-              hits: hitsRef.current,
-              misses: missesRef.current,
-              startedAt: startedAtRef.current,
-              latencies: latencyRef.current,
-              baselineRuns: baselineRunsRef.current,
-              championRuns: lastRunsRef.current,
-              running: state.stage !== "done",
-              seed,
-              trainIds,
-              holdoutIds,
-            }))
+          if (runIdRef.current !== runId) {
+            return
           }
+
+          const objective = liveObjective(
+            options.set,
+            runs,
+            new Set(caseIds),
+          )
+
+          state = recordTrial(state, {
+            id: request.id,
+            config: request.config,
+            objective,
+            scope: request.scope,
+            stage: request.stage,
+            searches,
+            label: request.label,
+            bypassCache: request.bypassCache,
+          })
+          stateRef.current = state
+
+          if (request.label === "start") {
+            baselineRunsRef.current = runs
+          }
+          // Only the champion's runs, so the delta table compares like with
+          // like instead of whichever trial happened to finish last.
+          if (state.champion?.id === request.id) {
+            championRunsRef.current = runs
+          }
+
+          setSnapshot(snapshotFromState(state, {
+            hits: hitsRef.current,
+            misses: missesRef.current,
+            startedAt: startedAtRef.current,
+            latencies: latencyRef.current,
+            baselineRuns: baselineRunsRef.current,
+            championRuns: championRunsRef.current,
+            running: state.stage !== "done",
+            seed,
+            trainIds,
+            holdoutIds,
+          }))
         }
       } catch (caught) {
         if (abort.signal.aborted || runIdRef.current !== runId) {
@@ -326,7 +333,7 @@ export function useAutoTune(indexName: string): AutoTuneState {
             startedAt: startedAtRef.current,
             latencies: latencyRef.current,
             baselineRuns: baselineRunsRef.current,
-            championRuns: lastRunsRef.current,
+            championRuns: championRunsRef.current,
             seed,
             trainIds,
             holdoutIds,
@@ -350,7 +357,7 @@ export function useAutoTune(indexName: string): AutoTuneState {
         startedAt: startedAtRef.current,
         latencies: latencyRef.current,
         baselineRuns: baselineRunsRef.current,
-        championRuns: lastRunsRef.current,
+        championRuns: championRunsRef.current,
         running: false,
         seed,
         trainIds,
@@ -389,23 +396,13 @@ function snapshotFromState(
       extras.latencies.length
     : null
 
-  const caseDeltas: AutoTuneSnapshot["caseDeltas"] = []
-  if (extras.baselineRuns.size > 0 && extras.championRuns.size > 0) {
-    const base = casePrimaries(state.options.set, extras.baselineRuns)
-    const next = casePrimaries(state.options.set, extras.championRuns)
-    const nextById = new Map(next.map((item) => [item.caseId, item]))
-    for (const item of base) {
-      const after = nextById.get(item.caseId)
-      if (!after) {
-        continue
-      }
-      caseDeltas.push({
-        ...after,
-        baseline: item.primary,
-        delta: after.primary - item.primary,
-      })
-    }
-  }
+  const deltas = extras.baselineRuns.size > 0 && extras.championRuns.size > 0
+    ? caseDeltas(
+      state.options.set,
+      extras.baselineRuns,
+      extras.championRuns,
+    )
+    : []
 
   return {
     running: extras.running ?? state.stage !== "done",
@@ -426,7 +423,7 @@ function snapshotFromState(
     noiseFloor: state.noiseFloor,
     rationale: explainChampion(state),
     leaderboard: leaderboard(state),
-    caseDeltas,
+    caseDeltas: deltas,
     stopped: state.stopped,
     exhausted: state.exhausted,
     stage: state.stage,
@@ -449,8 +446,11 @@ async function evaluateConfig(options: {
   onHit: () => void
   onMiss: (ms: number) => void
 }): Promise<{ runs: Map<string, CaseRun>; searches: number }> {
-  const cases = options.set.cases.filter((item) =>
-    item.enabled && options.caseIds.includes(item.id)
+  const cases = trialCases(
+    options.set,
+    options.config.weights,
+    options.caseIds,
+    options.config.fetchK,
   )
   const collected = new Map<string, CaseRun>()
   let searches = 0
@@ -461,14 +461,10 @@ async function evaluateConfig(options: {
       if (options.signal.aborted) {
         throw new DOMException("Aborted", "AbortError")
       }
-      const item = cases[cursor]
+      const { item, fetchK } = cases[cursor]
       cursor += 1
 
-      const signature = caseSignature(
-        item,
-        options.config.weights,
-        options.config.fetchK,
-      )
+      const signature = caseSignature(item, options.config.weights, fetchK)
       const cached = options.bypassCache
         ? undefined
         : options.cache.get(signature)
@@ -478,13 +474,25 @@ async function evaluateConfig(options: {
         continue
       }
 
+      // Built outside the network try: a value that cannot be coerced fails
+      // before anything is sent, so it must not be billed as a search.
+      let body: SearchIndexRequest
+      try {
+        body = buildCaseRequest(item, options.config.weights, fetchK)
+      } catch (caught) {
+        collected.set(item.id, {
+          caseId: item.id,
+          rows: [],
+          weightsUsed: caseScoringWeights(item, options.config.weights),
+          request: { k: fetchK, query: {} },
+          signature,
+          error: toUserFacingError(caught, "Case failed").title,
+        })
+        continue
+      }
+
       const started = performance.now()
       try {
-        const body = buildCaseRequest(
-          item,
-          options.config.weights,
-          options.config.fetchK,
-        )
         const response = await options.client.searchIndex(
           options.indexName,
           body,
@@ -510,7 +518,7 @@ async function evaluateConfig(options: {
           caseId: item.id,
           rows: [],
           weightsUsed: caseScoringWeights(item, options.config.weights),
-          request: { k: options.config.fetchK, query: {} },
+          request: body,
           signature,
           error: toUserFacingError(caught, "Case failed").title,
         }
