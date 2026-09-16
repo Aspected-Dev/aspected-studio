@@ -32,6 +32,9 @@ Import from `@/components/ui/...`.
 
 - Functional React components and TypeScript only
 - Prefer existing shadcn primitives over hand-rolled duplicates
+- Aspect query inputs live in `AspectValueField`
+  (`src/components/aspect-value-field.tsx`); extend that component when a
+  resolver needs a new control
 - Tailwind v4 utilities; no new CSS frameworks
 - TSDoc on **exported** functions, hooks, types, and classes; skip tiny private
   helpers

@@ -1,25 +1,16 @@
 import { useState } from "react"
 import { CheckIcon, PlusIcon, XIcon } from "lucide-react"
 import { DocsField, DocsHelpIcon } from "@/components/docs-help.tsx"
+import { AspectValueField } from "@/components/aspect-value-field.tsx"
 import { MetricHelp } from "@/components/metric-tile.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
 import { Switch } from "@/components/ui/switch.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
+import { aspectValueSchema } from "@/lib/aspected/aspect-value.ts"
 import type { GoldenCase } from "@/lib/aspected/golden.ts"
-import {
-  aspectNumberSetting,
-  aspectOptionValues,
-} from "@/lib/aspected/playground.ts"
 import type { CaseScore } from "@/lib/aspected/relevance.ts"
 import type { StoredAspect } from "@/lib/aspected/types.ts"
 import { docsPageForAspectType } from "@/lib/docs.ts"
@@ -133,10 +124,13 @@ export function GoldenCaseEditor({
       <div className="grid gap-4 sm:grid-cols-2">
         {schema.map((aspect) => {
           const row = item.aspects.find((entry) => entry.name === aspect.name)
-          const options = aspectOptionValues(aspect)
           const valueId = `golden-value-${item.id}-${aspect.name}`
           const value = row?.value ?? ""
           const enabled = row?.enabled ?? false
+          const valueError = value.trim() === ""
+            ? undefined
+            : aspectValueSchema(aspect).safeParse(value).error?.issues[0]
+              ?.message
 
           const update = (patch: { enabled?: boolean; value?: string }) => {
             const existing = item.aspects.some((entry) =>
@@ -176,58 +170,14 @@ export function GoldenCaseEditor({
                   label={aspect.name}
                 />
               </div>
-              {options.length > 0
-                ? (
-                  <Select
-                    value={value}
-                    onValueChange={(next) => {
-                      if (typeof next === "string") {
-                        update({ value: next, enabled: true })
-                      }
-                    }}
-                  >
-                    <SelectTrigger
-                      id={valueId}
-                      className="w-full"
-                      aria-label={`${aspect.name} value`}
-                    >
-                      <SelectValue placeholder="Choose a value" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )
-                : aspect.type === "text" || aspect.type === "raw"
-                ? (
-                  <Textarea
-                    id={valueId}
-                    rows={2}
-                    value={value}
-                    placeholder={aspect.type === "raw"
-                      ? "[0.1, 0.2]"
-                      : "Free text"}
-                    onChange={(event) =>
-                      update({ value: event.target.value, enabled: true })}
-                    aria-label={`${aspect.name} value`}
-                  />
-                )
-                : (
-                  <Input
-                    id={valueId}
-                    type={aspect.type === "number" ? "number" : "text"}
-                    min={aspectNumberSetting(aspect, "min")}
-                    max={aspectNumberSetting(aspect, "max")}
-                    value={value}
-                    onChange={(event) =>
-                      update({ value: event.target.value, enabled: true })}
-                    aria-label={`${aspect.name} value`}
-                  />
-                )}
+              <AspectValueField
+                aspect={aspect}
+                id={valueId}
+                value={value}
+                error={valueError}
+                invalid={Boolean(valueError)}
+                onChange={(next) => update({ value: next, enabled: true })}
+              />
             </div>
           )
         })}

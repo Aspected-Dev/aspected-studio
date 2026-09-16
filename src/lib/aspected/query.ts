@@ -1,9 +1,39 @@
 import { z } from "zod"
-import type { SearchIndexRequest } from "./types.ts"
+import { aspectValueSchema } from "./aspect-value.ts"
+import { coerceAspectValue, MAX_WEIGHT } from "./playground.ts"
+import {
+  type AspectType,
+  aspectTypeSchema,
+  type SearchIndexRequest,
+  type StoredAspect,
+} from "./types.ts"
+
+/**
+ * Optional search weight string. Blank means omit (server default 1).
+ * Otherwise a finite number in `0`…{@link MAX_WEIGHT}.
+ */
+export const searchWeightSchema = z.string().superRefine((value, ctx) => {
+  const trimmed = value.trim()
+  if (trimmed === "") {
+    return
+  }
+  const parsed = Number(trimmed)
+  if (!Number.isFinite(parsed)) {
+    ctx.addIssue({ code: "custom", message: "Weight must be a number" })
+    return
+  }
+  if (parsed < 0 || parsed > MAX_WEIGHT) {
+    ctx.addIssue({
+      code: "custom",
+      message: `Weight must be between 0 and ${MAX_WEIGHT}`,
+    })
+  }
+})
 
 /** A single aspect field on the sparse search form. */
 export type SparseAspectInput = {
   name: string
+  type: AspectType
   value: string
   weight: string
 }
@@ -21,7 +51,7 @@ export function buildSparseSearchRequest(input: {
   withVectors: boolean
   withExplanation: boolean
 }): SearchIndexRequest {
-  const query: Record<string, string | number> = {}
+  const query: Record<string, string | number | { $raw: number[] }> = {}
   const weights: Record<string, number> = {}
 
   for (const aspect of input.aspects) {
@@ -30,11 +60,7 @@ export function buildSparseSearchRequest(input: {
       continue
     }
 
-    const asNumber = Number(trimmed)
-    query[aspect.name] = trimmed !== "" && !Number.isNaN(asNumber) &&
-        trimmed === String(asNumber)
-      ? asNumber
-      : trimmed
+    query[aspect.name] = coerceAspectValue(aspect.type, aspect.value)
 
     const weight = Number(aspect.weight)
     if (aspect.weight.trim() !== "" && !Number.isNaN(weight)) {
@@ -62,30 +88,53 @@ export function buildSparseSearchRequest(input: {
   return request
 }
 
-/** React Hook Form schema for the index search page. */
-export const searchFormSchema = z.object({
-  k: z.string().refine(
-    (v) => v.trim() !== "" && Number.isInteger(Number(v)) && Number(v) >= 1,
-    "k must be a positive integer",
-  ),
-  aspects: z.array(
-    z.object({
-      name: z.string(),
-      value: z.string(),
-      weight: z.string().refine(
-        (v) => v.trim() === "" || !Number.isNaN(Number(v)),
-        "Weight must be a number",
-      ),
-    }),
-  ),
-  accessFilter: z.string(),
-  includeNullAccess: z.boolean(),
-  withDocs: z.boolean(),
-  withExplanation: z.boolean(),
-  withVectors: z.boolean(),
+const searchAspectRowSchema = z.object({
+  name: z.string(),
+  type: aspectTypeSchema,
+  value: z.string(),
+  weight: searchWeightSchema,
 })
 
-export type SearchFormValues = z.infer<typeof searchFormSchema>
+/**
+ * React Hook Form schema for the index search page.
+ *
+ * Pass the loaded index schema so aspect values are validated against resolver
+ * settings. An empty schema keeps shape-only checks for unit tests.
+ */
+export function searchFormSchema(schema: StoredAspect[] = []) {
+  const byName = new Map(schema.map((aspect) => [aspect.name, aspect]))
+  return z.object({
+    k: z.string().refine(
+      (v) => v.trim() !== "" && Number.isInteger(Number(v)) && Number(v) >= 1,
+      "k must be a positive integer",
+    ),
+    aspects: z.array(
+      searchAspectRowSchema.superRefine((row, ctx) => {
+        const aspect = byName.get(row.name)
+        if (!aspect) {
+          return
+        }
+        const result = aspectValueSchema(aspect).safeParse(row.value)
+        if (!result.success) {
+          for (const issue of result.error.issues) {
+            ctx.addIssue({
+              code: "custom",
+              message: issue.message,
+              path: ["value"],
+            })
+          }
+        }
+      }),
+    ),
+    accessFilter: z.string(),
+    includeNullAccess: z.boolean(),
+    withDocs: z.boolean(),
+    withExplanation: z.boolean(),
+    withVectors: z.boolean(),
+  })
+}
+
+export type SearchFormValues = z.infer<ReturnType<typeof searchFormSchema>>
 
 /**
  * Parses a comma-separated access filter. Empty input means no filter.

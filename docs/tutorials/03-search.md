@@ -31,10 +31,10 @@ the query object. Enums **steer**; they do not hard-filter.
 
 Try this:
 
-1. Enable or fill **title** with: `gaming laptop`
-2. Set **category** to `laptop` (enum control)
-3. Set **price** to `900`
-4. Leave **brand**, **rating**, and **released** empty / off
+1. Fill **title** with: `gaming laptop` (textarea for text aspects)
+2. Choose **category** `laptop` from the dropdown
+3. Set **price** to `900` (number input, validated against min/max)
+4. Leave **brand**, **rating**, and **released** empty
 5. Set **k** to `5` (or `10` if you want a longer list)
 
 ## Step 3: Run the search

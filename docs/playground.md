@@ -3,11 +3,14 @@
 `/indexes/:name/playground` answers: **what happens to my ranking if I turn this
 aspect up?** The [Search](indexes.md#search) page stays the raw API form.
 
-Compose a sparse query with one control per aspect, then drag the log-scale
-weight sliders. Every search runs with `withExplanation: true`, so Studio can
-recover per-aspect distances and re-score results already on screen. Ranking
-updates on the frame without a server round trip and without re-embedding the
-query text. A real search follows on a 300ms debounce while **Auto-run** is on.
+Compose a sparse query with one control per aspect (shared `AspectValueField`:
+enum/dict select, text/raw textarea, number input, datetime picker), then drag
+the log-scale weight sliders. Invalid aspect values are caught against the index
+settings before a request is sent. Every search runs with
+`withExplanation: true`, so Studio can recover per-aspect distances and re-score
+results already on screen. Ranking updates on the frame without a server round
+trip and without re-embedding the query text. A real search follows on a 300ms
+debounce while **Auto-run** is on.
 
 ## Ranking tab
 

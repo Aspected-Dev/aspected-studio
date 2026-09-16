@@ -32,7 +32,8 @@ const numberSettingsSchema = z.object({
   max: z.number(),
 })
 
-const datetimeGranularitySchema = z.enum([
+/** Granularity modes the datetime resolver accepts. */
+export const datetimeGranularitySchema = z.enum([
   "hour",
   "day",
   "weekday",
@@ -41,6 +42,8 @@ const datetimeGranularitySchema = z.enum([
   "timestamp",
 ])
 
+/** Granularity modes the datetime resolver accepts. */
+export type DatetimeGranularity = z.infer<typeof datetimeGranularitySchema>
 const datetimeSettingsSchema = z.object({
   granularity: z.union([
     datetimeGranularitySchema,

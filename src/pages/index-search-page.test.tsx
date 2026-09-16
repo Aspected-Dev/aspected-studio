@@ -19,6 +19,12 @@ const index: IndexDetail = {
       path: "$.category",
       settings: { values: ["electronics"] },
     },
+    {
+      name: "price",
+      type: "number",
+      path: "$.price",
+      settings: { min: 0, max: 100 },
+    },
   ],
   hnsw: {
     M: 16,
@@ -107,13 +113,54 @@ describe("IndexSearchPage", () => {
   it("shows an inline error when weight is not a number", async () => {
     const user = userEvent.setup()
     renderPage()
-    // Wait for aspects to load from the mock index, then find the weight input by its label
-    const weightInput = await screen.findByLabelText(/^weight$/i)
-    await user.type(weightInput, "abc")
+    const weightInputs = await screen.findAllByLabelText(/^weight$/i)
+    await user.type(weightInputs[0], "abc")
     await user.click(screen.getByRole("button", { name: "Search" }))
     expect(
       await screen.findByText("Weight must be a number"),
     ).toBeInTheDocument()
+    expect(weightInputs[0]).toHaveAttribute("aria-invalid", "true")
     expect(connection.client.searchIndex).not.toHaveBeenCalled()
+  })
+
+  it("shows an inline error when weight is out of range", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    const weightInputs = await screen.findAllByLabelText(/^weight$/i)
+    await user.clear(weightInputs[0])
+    await user.type(weightInputs[0], "10001")
+    await user.click(screen.getByRole("button", { name: "Search" }))
+    expect(
+      await screen.findByText("Weight must be between 0 and 10000"),
+    ).toBeInTheDocument()
+    expect(connection.client.searchIndex).not.toHaveBeenCalled()
+  })
+
+  it("validates number aspects against min and max", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    const price = await screen.findByLabelText("price value")
+    await user.clear(price)
+    await user.type(price, "250")
+    await user.click(screen.getByRole("button", { name: "Search" }))
+    expect(
+      await screen.findByText("Must be between 0 and 100"),
+    ).toBeInTheDocument()
+    expect(price).toHaveAttribute("aria-invalid", "true")
+    expect(connection.client.searchIndex).not.toHaveBeenCalled()
+  })
+
+  it("shows a description for number aspects", async () => {
+    renderPage()
+    expect(
+      await screen.findByText("Number between 0 and 100. Leave blank to omit."),
+    ).toBeInTheDocument()
+  })
+
+  it("renders enum aspects as a select", async () => {
+    renderPage()
+    expect(
+      await screen.findByRole("combobox", { name: "category value" }),
+    ).toBeInTheDocument()
   })
 })

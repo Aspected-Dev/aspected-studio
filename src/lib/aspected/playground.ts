@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { aspectValueSchema } from "./aspect-value.ts"
 import { aspectTypeSchema } from "./types.ts"
 import type { AspectType, SearchIndexRequest, StoredAspect } from "./types.ts"
 
@@ -70,20 +71,47 @@ export const playgroundAspectSchema = z.object({
   weight: z.number(),
 })
 
-/** React Hook Form schema for the playground. */
-export const playgroundFormSchema = z.object({
-  k: z.string().refine(
-    (value) =>
-      value.trim() !== "" && Number.isInteger(Number(value)) &&
-      Number(value) >= 1,
-    "k must be a positive integer",
-  ),
-  autoRun: z.boolean(),
-  aspects: z.array(playgroundAspectSchema),
-})
+/**
+ * React Hook Form schema for the playground.
+ *
+ * Pass the loaded index schema so aspect values are validated against resolver
+ * settings. An empty schema keeps shape-only checks for unit tests.
+ */
+export function playgroundFormSchema(schema: StoredAspect[] = []) {
+  const byName = new Map(schema.map((aspect) => [aspect.name, aspect]))
+  return z.object({
+    k: z.string().refine(
+      (value) =>
+        value.trim() !== "" && Number.isInteger(Number(value)) &&
+        Number(value) >= 1,
+      "k must be a positive integer",
+    ),
+    autoRun: z.boolean(),
+    aspects: z.array(
+      playgroundAspectSchema.superRefine((row, ctx) => {
+        const aspect = byName.get(row.name)
+        if (!aspect) {
+          return
+        }
+        const result = aspectValueSchema(aspect).safeParse(row.value)
+        if (!result.success) {
+          for (const issue of result.error.issues) {
+            ctx.addIssue({
+              code: "custom",
+              message: issue.message,
+              path: ["value"],
+            })
+          }
+        }
+      }),
+    ),
+  })
+}
 
 export type PlaygroundAspectValues = z.infer<typeof playgroundAspectSchema>
-export type PlaygroundFormValues = z.infer<typeof playgroundFormSchema>
+export type PlaygroundFormValues = z.infer<
+  ReturnType<typeof playgroundFormSchema>
+>
 
 /**
  * Seeds one form row per index aspect, all enabled at weight `1`.

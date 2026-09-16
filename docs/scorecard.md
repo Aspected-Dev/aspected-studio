@@ -36,6 +36,9 @@ in the catalog tutorial.
 
 ## Judgements and gains
 
+Case query fields use the same type-aware `AspectValueField` as Search and
+Playground, with inline validation from aspect settings.
+
 Expected documents carry a **gain**. Leave it at `1` for plain relevant, and
 raise it when a document should outrank the other hits. That is the only part of
 nDCG that a yes/no judgement cannot express.

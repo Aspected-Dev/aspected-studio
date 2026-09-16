@@ -37,9 +37,17 @@ a success toast. Match that pattern for other destructive actions.
 ## Search
 
 `/indexes/:name/search` is the raw sparse search form: query fields per aspect,
-optional weights, `k`, flags such as `withDocs`. It is the API-shaped surface.
-Click a result row to open an inspect sheet with distance, explanation JSON, and
-document JSON when those fields are present.
+optional weights, `k`, flags such as `withDocs`. Each aspect control follows its
+resolver type (dropdown for enum/dict, textarea for text/raw, number input,
+granularity-aware datetime picker) and validates against the aspect settings
+with Zod before the request is sent. Fields use shadcn `Field` invalid styling
+and helper text for accepted values; the form uses `noValidate` so the browser
+does not show native constraint popups. Blank aspect values stay sparse.
+
+Weights are optional numbers from `0` to `10000`. Blank means omit (server
+default `1`). `0` effectively turns the aspect off for scoring. Click a result
+row to open an inspect sheet with distance, explanation JSON, and document JSON
+when those fields are present.
 
 Weight tuning belongs on the [Playground](playground.md). Quality measurement
 belongs on the [Scorecard](scorecard.md).

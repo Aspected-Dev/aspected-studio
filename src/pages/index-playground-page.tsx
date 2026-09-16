@@ -9,6 +9,7 @@ import {
 import {
   type Control,
   Controller,
+  type Resolver,
   useFieldArray,
   useForm,
 } from "react-hook-form"
@@ -23,6 +24,7 @@ import {
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { AnimatedNumber } from "@/components/animated-number.tsx"
+import { AspectValueField } from "@/components/aspect-value-field.tsx"
 import {
   DocsField,
   DocsHelpIcon,
@@ -53,13 +55,6 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart.tsx"
 import { Input } from "@/components/ui/input.tsx"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
 import { Slider } from "@/components/ui/slider.tsx"
 import { Switch } from "@/components/ui/switch.tsx"
@@ -77,7 +72,6 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs.tsx"
-import { Textarea } from "@/components/ui/textarea.tsx"
 import {
   Tooltip,
   TooltipContent,
@@ -86,10 +80,9 @@ import {
 } from "@/components/ui/tooltip.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
 import { type RecordedRequest } from "@/lib/aspected/client.ts"
+import { aspectValueDescription } from "@/lib/aspected/aspect-value.ts"
 import {
   activeAspects,
-  aspectNumberSetting,
-  aspectOptionValues,
   aspectRowsFromSchema,
   buildPlaygroundRequest,
   coerceAspectValue,
@@ -188,12 +181,13 @@ function AspectControl({
   control,
   index,
   aspect,
+  error,
 }: {
   control: Control<PlaygroundFormValues>
   index: number
   aspect: StoredAspect
+  error?: string
 }) {
-  const options = aspectOptionValues(aspect)
   const multiplier = aspect.multiplier ?? 1
   const valueId = `playground-value-${index}`
   const weightId = `playground-weight-${index}`
@@ -235,55 +229,16 @@ function AspectControl({
             page="resolvers"
             hash={DOCS_HASH.combiningResolvers}
             blurb="Leave blank to keep this aspect out of the query."
+            description={aspectValueDescription(aspect)}
+            error={error}
           >
-            {options.length > 0
-              ? (
-                <Select
-                  value={field.value}
-                  onValueChange={(next) => {
-                    if (typeof next === "string") {
-                      field.onChange(next)
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    id={valueId}
-                    className="w-full"
-                    aria-label={`${aspect.name} value`}
-                  >
-                    <SelectValue placeholder="Choose a value" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )
-              : aspect.type === "text" || aspect.type === "raw"
-              ? (
-                <Textarea
-                  id={valueId}
-                  rows={2}
-                  placeholder={aspect.type === "raw"
-                    ? "[0.1, 0.2]"
-                    : "Free text"}
-                  {...field}
-                  aria-label={`${aspect.name} value`}
-                />
-              )
-              : (
-                <Input
-                  id={valueId}
-                  type={aspect.type === "number" ? "number" : "text"}
-                  min={aspectNumberSetting(aspect, "min")}
-                  max={aspectNumberSetting(aspect, "max")}
-                  {...field}
-                  aria-label={`${aspect.name} value`}
-                />
-              )}
+            <AspectValueField
+              aspect={aspect}
+              id={valueId}
+              value={field.value}
+              onChange={field.onChange}
+              invalid={Boolean(error)}
+            />
           </DocsField>
         )}
       />
@@ -357,9 +312,20 @@ export function IndexPlaygroundPage() {
     { title: string; value: unknown } | null
   >(null)
   const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null)
+  const schemaRef = useRef<StoredAspect[]>([])
+
+  const resolver = useCallback<Resolver<PlaygroundFormValues>>(
+    (values, context, options) =>
+      zodResolver(playgroundFormSchema(schemaRef.current))(
+        values,
+        context,
+        options,
+      ),
+    [],
+  )
 
   const form = useForm<PlaygroundFormValues>({
-    resolver: zodResolver(playgroundFormSchema),
+    resolver,
     defaultValues: { k: "20", autoRun: true, aspects: [] },
   })
   const { fields } = useFieldArray({ control: form.control, name: "aspects" })
@@ -375,6 +341,7 @@ export function IndexPlaygroundPage() {
         return
       }
       setIndex(response.data)
+      schemaRef.current = response.data.schema
       form.setValue("aspects", aspectRowsFromSchema(response.data.schema))
     }).catch((caught) => {
       if (cancelled) {
@@ -646,6 +613,8 @@ export function IndexPlaygroundPage() {
                     control={form.control}
                     index={position}
                     aspect={schema[position]}
+                    error={form.formState.errors.aspects?.[position]?.value
+                      ?.message}
                   />
                 </div>
               ))}
