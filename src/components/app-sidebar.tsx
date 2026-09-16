@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router"
 import {
   BracesIcon,
   CirclePlusIcon,
-  DatabaseIcon,
   FileTextIcon,
   LayoutListIcon,
   SearchIcon,
@@ -11,6 +10,7 @@ import {
   SparklesIcon,
   TargetIcon,
 } from "lucide-react"
+import { AspectedLogo } from "@/assets/aspected-logo.tsx"
 import { ConnectionFooter } from "@/components/connection-footer.tsx"
 import { NavSecondary } from "@/components/nav-secondary.tsx"
 import {
@@ -50,7 +50,7 @@ export function AppSidebar(
               className="data-[slot=sidebar-menu-button]:p-1.5!"
               render={<Link to="/" />}
             >
-              <DatabaseIcon className="size-5!" />
+              <AspectedLogo className="size-5!" />
               <span className="text-base font-semibold">Aspected Studio</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
