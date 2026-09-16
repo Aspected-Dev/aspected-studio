@@ -3,7 +3,10 @@ import { useParams } from "react-router"
 import { createDataTableColumnHelper } from "@/components/data-table-features.ts"
 import { DataTable } from "@/components/data-table.tsx"
 import { DocsHelpIcon, PageDocsButton } from "@/components/docs-help.tsx"
+import { CopyableReadonlyField } from "@/components/copyable-readonly-field.tsx"
 import { JsonEditor } from "@/components/json-editor.tsx"
+import { JsonInspectSheet } from "@/components/json-inspect-sheet.tsx"
+import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
@@ -43,11 +46,7 @@ const columns = columnHelper.columns([
   columnHelper.accessor("settings", {
     header: "Settings",
     meta: { className: "font-mono text-xs" },
-    cell: ({ getValue }) => (
-      <span className="inline-block w-36 truncate sm:w-52">
-        {JSON.stringify(getValue())}
-      </span>
-    ),
+    cell: ({ getValue }) => <JsonPreviewCell value={getValue()} />,
   }),
 ])
 
@@ -59,6 +58,9 @@ export function IndexSchemaPage() {
   const { client } = useConnection()
   const [index, setIndex] = useState<IndexDetail | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [selectedAspect, setSelectedAspect] = useState<StoredAspect | null>(
+    null,
+  )
 
   useEffect(() => {
     if (!name) {
@@ -129,7 +131,48 @@ export function IndexSchemaPage() {
         columns={columns}
         data={index.schema}
         getRowId={(row) => row.name}
+        selectedRowId={selectedAspect?.name}
+        onRowClick={setSelectedAspect}
       />
+      <JsonInspectSheet
+        open={selectedAspect !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedAspect(null)
+          }
+        }}
+        title={selectedAspect?.name ?? ""}
+        description="Aspect definition from the stored schema."
+        value={selectedAspect?.settings}
+        jsonLabel="Settings"
+      >
+        {selectedAspect
+          ? (
+            <div className="grid gap-4">
+              <CopyableReadonlyField
+                id="aspect-name"
+                label="Name"
+                value={selectedAspect.name}
+              />
+              <CopyableReadonlyField
+                id="aspect-type"
+                label="Type"
+                value={selectedAspect.type}
+              />
+              <CopyableReadonlyField
+                id="aspect-path"
+                label="Path"
+                value={selectedAspect.path}
+              />
+              <CopyableReadonlyField
+                id="aspect-multiplier"
+                label="Multiplier"
+                value={String(selectedAspect.multiplier ?? 1)}
+              />
+            </div>
+          )
+          : null}
+      </JsonInspectSheet>
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h2 className="text-sm font-medium">HNSW</h2>

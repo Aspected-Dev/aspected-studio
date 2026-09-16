@@ -32,6 +32,8 @@ import {
 import { MotionTableRow } from "@/components/motion-table-row.tsx"
 import { PlaygroundCompare } from "@/components/playground-compare.tsx"
 import { PlaygroundScorecard } from "@/components/playground-scorecard.tsx"
+import { JsonInspectSheet } from "@/components/json-inspect-sheet.tsx"
+import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -351,6 +353,9 @@ export function IndexPlaygroundPage() {
   const [pinned, setPinned] = useState<PinnedRun | null>(null)
   const [running, setRunning] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [inspectValue, setInspectValue] = useState<
+    { title: string; value: unknown } | null
+  >(null)
   const [lastRequest, setLastRequest] = useState<RecordedRequest | null>(null)
 
   const form = useForm<PlaygroundFormValues>({
@@ -979,8 +984,33 @@ export function IndexPlaygroundPage() {
                               <TableCell className="font-mono text-xs">
                                 {grade.name}
                               </TableCell>
-                              <TableCell className="max-w-40 truncate text-xs">
-                                {JSON.stringify(grade.value)}
+                              <TableCell>
+                                <JsonPreviewCell
+                                  value={grade.value}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Inspect stored value for ${grade.name}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setInspectValue({
+                                      title: grade.name,
+                                      value: grade.value,
+                                    })
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (
+                                      event.key === "Enter" ||
+                                      event.key === " "
+                                    ) {
+                                      event.preventDefault()
+                                      event.stopPropagation()
+                                      setInspectValue({
+                                        title: grade.name,
+                                        value: grade.value,
+                                      })
+                                    }
+                                  }}
+                                />
                               </TableCell>
                               <TableCell className="font-mono text-xs">
                                 {grade.raw === null
@@ -1012,6 +1042,17 @@ export function IndexPlaygroundPage() {
           </div>
         </div>
       </div>
+      <JsonInspectSheet
+        open={inspectValue !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInspectValue(null)
+          }
+        }}
+        title={inspectValue?.title ?? ""}
+        description="Stored value"
+        value={inspectValue?.value}
+      />
     </MotionConfig>
   )
 }

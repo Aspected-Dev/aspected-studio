@@ -85,17 +85,15 @@ describe("IndexDocsPage", () => {
     vi.mocked(toast.success).mockClear()
   })
 
-  it("shows the selected document in a read-only JSON editor", async () => {
+  it("opens the edit dialog when a document row is clicked", async () => {
     const user = userEvent.setup()
     renderPage()
     await user.click(await screen.findByRole("cell", { name: "prod-001" }))
 
-    const editor = screen.getAllByTestId("json-editor").find((element) =>
-      element.getAttribute("readonly") !== null
-    )
-    expect(editor).toBeDefined()
-    expect(editor).toHaveValue(JSON.stringify(doc, null, 2))
-    expect(document.querySelector("pre")).not.toBeInTheDocument()
+    const dialog = screen.getByRole("dialog")
+    expect(dialog).toHaveTextContent("Edit document")
+    const editor = dialog.querySelector('[data-testid="json-editor"]')
+    expect(editor).toHaveValue(JSON.stringify(doc.doc, null, 2))
   })
 
   it("opens bulk upload with pretty-printed example JSON", async () => {

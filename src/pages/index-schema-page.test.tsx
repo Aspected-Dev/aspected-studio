@@ -1,9 +1,11 @@
 import { cleanup, render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { IndexSchemaPage } from "./index-schema-page.tsx"
 import type { IndexDetail } from "@/lib/aspected/types.ts"
 import { docsUrl, INDEX_FIELD_DOCS } from "@/lib/docs.ts"
+import { prettyJson } from "@/lib/pretty-json.ts"
 
 const index: IndexDetail = {
   name: "products",
@@ -73,6 +75,28 @@ describe("IndexSchemaPage", () => {
     expect(editor).toHaveAttribute("aria-readonly", "true")
     expect(editor).toHaveValue(JSON.stringify(index.hnsw, null, 2))
     expect(document.querySelector("pre")).not.toBeInTheDocument()
+  })
+
+  it("opens an inspect sheet when an aspect row is clicked", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByTestId("json-editor")
+    await user.click(screen.getByRole("cell", { name: "category" }))
+
+    expect(screen.getByRole("heading", { name: "category" }))
+      .toBeInTheDocument()
+    expect(screen.getByText("Aspect definition from the stored schema."))
+      .toBeInTheDocument()
+    const sheetEditor = screen.getAllByTestId("json-editor").find((element) =>
+      (element as HTMLTextAreaElement).value ===
+        prettyJson(index.schema[0].settings)
+    )
+    expect(sheetEditor).toBeDefined()
+    expect(sheetEditor).toHaveAttribute("readonly")
+    expect(screen.getByLabelText("Name")).toHaveValue("category")
+    expect(screen.getByLabelText("Type")).toHaveValue("enum")
+    expect(screen.getByLabelText("Path")).toHaveValue("$.category")
+    expect(screen.getByLabelText("Multiplier")).toHaveValue("1")
   })
 
   it("links index property badges to field docs", async () => {

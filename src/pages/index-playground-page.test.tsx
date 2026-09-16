@@ -294,6 +294,24 @@ describe("IndexPlaygroundPage", () => {
     expect(within(inspector).getByText("90.0%")).toBeInTheDocument()
   })
 
+  it("opens an inspect sheet for a stored contribution value", async () => {
+    const user = await setupManual()
+    await fillQuery(user)
+    await user.click(screen.getByRole("button", { name: "Run search" }))
+    await user.click(await screen.findByText("title-match"))
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Inspect stored value for title",
+      }),
+    )
+
+    expect(screen.getByRole("heading", { name: "title" })).toBeInTheDocument()
+    const editor = screen.getByTestId("json-editor")
+    expect(editor).toHaveAttribute("readonly")
+    expect(editor).toHaveValue('"rake"')
+  })
+
   it("searches on its own when auto-run is left on", async () => {
     const user = userEvent.setup()
     renderPage()

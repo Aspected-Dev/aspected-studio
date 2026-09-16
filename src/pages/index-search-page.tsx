@@ -11,6 +11,9 @@ import {
   PageDocsButton,
 } from "@/components/docs-help.tsx"
 import { JsonEditor } from "@/components/json-editor.tsx"
+import { JsonInspectSheet } from "@/components/json-inspect-sheet.tsx"
+import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
+import { CopyableReadonlyField } from "@/components/copyable-readonly-field.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import { Checkbox } from "@/components/ui/checkbox.tsx"
@@ -34,7 +37,9 @@ import {
   searchIndexRequestSchema,
   type SearchResultRow,
 } from "@/lib/aspected/types.ts"
+import { usedExplanation } from "@/lib/aspected/explanation.ts"
 import { DOCS_HASH } from "@/lib/docs.ts"
+import { prettyJson } from "@/lib/pretty-json.ts"
 
 const columnHelper = createDataTableColumnHelper<SearchResultRow>()
 
@@ -67,31 +72,15 @@ const columns = columnHelper.columns([
         />
       </span>
     ),
-    meta: { className: "max-w-sm font-mono text-xs whitespace-normal" },
-    cell: ({ getValue }) => {
-      const value = getValue()
-      return value
-        ? (
-          <span className="inline-block max-w-36 whitespace-normal break-all sm:max-w-sm">
-            {JSON.stringify(value)}
-          </span>
-        )
-        : ""
-    },
+    meta: { className: "font-mono text-xs" },
+    cell: ({ getValue }) => (
+      <JsonPreviewCell value={usedExplanation(getValue())} />
+    ),
   }),
   columnHelper.accessor("doc", {
     header: "Document",
     meta: { className: "font-mono text-xs" },
-    cell: ({ getValue }) => {
-      const value = getValue()
-      return value
-        ? (
-          <span className="inline-block w-36 truncate sm:w-52">
-            {JSON.stringify(value)}
-          </span>
-        )
-        : ""
-    },
+    cell: ({ getValue }) => <JsonPreviewCell value={getValue()} />,
   }),
 ])
 
@@ -193,6 +182,7 @@ export function IndexSearchPage() {
   })
 
   const errors = form.formState.errors
+  const selectedExplanation = usedExplanation(selected?.explanation)
 
   return (
     <form onSubmit={handleSubmit} className="grid min-w-0 gap-6">
@@ -397,14 +387,50 @@ export function IndexSearchPage() {
         onRowClick={setSelected}
       />
 
-      {selected
-        ? (
-          <JsonEditor
-            value={JSON.stringify(selected, null, 2)}
-            readOnly
-          />
-        )
-        : null}
+      <JsonInspectSheet
+        open={selected !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelected(null)
+          }
+        }}
+        title={selected?.id ?? ""}
+        description="Search result detail."
+      >
+        {selected
+          ? (
+            <div className="grid gap-4">
+              <CopyableReadonlyField
+                id="result-distance"
+                label="Distance"
+                value={String(selected.distance)}
+              />
+              {selectedExplanation.length > 0
+                ? (
+                  <Field>
+                    <FieldLabel>Explanation</FieldLabel>
+                    <JsonEditor
+                      value={prettyJson(selectedExplanation)}
+                      readOnly
+                    />
+                  </Field>
+                )
+                : null}
+              {selected.doc
+                ? (
+                  <Field>
+                    <FieldLabel>Document</FieldLabel>
+                    <JsonEditor
+                      value={prettyJson(selected.doc)}
+                      readOnly
+                    />
+                  </Field>
+                )
+                : null}
+            </div>
+          )
+          : null}
+      </JsonInspectSheet>
 
       <RequestInspector request={lastRequest} />
     </form>

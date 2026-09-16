@@ -18,15 +18,18 @@ and existing shadcn controls so create UI matches the rest of Studio.
 
 ## Schema
 
-`/indexes/:name` shows the stored schema and HNSW settings. There is no in-app
-schema migrate path in the MVP: recreate the index if the layout must change.
+`/indexes/:name` shows the stored schema and HNSW settings. Click an aspect row
+to open an inspect sheet with readonly fields for name, type, path, and
+multiplier, plus a Settings JSON editor. There is no in-app schema migrate path
+in the MVP: recreate the index if the layout must change.
 
 ## Documents
 
 `/indexes/:name/docs` lists documents, uploads one or many via
 `POST /indexes/{name}/docs`, and deletes by uploading an id with no `doc`. Ids
 are client-supplied. Duplicate and missing policies are set on the upload
-dialog.
+dialog. Row click opens the edit dialog with pretty JSON; truncated document
+cells are previews only.
 
 Destructive deletes use a confirm `AlertDialog` with `variant="destructive"` and
 a success toast. Match that pattern for other destructive actions.
@@ -35,6 +38,8 @@ a success toast. Match that pattern for other destructive actions.
 
 `/indexes/:name/search` is the raw sparse search form: query fields per aspect,
 optional weights, `k`, flags such as `withDocs`. It is the API-shaped surface.
+Click a result row to open an inspect sheet with distance, explanation JSON, and
+document JSON when those fields are present.
 
 Weight tuning belongs on the [Playground](playground.md). Quality measurement
 belongs on the [Scorecard](scorecard.md).

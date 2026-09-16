@@ -41,7 +41,9 @@ Try this:
 
 1. Click **Search** (submit on the form)
 2. Results appear with ids and distances
-3. Open the Request Inspector
+3. Click a result row to open the inspect sheet (distance, explanation JSON, and
+   document JSON when enabled)
+4. Open the Request Inspector
 
 Confirm the body looks roughly like:
 

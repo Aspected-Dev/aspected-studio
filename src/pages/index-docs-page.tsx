@@ -11,6 +11,7 @@ import {
   PageDocsButton,
 } from "@/components/docs-help.tsx"
 import { JsonEditor } from "@/components/json-editor.tsx"
+import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import {
   AlertDialog,
@@ -228,9 +229,7 @@ export function IndexDocsPage() {
       header: "Document",
       meta: { className: "font-mono text-xs" },
       cell: ({ getValue }) => (
-        <span className="inline-block w-40 truncate sm:w-64">
-          {JSON.stringify(getValue())}
-        </span>
+        <JsonPreviewCell value={getValue()} width="wide" />
       ),
     }),
     columnHelper.accessor("accessList", {
@@ -366,15 +365,6 @@ export function IndexDocsPage() {
           label: `Page ${page} of ${pageCount}`,
         }}
       />
-
-      {selected
-        ? (
-          <JsonEditor
-            value={JSON.stringify(selected, null, 2)}
-            readOnly
-          />
-        )
-        : null}
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="sm:max-w-xl">

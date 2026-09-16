@@ -24,6 +24,9 @@ exists).
 Schema is fixed at create time. Wrong layout means recreate the index (the seed
 script does that for `catalog`).
 
+Click an aspect row to open an inspect sheet with readonly fields and the
+settings JSON. Truncated Settings cells are previews only.
+
 Click the **Docs** help control if you want Aspected product docs for resolvers
 (that opens `aspects.dev` material, not this repo’s `/docs`).
 
@@ -32,6 +35,7 @@ Click the **Docs** help control if you want Aspected product docs for resolvers
 1. In the sidebar under **catalog**, click **Documents**\
    (URL: `/indexes/catalog/docs`)
 2. Browse the table. Ids look like `laptop-aurora-pro-16`, not opaque UUIDs.
+3. Click a row to open the edit dialog and read the full document JSON.
 
 Readable ids matter later: golden cases name document ids in their expected
 lists.

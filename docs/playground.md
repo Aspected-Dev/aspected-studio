@@ -18,7 +18,9 @@ query text. A real search follows on a 300ms debounce while **Auto-run** is on.
 | Stale   | The query changed, or grades cannot be recovered                 |
 
 Every metric stacks per-aspect contributions that sum to the total distance, so
-a shorter bar is always a closer match.
+a shorter bar is always a closer match. Select a ranking row to open the aspect
+contribution table. Click a truncated **Stored value** cell to open an inspect
+sheet with the full JSON.
 
 ### Limits
 

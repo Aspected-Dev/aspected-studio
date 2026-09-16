@@ -1,9 +1,11 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { IndexSearchPage } from "./index-search-page.tsx"
+import { usedExplanation } from "@/lib/aspected/explanation.ts"
 import type { IndexDetail, SearchResultRow } from "@/lib/aspected/types.ts"
+import { prettyJson } from "@/lib/pretty-json.ts"
 
 const index: IndexDetail = {
   name: "products",
@@ -34,6 +36,10 @@ const index: IndexDetail = {
 const result: SearchResultRow = {
   id: "prod-001",
   distance: 0.12,
+  explanation: [
+    { name: "category", value: "electronics", distance: 0.05 },
+    { name: "brand", value: "aurora" },
+  ],
   doc: { category: "electronics" },
 }
 
@@ -75,15 +81,27 @@ describe("IndexSearchPage", () => {
     connection.client.searchIndex.mockReset()
   })
 
-  it("shows a selected result in a read-only JSON editor", async () => {
+  it("opens an inspect sheet when a result row is clicked", async () => {
     const user = userEvent.setup()
     renderPage()
     await user.click(await screen.findByRole("button", { name: "Search" }))
     await user.click(await screen.findByRole("cell", { name: "prod-001" }))
 
-    const editor = screen.getByTestId("json-editor")
-    expect(editor).toHaveAttribute("readonly")
-    expect(editor).toHaveValue(JSON.stringify(result, null, 2))
+    const sheet = screen.getByRole("dialog")
+    expect(within(sheet).getByRole("heading", { name: "prod-001" }))
+      .toBeInTheDocument()
+    expect(within(sheet).getByText("Search result detail.")).toBeInTheDocument()
+    expect(within(sheet).getByLabelText("Distance")).toHaveValue("0.12")
+    expect(within(sheet).getByText("Explanation")).toBeInTheDocument()
+    expect(within(sheet).getByText("Document")).toBeInTheDocument()
+    const editors = within(sheet).getAllByTestId("json-editor")
+    expect(editors).toHaveLength(2)
+    expect(editors[0]).toHaveAttribute("readonly")
+    expect(editors[0]).toHaveValue(
+      prettyJson(usedExplanation(result.explanation)),
+    )
+    expect(editors[1]).toHaveAttribute("readonly")
+    expect(editors[1]).toHaveValue(prettyJson(result.doc))
   })
 
   it("shows an inline error when weight is not a number", async () => {
