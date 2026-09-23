@@ -47,10 +47,10 @@ The champion is **auto-saved** under Saved configs.
 
 ## Step 4: Apply in Playground
 
-1. Open **Playground** → Scorecard tab
-2. **Load tuned config** → pick the new champion
-3. Confirm left-hand sliders match the saved weights
-4. **Run set** once to grade Live at those weights
+1. Open **Playground**
+2. In **Query and weights**, **Load tuned config** → pick the new champion
+3. Confirm the weight sliders match the saved weights
+4. Open the Scorecard tab and **Run set** once to grade Live at those weights
 5. Compare chips and nDCG to the all-`1` baseline from Tutorial 5
 
 Optional: open Ranking / Compare with a representative query and pin A if you

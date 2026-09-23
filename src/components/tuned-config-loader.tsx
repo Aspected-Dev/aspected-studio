@@ -43,7 +43,7 @@ export function TunedConfigLoader({
       }}
     >
       <SelectTrigger
-        className="w-52"
+        className="w-full min-w-0"
         aria-label="Load tuned config"
         disabled={disabled}
       >

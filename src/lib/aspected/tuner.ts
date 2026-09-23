@@ -127,6 +127,8 @@ export type TunerState = {
   batchAspect: string | null
   /** Top trial ids queued for confirm re-eval. */
   confirmQueue: number[]
+  /** True after near-tie holdout trials have been enqueued (or skipped). */
+  holdoutQueued: boolean
   holdoutObjective: TuneObjective | null
   stopped: boolean
   exhausted: boolean
@@ -212,6 +214,7 @@ export function createTunerState(options: TunerOptions): TunerState {
     batchIds: [],
     batchAspect: null,
     confirmQueue: [],
+    holdoutQueued: false,
     holdoutObjective: null,
     stopped: false,
     exhausted: false,
@@ -312,6 +315,8 @@ export function recordTrial(
   maybeAdoptChampion(next, recorded)
 
   if (recorded.scope === "holdout") {
+    // Final holdoutObjective is chosen in selectChampionByHoldoutGap once all
+    // near-tie holdout trials finish. Keep the latest as a fallback.
     next.holdoutObjective = recorded.objective
   }
 
@@ -605,6 +610,14 @@ function advanceStage(state: TunerState): void {
 
   if (state.stage === "confirm") {
     if (!queueNextConfirm(state)) {
+      if (!state.holdoutQueued) {
+        state.holdoutQueued = true
+        enqueueNearTieHoldouts(state)
+        if (state.pending.length > 0) {
+          return
+        }
+      }
+      selectChampionByHoldoutGap(state)
       state.stage = "done"
     }
   }
@@ -644,19 +657,158 @@ function beginConfirm(state: TunerState): void {
   state.confirmQueue = leaderboard(state, 3).map((trial) => trial.id)
   state.batchIds = []
   state.batchAspect = null
+  state.holdoutQueued = false
 
-  if (state.options.holdoutIds.length > 0 && state.champion) {
+  // Remeasure top train trials first. Near-tie holdout scoring runs after
+  // those confirms finish (see advanceStage confirm branch).
+  if (state.pending.length === 0 && !queueNextConfirm(state)) {
+    state.holdoutQueued = true
+    enqueueNearTieHoldouts(state)
+    if (state.pending.length === 0) {
+      selectChampionByHoldoutGap(state)
+      state.stage = "done"
+    }
+  }
+}
+
+/**
+ * Enqueues holdout Live trials for train confirm configs within the noise
+ * floor of the best remeasured train objective.
+ */
+function enqueueNearTieHoldouts(state: TunerState): void {
+  if (state.options.holdoutIds.length === 0) {
+    return
+  }
+
+  const confirms = state.trials.filter((trial) =>
+    trial.stage === "confirm" &&
+    trial.scope !== "holdout" &&
+    trial.label.startsWith("confirm #")
+  )
+
+  const pool = confirms.length > 0
+    ? confirms
+    : state.champion
+    ? [state.champion]
+    : []
+  if (pool.length === 0) {
+    return
+  }
+
+  const bestTrain = Math.max(
+    ...pool.map((trial) => trial.objective.value),
+  )
+  const near = pool.filter((trial) =>
+    bestTrain - trial.objective.value <= state.noiseFloor
+  )
+
+  const seen = new Set<string>()
+  for (const trial of near) {
+    const key = JSON.stringify({
+      weights: trial.config.weights,
+      fetchK: trial.config.fetchK,
+    })
+    if (seen.has(key)) {
+      continue
+    }
+    seen.add(key)
     enqueue(state, {
-      config: cloneConfig(state.champion.config),
+      config: cloneConfig(trial.config),
       scope: "holdout",
       stage: "confirm",
-      label: "holdout champion",
+      label: `holdout confirm #${trial.id}`,
     })
   }
+}
 
-  if (state.pending.length === 0 && !queueNextConfirm(state)) {
-    state.stage = "done"
+/**
+ * Among Confirm holdout results, pick the near-tied train config with the
+ * smallest |holdout − train| gap and set it as champion.
+ */
+function selectChampionByHoldoutGap(state: TunerState): void {
+  const holdouts = state.trials.filter((trial) =>
+    trial.scope === "holdout" && trial.stage === "confirm"
+  )
+  if (holdouts.length === 0) {
+    return
   }
+
+  type Candidate = {
+    holdout: TuneTrial
+    train: TuneTrial
+  }
+  const candidates: Candidate[] = []
+  for (const holdout of holdouts) {
+    const match = /^holdout confirm #(\d+)$/.exec(holdout.label)
+    if (!match) {
+      continue
+    }
+    const train = state.trials.find((trial) => trial.id === Number(match[1]))
+    if (!train) {
+      continue
+    }
+    candidates.push({ holdout, train })
+  }
+  if (candidates.length === 0) {
+    state.holdoutObjective = holdouts[holdouts.length - 1]?.objective ?? null
+    return
+  }
+
+  const bestTrain = Math.max(
+    ...candidates.map((item) => item.train.objective.value),
+  )
+  const eligible = candidates.filter((item) =>
+    bestTrain - item.train.objective.value <= state.noiseFloor
+  )
+  if (eligible.length === 0) {
+    state.holdoutObjective = holdouts[holdouts.length - 1]?.objective ?? null
+    return
+  }
+
+  let best = eligible[0]
+  for (const item of eligible.slice(1)) {
+    const gapBest = Math.abs(
+      best.holdout.objective.value - best.train.objective.value,
+    )
+    const gapItem = Math.abs(
+      item.holdout.objective.value - item.train.objective.value,
+    )
+    if (gapItem < gapBest - 1e-12) {
+      best = item
+      continue
+    }
+    if (Math.abs(gapItem - gapBest) > 1e-12) {
+      continue
+    }
+    if (item.holdout.objective.value > best.holdout.objective.value + 1e-12) {
+      best = item
+      continue
+    }
+    if (
+      Math.abs(
+          item.holdout.objective.value - best.holdout.objective.value,
+        ) <= 1e-12 &&
+      isBetterConfig(
+        {
+          value: item.train.objective.value,
+          weights: item.holdout.config.weights,
+          fetchK: item.holdout.config.fetchK,
+        },
+        {
+          value: best.train.objective.value,
+          weights: best.holdout.config.weights,
+          fetchK: best.holdout.config.fetchK,
+        },
+        state.options.start,
+        state.noiseFloor,
+      )
+    ) {
+      best = item
+    }
+  }
+
+  state.champion = best.train
+  state.holdoutObjective = best.holdout.objective
 }
 
 function queueNextScreen(state: TunerState): boolean {

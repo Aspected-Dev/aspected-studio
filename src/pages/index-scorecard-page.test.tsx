@@ -18,6 +18,10 @@ import {
 } from "@/lib/aspected/golden.ts"
 import { toast } from "sonner"
 import type { IndexDetail, SearchResultRow } from "@/lib/aspected/types.ts"
+import {
+  TUNED_CONFIG_VERSION,
+  upsertTunedConfig,
+} from "@/lib/aspected/tuned-config.ts"
 
 const index: IndexDetail = {
   name: "products",
@@ -125,10 +129,10 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
-function renderPage() {
+function renderPage(path = "/indexes/products/scorecard") {
   const router = createMemoryRouter(
     [{ path: "/indexes/:name/scorecard", element: <IndexScorecardPage /> }],
-    { initialEntries: ["/indexes/products/scorecard"] },
+    { initialEntries: [path] },
   )
   return render(<RouterProvider router={router} />)
 }
@@ -413,5 +417,45 @@ describe("IndexScorecardPage", () => {
     expect(
       await screen.findByText("/indexes/products/search"),
     ).toBeInTheDocument()
+  })
+
+  it("loads tuned weights from ?loadTuned= and clears the param", async () => {
+    saveGoldenSets([goldenSet()])
+    upsertTunedConfig({
+      version: TUNED_CONFIG_VERSION,
+      id: "tuned-1",
+      name: "Products champion",
+      indexName: "products",
+      goldenSetId: "set-1",
+      goldenSetName: "Garden set",
+      weights: { title: 2.5, price: 0.4 },
+      fetchK: 20,
+      primaryMetric: "ndcg",
+      trainPrimary: 0.9,
+      holdoutPrimary: 0.88,
+      objectiveValue: 0.9,
+      noiseFloor: 0.002,
+      rationale: ["title: 1 → 2.5."],
+      createdAt: 1,
+      holdoutSeed: 42,
+    })
+
+    const router = createMemoryRouter(
+      [{ path: "/indexes/:name/scorecard", element: <IndexScorecardPage /> }],
+      { initialEntries: ["/indexes/products/scorecard?loadTuned=tuned-1"] },
+    )
+    render(<RouterProvider router={router} />)
+
+    await findRunButton()
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "Weights loaded. Run set to verify.",
+      )
+    })
+    expect(router.state.location.search).not.toContain("loadTuned")
+
+    const titleWeight = screen.getByLabelText("Weight for title")
+    expect(titleWeight).toHaveValue(2.5)
   })
 })

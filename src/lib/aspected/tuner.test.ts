@@ -494,4 +494,144 @@ describe("createTunerState and stages", () => {
       state.trials.some((trial) => trial.scope === "holdout"),
     ).toBe(true)
   })
+
+  it("Confirm holdout among train near-ties prefers the smaller gap", () => {
+    const golden = set([
+      testCase({ id: "train" }),
+      testCase({ id: "hold", name: "hold" }),
+    ])
+    const start: TuneConfig = {
+      weights: { title: 1, price: 1 },
+      fetchK: 5,
+    }
+    const overfitConfig: TuneConfig = {
+      weights: { title: 1, price: 10 },
+      fetchK: 5,
+    }
+    const matchedConfig: TuneConfig = {
+      weights: { title: 1, price: 1 },
+      fetchK: 5,
+    }
+
+    let state = createTunerState({
+      set: golden,
+      start,
+      space: {
+        aspects: [
+          { name: "title", tuneWeight: false, allowOff: false, freeze: true },
+          { name: "price", tuneWeight: false, allowOff: false, freeze: true },
+        ],
+        tuneDepth: false,
+      },
+      trainIds: ["train"],
+      holdoutIds: ["hold"],
+      maxSearches: 50,
+    })
+
+    const overfitTrain = {
+      id: 10,
+      config: overfitConfig,
+      objective: objective(0.8),
+      scope: "train" as const,
+      stage: "confirm" as const,
+      searches: 1,
+      label: "confirm #10",
+      bypassCache: true,
+    }
+    const matchedTrain = {
+      id: 11,
+      config: matchedConfig,
+      objective: objective(0.799),
+      scope: "train" as const,
+      stage: "confirm" as const,
+      searches: 1,
+      label: "confirm #11",
+      bypassCache: true,
+    }
+
+    // Hand-build the end of Confirm remeasure: train champion is the slight
+    // overfit, with a near-tied matched config still in the confirm pool.
+    state = {
+      ...state,
+      stage: "confirm",
+      noiseFloor: 0.01,
+      confirmQueue: [],
+      confirmIndex: 0,
+      holdoutQueued: false,
+      trials: [overfitTrain, matchedTrain],
+      champion: overfitTrain,
+      baseline: overfitTrain,
+      nextTrialId: 100,
+      pending: [{
+        id: 100,
+        config: overfitConfig,
+        scope: "train",
+        stage: "confirm",
+        label: "confirm kick",
+      }],
+    }
+
+    state = recordTrial(state, {
+      id: 100,
+      config: overfitConfig,
+      objective: objective(0.8),
+      scope: "train",
+      stage: "confirm",
+      searches: 1,
+      label: "confirm kick",
+    })
+
+    expect(state.pending.filter((item) => item.scope === "holdout").length)
+      .toBe(2)
+
+    while (state.stage !== "done" && state.pending.length > 0) {
+      const pending = nextCandidates(state)
+      for (const request of pending) {
+        const holdoutValue = request.config.weights.price === 10 ? 0.4 : 0.79
+        state = recordTrial(state, {
+          id: request.id,
+          config: request.config,
+          objective: objective(
+            request.scope === "holdout" ? holdoutValue : 0.8,
+          ),
+          scope: request.scope,
+          stage: request.stage,
+          searches: 1,
+          label: request.label,
+          bypassCache: request.bypassCache,
+        })
+      }
+    }
+
+    expect(state.stage).toBe("done")
+    expect(championOf(state)!.config.weights.price).toBe(1)
+    expect(championOf(state)!.scope).not.toBe("holdout")
+    expect(state.holdoutObjective!.value).toBeCloseTo(0.79, 5)
+  })
+
+  it("does not enqueue holdout trials when holdout is off", () => {
+    const golden = set([testCase({ id: "train" })])
+    const start: TuneConfig = {
+      weights: { title: 1, price: 1 },
+      fetchK: 5,
+    }
+    let state = createTunerState({
+      set: golden,
+      start,
+      space: {
+        aspects: [
+          { name: "title", tuneWeight: false, allowOff: false, freeze: true },
+          { name: "price", tuneWeight: false, allowOff: false, freeze: true },
+        ],
+        tuneDepth: false,
+      },
+      trainIds: ["train"],
+      holdoutIds: [],
+      maxSearches: 50,
+    })
+    state = drain(state)
+    expect(state.stage).toBe("done")
+    expect(state.trials.some((trial) => trial.scope === "holdout")).toBe(false)
+    expect(state.holdoutObjective).toBeNull()
+  })
 })

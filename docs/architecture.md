@@ -87,8 +87,9 @@ sweep and Preview ascent arithmetic is on cached rows, not a search per sample.
 **Auto-tune** (`/indexes/:name/auto-tune`) is the Live path: a budgeted planner
 (`tuner.ts`) proposes configs; `use-auto-tune.ts` evaluates them with real
 `searchIndex` calls, a global case-signature cache, AbortSignal cancel, optional
-holdout, and saved tuned configs in localStorage. Preview Suggest remains a
-diagnostic; Auto-tune is what you use when the objective must match the server.
+holdout (Confirm may pick among train near-ties by holdout gap), and saved tuned
+configs in localStorage. Preview Suggest remains a diagnostic; Auto-tune is what
+you use when the objective must match the server.
 
 ## Request Inspector and concurrent runs
 

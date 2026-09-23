@@ -22,6 +22,7 @@ import { JsonInspectSheet } from "@/components/json-inspect-sheet.tsx"
 import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
 import { CopyableReadonlyField } from "@/components/copyable-readonly-field.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
+import { TunedConfigLoader } from "@/components/tuned-config-loader.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import {
   Card,
@@ -42,6 +43,7 @@ import { Separator } from "@/components/ui/separator.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
 import { type RecordedRequest } from "@/lib/aspected/client.ts"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
+import { tunedConfigsForIndex } from "@/lib/aspected/tuned-config.ts"
 import {
   buildSparseSearchRequest,
   searchFormSchema,
@@ -325,6 +327,30 @@ export function IndexSearchPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
+                {name
+                  ? (
+                    <TunedConfigLoader
+                      configs={tunedConfigsForIndex(name)}
+                      onLoad={(config) => {
+                        for (
+                          const [aspectName, weight] of Object.entries(
+                            config.weights,
+                          )
+                        ) {
+                          const position = aspectFields.findIndex((aspect) =>
+                            aspect.name === aspectName
+                          )
+                          if (position !== -1) {
+                            form.setValue(
+                              `aspects.${position}.weight`,
+                              weight,
+                            )
+                          }
+                        }
+                      }}
+                    />
+                  )
+                  : null}
                 {aspectFields.map((field, index) => {
                   const aspect = indexSchema.find((entry) =>
                     entry.name === field.name

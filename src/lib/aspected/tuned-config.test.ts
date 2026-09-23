@@ -29,6 +29,7 @@ function sample(overrides: Partial<TunedConfig> = {}): TunedConfig {
     noiseFloor: 0.002,
     rationale: ["price: 1 → 6.3."],
     createdAt: 1000,
+    holdoutSeed: null,
     ...overrides,
   }
 }
@@ -71,5 +72,11 @@ describe("tuned-config storage", () => {
     expect(tunedConfigFilename(sample({ name: "My Best!" }))).toBe(
       "my-best.json",
     )
+  })
+
+  it("keeps holdoutSeed when present", () => {
+    const saved = upsertTunedConfig(sample({ id: "seeded", holdoutSeed: 99 }))
+    expect(loadTunedConfigs()[0]?.holdoutSeed).toBe(99)
+    expect(saved.holdoutSeed).toBe(99)
   })
 })

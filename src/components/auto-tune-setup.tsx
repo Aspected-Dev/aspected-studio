@@ -30,6 +30,7 @@ import {
 } from "@/lib/aspected/tuner.ts"
 import {
   HOLDOUT_MIN_CASES,
+  HOLDOUT_NOISY_CASE_MAX,
   TUNE_RESULT_HELP,
 } from "@/lib/aspected/tune-objective.ts"
 
@@ -44,6 +45,8 @@ export type AutoTuneSetupValues = {
   customBudget: number
   concurrency: number
   useHoldout: boolean
+  /** Explicit split seed, or null to pick randomly at start. */
+  holdoutSeed: number | null
   tuneDepth: boolean
   wallClockMinutes: number | null
 }
@@ -58,6 +61,8 @@ export type AutoTuneSetupProps = {
   runnableCaseCount: number
   disabled: boolean
   onStart: () => void
+  /** Seed from the last finished run, for "Use last seed". */
+  lastHoldoutSeed?: number | null
 }
 
 /**
@@ -74,11 +79,14 @@ export function AutoTuneSetup({
   runnableCaseCount,
   disabled,
   onStart,
+  lastHoldoutSeed = null,
 }: AutoTuneSetupProps) {
   const maxSearches = values.budgetPreset === "custom"
     ? values.customBudget
     : BUDGET_PRESETS[values.budgetPreset]
   const holdoutReady = runnableCaseCount >= HOLDOUT_MIN_CASES
+  const holdoutNoisy = holdoutReady &&
+    runnableCaseCount < HOLDOUT_NOISY_CASE_MAX
 
   return (
     <Card>
@@ -315,6 +323,67 @@ export function AutoTuneSetup({
                   : null}
               </span>
             </label>
+            {holdoutNoisy
+              ? (
+                <p className="text-sm text-muted-foreground">
+                  With fewer than {HOLDOUT_NOISY_CASE_MAX}{" "}
+                  cases, the held-out slice is small, so scores can swing a lot
+                  between runs. After Auto-tune, open Scorecard and Run set on
+                  the full set before you trust the weights. You can also turn
+                  this split off.
+                </p>
+              )
+              : null}
+            {values.useHoldout && holdoutReady
+              ? (
+                <div className="grid min-w-0 gap-2">
+                  <Label htmlFor="auto-tune-holdout-seed">
+                    Holdout seed (optional)
+                  </Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      id="auto-tune-holdout-seed"
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="Random each run"
+                      value={values.holdoutSeed ?? ""}
+                      disabled={disabled}
+                      aria-label="Holdout seed"
+                      onChange={(event) => {
+                        const raw = event.target.value.trim()
+                        onChange({
+                          ...values,
+                          holdoutSeed: raw === ""
+                            ? null
+                            : Math.trunc(Number(raw)) || 0,
+                        })
+                      }}
+                    />
+                    {lastHoldoutSeed !== null && lastHoldoutSeed !== undefined
+                      ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={disabled}
+                          onClick={() =>
+                            onChange({
+                              ...values,
+                              holdoutSeed: lastHoldoutSeed,
+                            })}
+                        >
+                          Use last seed
+                        </Button>
+                      )
+                      : null}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Same seed repeats the same train / holdout split. Leave
+                    blank for a new split each run.
+                  </p>
+                </div>
+              )
+              : null}
             <Label htmlFor="auto-tune-wall">
               Wall-clock cap (minutes, optional)
             </Label>

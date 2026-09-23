@@ -45,7 +45,9 @@ not a free simplification.
 3. **Coarse**: Live coordinate ascent on a log grid (~0.1…10)
 4. **Refine**: local steps around winners
 5. **Depth**: optional `1× / 2× / 4×` the deepest case grading `k` as `fetchK`
-6. **Confirm**: re-check top trials; score holdout when enabled
+6. **Confirm**: re-check top train trials; when holdout is on, score every train
+   near-tie (within the noise floor of the best remeasure) on holdout and keep
+   the config with the smallest |holdout − train| gap
 
 Budget is counted in **searches**, not trials. A per-case signature cache means
 changing one aspect does not re-run cases that never query it.
@@ -61,37 +63,46 @@ number you set, never a whole queued batch past it.
   selected set never queries; switching sets rebuilds those defaults.
 - Budget presets: Quick 250, Standard 1000, Thorough 4000, or custom
 - Concurrency (default 4)
-- Train/holdout split (on when the set has enough runnable cases)
+- Train/holdout split (on when the set has enough runnable cases). Optional
+  holdout seed: leave blank for a new split each run, or reuse a seed so
+  Thorough repeats share the same cases. With fewer than 24 runnable cases the
+  held-out slice is small and noisy; prefer Scorecard Run set on the full set
+  before trusting weights, or turn the split off.
 - Optional wall-clock cap
 
 ## Results and saved configs
 
 When a run finishes (or you Stop), the champion is auto-saved under
-`aspected-studio.tuned-configs`. The results card shows start vs champion,
-holdout, rationale, per-case deltas, and a leaderboard. Each result tile has a
-help icon with the same wording as below.
+`aspected-studio.tuned-configs` (including the holdout seed when a split was
+used). The results card shows start vs champion, holdout with a matched / mild
+lag / overfit / holdout-ahead label, rationale, per-case deltas, and a
+leaderboard. **Verify on Scorecard** saves the champion if needed and opens
+Scorecard with `?loadTuned=` so you can Run set on the full golden set without a
+second Live Auto-tune budget. Each result tile has a help icon with the same
+wording as below.
 
 ### Reading the three tiles
 
-| Tile                   | Meaning                                                                                                                                                                                                                                                                                         |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Start objective**    | Score of the config you began with (often all weights 1), on the **train** split when holdout is on. Objective = primary metric (usually nDCG) minus a forbidden-case penalty; each case counts equally.                                                                                        |
-| **Champion objective** | Best config found on **train** under the budget. Compare to Start. A gain within the noise floor is treated as a tie (parsimony may still change which config wins).                                                                                                                            |
-| **Holdout**            | Same objective on cases **not** used while searching. Scored once in Confirm. Close to the train champion → the win likely generalizes. Much lower → possible overfit or an unlucky split (especially on small sets). `n/a` means holdout was off, the set was too small, or Confirm never ran. |
+| Tile                   | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Start objective**    | Score of the config you began with (often all weights 1), on the **train** split when holdout is on. Objective = primary metric (usually nDCG) minus a forbidden-case penalty; each case counts equally.                                                                                                                                                                                                                                                         |
+| **Champion objective** | Best config found on **train** under the budget. Compare to Start. A gain within the noise floor is treated as a tie (parsimony may still change which config wins).                                                                                                                                                                                                                                                                                             |
+| **Holdout**            | Same objective on cases **not** used while searching. Confirm scores every train near-tie (within noise of the best remeasure), then keeps the config with the smallest \|holdout − train\| gap. Labels: **matched** (within max(noise, 0.02)), **mild lag** (train ahead by up to 0.10), **overfit** (larger lag), **holdout ahead**. Prefer a matched gap, then Verify on Scorecard. `n/a` means holdout was off, the set was too small, or Confirm never ran. |
 
 Per-case deltas compare the baseline runs against the **champion's** runs, so
 they always describe the config you are about to save rather than whichever
 trial finished last. They cover the train split only, so a run with a holdout
 lists fewer cases than the set has.
 
-The holdout is scored once, in Confirm. A run that spends its budget or is
-stopped earlier leaves the tile at `n/a` and says so, which is a different
-message from the one you get when there was no split to score.
+The holdout is scored in Confirm (up to three near-tied train configs). A run
+that spends its budget or is stopped earlier leaves the tile at `n/a` and says
+so, which is a different message from the one you get when there was no split to
+score. Across reshuffled seeds, pick by gap plus full-set Scorecard verify, not
+by the highest train or holdout number alone.
 
-Load a saved config from:
-
-- Playground Scorecard tab: **Load tuned config**
-- Scorecard page: next to **Weights under test**
+Load a saved config from **Load tuned config** in the **Query and weights**
+panel on Playground or Search, or next to **Weights under test** on the
+Scorecard page.
 
 ## Production guidance
 

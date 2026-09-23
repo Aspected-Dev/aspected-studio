@@ -49,9 +49,7 @@ import {
 } from "@/lib/aspected/golden.ts"
 import { summariseScorecard } from "@/lib/aspected/relevance.ts"
 import { sameWeights, scoreSet } from "@/lib/aspected/scorecard.ts"
-import { tunedConfigsForIndex } from "@/lib/aspected/tuned-config.ts"
 import type { DistanceType, StoredAspect } from "@/lib/aspected/types.ts"
-import { TunedConfigLoader } from "@/components/tuned-config-loader.tsx"
 
 /** Stroke colours for rank-vs-weight lines. */
 const RANK_VS_WEIGHT_COLORS = [
@@ -342,10 +340,6 @@ export function PlaygroundScorecard({
           </CardDescription>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <TunedConfigLoader
-            configs={tunedConfigsForIndex(indexName)}
-            onLoad={(config) => onUseWeights(config.weights)}
-          />
           {scorecard.ranAt === null
             ? null
             : (

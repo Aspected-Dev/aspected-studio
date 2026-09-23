@@ -86,8 +86,8 @@ Django’s primary genre is Drama, so Western alone never recovers it.
 
 1. Open `/indexes/movies/auto-tune`
 2. Select **Movies planted truth**
-3. Budget **Standard**, **holdout off** (tiny set; `Date.now()` holdout splits
-   make two Thorough runs tell different stories)
+3. Budget **Standard**, **holdout off** (fewer than 24 cases: the held-out slice
+   is too small to trust between runs)
 4. **Start auto-tune**
 
 **Pass bar** (do not require global title/credits/overview weight increases):
@@ -113,16 +113,22 @@ as a tuner bug before trusting the main set. Main baseline still uses holdout.
 On **Movies baseline**:
 
 1. **Quick** (250): sanity that the run starts, caches, and stops cleanly
-2. **Standard** (1000): read champion vs baseline, holdout, per-case deltas by
-   tag (`policy`, `known-item`, `people`, …). No slice should silently collapse
+2. **Standard** (1000): read champion vs baseline, holdout gap label, per-case
+   deltas by tag (`policy`, `known-item`, `people`, …). No slice should silently
+   collapse
 3. **Thorough** (4000): champion should agree with Standard within the noise
-   floor
+   floor. Optional: reuse the **Holdout seed** from a good run so repeats share
+   the same split
 
-Repeat Standard once. Objective should reproduce within noise.
+Repeat Standard once (same seed if you are comparing). Prefer a run where
+holdout **matches** the train champion (small gap), not the run with the highest
+train score alone. Then click **Verify on Scorecard**, Run set on the full
+Movies baseline, and only keep weights that still look good there.
 
 ## Step 7: Round trip
 
-1. Playground → Scorecard tab → **Load tuned config**
+1. From Results, **Verify on Scorecard** (or Playground **Query and weights** →
+   **Load tuned config**)
 2. **Run set** Live
 3. nDCG and chips should match the Auto-tune champion for that set
 
@@ -160,9 +166,9 @@ a local CPU server (~44 minutes to seed ~4,802 docs).
 
 Manual steps still required for production sign-off: planted Standard Auto-tune
 with holdout off (Step 5 pass bar), main-set Quick → Standard → Thorough with
-holdout on, stability repeat, Load tuned config round trip, Stop/concurrency
-checks, and a browser pass over Progress/Results with 86 cases. Use this
-tutorial’s Steps 5–9.
+holdout on, pick by matched holdout gap then **Verify on Scorecard**, stability
+repeat with a reused seed, Stop/concurrency checks, and a browser pass over
+Progress/Results with 86 cases. Use this tutorial’s Steps 5–9.
 
 ## Related
 

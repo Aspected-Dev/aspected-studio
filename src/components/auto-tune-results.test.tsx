@@ -137,5 +137,9 @@ describe("AutoTuneResults help", () => {
       screen.getByRole("button", { name: "About per-case primary delta" }),
     ).toBeTruthy()
     expect(TUNE_RESULT_HELP.holdout).toMatch(/Confirm/)
+    expect(TUNE_RESULT_HELP.holdout).toMatch(/Scorecard/)
+    expect(
+      screen.getByText(/Holdout is a little behind the train champion/i),
+    ).toBeInTheDocument()
   })
 })

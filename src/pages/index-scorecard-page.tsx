@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react"
-import { useParams } from "react-router"
+import { useParams, useSearchParams } from "react-router"
 import { MotionConfig } from "motion/react"
 import { DownloadIcon, PlusIcon, UploadIcon } from "lucide-react"
 import { GoldenCaseEditor } from "@/components/golden-case-editor.tsx"
@@ -122,6 +122,7 @@ const METRIC_OPTIONS: GoldenMetricKey[] = [
  */
 export function IndexScorecardPage() {
   const { name } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { client } = useConnection()
 
   const [index, setIndex] = useState<IndexDetail | null>(null)
@@ -183,6 +184,35 @@ export function IndexScorecardPage() {
     setSets(stored)
     setActiveSetId(stored[0]?.id ?? null)
   }, [name])
+
+  useEffect(() => {
+    if (!name || index === null) {
+      return
+    }
+    const loadTuned = searchParams.get("loadTuned")
+    if (!loadTuned) {
+      return
+    }
+    const config = tunedConfigsForIndex(name).find((item) =>
+      item.id === loadTuned
+    )
+    if (!config) {
+      toast.error("Could not load tuned config", {
+        description: "That saved config was not found for this index.",
+      })
+    } else {
+      setWeights((previous) => ({
+        ...previous,
+        ...config.weights,
+      }))
+      toast.success("Weights loaded. Run set to verify.")
+    }
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous)
+      next.delete("loadTuned")
+      return next
+    }, { replace: true })
+  }, [name, index, searchParams, setSearchParams])
 
   const activeSet = sets.find((item) => item.id === activeSetId) ?? null
   const schema = index?.schema ?? []

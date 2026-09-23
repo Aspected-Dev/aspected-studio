@@ -8,7 +8,11 @@ import {
 } from "@/components/ui/card.tsx"
 import { MetricHelp } from "@/components/metric-tile.tsx"
 import type { AutoTuneSnapshot } from "@/hooks/use-auto-tune.ts"
-import { noiseLabel, TUNE_RESULT_HELP } from "@/lib/aspected/tune-objective.ts"
+import {
+  classifyHoldoutGap,
+  noiseLabel,
+  TUNE_RESULT_HELP,
+} from "@/lib/aspected/tune-objective.ts"
 import type { TuneConfig, TuneTrial } from "@/lib/aspected/tuner.ts"
 
 /** Props for {@link AutoTuneResults}. */
@@ -16,6 +20,8 @@ export type AutoTuneResultsProps = {
   snapshot: AutoTuneSnapshot
   onApply: (config: TuneConfig) => void
   onSave: (trial: TuneTrial) => void
+  /** Opens Scorecard with champion weights loaded for a full-set Run set. */
+  onVerify?: () => void
 }
 
 /**
@@ -44,6 +50,7 @@ export function AutoTuneResults({
   snapshot,
   onApply,
   onSave,
+  onVerify,
 }: AutoTuneResultsProps) {
   const {
     champion,
@@ -56,6 +63,7 @@ export function AutoTuneResults({
     stopped,
     exhausted,
     holdoutIds,
+    seed,
   } = snapshot
 
   if (!champion || !baseline) {
@@ -64,6 +72,13 @@ export function AutoTuneResults({
 
   const gain = champion.objective.value - baseline.objective.value
   const kind = noiseLabel(gain, noiseFloor)
+  const holdoutGap = holdoutObjective
+    ? classifyHoldoutGap(
+      champion.objective.value,
+      holdoutObjective.value,
+      noiseFloor,
+    )
+    : null
 
   return (
     <Card>
@@ -104,12 +119,34 @@ export function AutoTuneResults({
           />
         </div>
 
-        {holdoutObjective &&
-            holdoutObjective.value + noiseFloor < champion.objective.value
+        {holdoutGap
           ? (
             <p className="text-sm text-muted-foreground">
-              Holdout lagged the train champion. The win may not generalize;
-              inspect the per-case table before applying in production.
+              {holdoutGap.message}
+            </p>
+          )
+          : null}
+
+        {seed !== null && holdoutIds.length > 0
+          ? (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                Holdout seed:{" "}
+                <span className="font-mono text-xs text-foreground">
+                  {seed}
+                </span>
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                onClick={() => {
+                  void navigator.clipboard.writeText(String(seed))
+                }}
+              >
+                Copy
+              </Button>
             </p>
           )
           : null}
@@ -211,7 +248,18 @@ export function AutoTuneResults({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => onApply(champion.config)}>
+          {onVerify
+            ? (
+              <Button type="button" onClick={onVerify}>
+                Verify on Scorecard
+              </Button>
+            )
+            : null}
+          <Button
+            type="button"
+            variant={onVerify ? "secondary" : "default"}
+            onClick={() => onApply(champion.config)}
+          >
             Apply champion
           </Button>
           <Button
@@ -252,6 +300,10 @@ function MetricTile({
   )
 }
 
+function formatWeight(weight: number): string {
+  return weight <= 0 ? "off" : String(weight)
+}
+
 function weightLines(start: TuneConfig, champion: TuneConfig): string[] {
   const names = new Set([
     ...Object.keys(start.weights),
@@ -264,7 +316,7 @@ function weightLines(start: TuneConfig, champion: TuneConfig): string[] {
     if (from === to) {
       continue
     }
-    lines.push(`${name}: ${from} → ${to}`)
+    lines.push(`${name}: ${formatWeight(from)} → ${formatWeight(to)}`)
   }
   if (start.fetchK !== champion.fetchK) {
     lines.push(`fetchK: ${start.fetchK} → ${champion.fetchK}`)

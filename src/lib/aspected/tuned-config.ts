@@ -23,6 +23,8 @@ export const tunedConfigSchema = z.object({
   noiseFloor: z.number(),
   rationale: z.array(z.string()),
   createdAt: z.number(),
+  /** Split seed when holdout was used; omitted on older saves. */
+  holdoutSeed: z.number().nullable().optional(),
 })
 
 /** One saved Auto-tune result. */
@@ -109,6 +111,7 @@ export function serializeTunedConfig(config: TunedConfig): string {
     objectiveValue: config.objectiveValue,
     noiseFloor: config.noiseFloor,
     rationale: config.rationale,
+    holdoutSeed: config.holdoutSeed ?? null,
   }
   return `${JSON.stringify(payload, null, 2)}\n`
 }

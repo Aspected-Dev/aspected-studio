@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { Link, useParams } from "react-router"
+import { Link, useNavigate, useParams } from "react-router"
 import { PageDocsButton } from "@/components/docs-help.tsx"
 import { AutoTuneHistory } from "@/components/auto-tune-history.tsx"
 import { AutoTuneProgressPanel } from "@/components/auto-tune-progress.tsx"
@@ -42,6 +42,7 @@ import { toast } from "sonner"
  */
 export function IndexAutoTunePage() {
   const { name } = useParams()
+  const navigate = useNavigate()
   const { client } = useConnection()
   const [index, setIndex] = useState<IndexDetail | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -50,6 +51,7 @@ export function IndexAutoTunePage() {
   const [appliedNotice, setAppliedNotice] = useState<string | null>(null)
   const tuner = useAutoTune(name ?? "")
   const autoSavedRef = useRef<number | null>(null)
+  const lastSavedConfigIdRef = useRef<string | null>(null)
 
   const [setup, setSetup] = useState<AutoTuneSetupValues>({
     setId: "",
@@ -58,6 +60,7 @@ export function IndexAutoTunePage() {
     customBudget: 1000,
     concurrency: 4,
     useHoldout: true,
+    holdoutSeed: null,
     tuneDepth: true,
     wallClockMinutes: null,
   })
@@ -130,12 +133,13 @@ export function IndexAutoTunePage() {
       return
     }
     autoSavedRef.current = tuner.champion.id
-    saveChampion({
+    const savedConfig = saveChampion({
       trial: tuner.champion,
       snapshot: tuner,
       set: activeSet,
       indexName: name,
     })
+    lastSavedConfigIdRef.current = savedConfig.id
     setSaved(tunedConfigsForIndex(name))
     toast.success("Champion auto-saved")
   }, [tuner.running, tuner.champion, activeSet, name, tuner])
@@ -210,12 +214,14 @@ export function IndexAutoTunePage() {
             onChange={setSetup}
             runnableCaseCount={runnableCount}
             disabled={tuner.running}
+            lastHoldoutSeed={tuner.seed}
             onStart={() => {
               if (!activeSet) {
                 return
               }
               setAppliedNotice(null)
               autoSavedRef.current = null
+              lastSavedConfigIdRef.current = null
               void tuner.start({
                 set: activeSet,
                 start: startConfig,
@@ -228,6 +234,7 @@ export function IndexAutoTunePage() {
                   : BUDGET_PRESETS[setup.budgetPreset],
                 concurrency: setup.concurrency,
                 useHoldout: setup.useHoldout,
+                holdoutSeed: setup.holdoutSeed ?? undefined,
                 wallClockMs: setup.wallClockMinutes === null
                   ? null
                   : setup.wallClockMinutes * 60_000,
@@ -264,14 +271,38 @@ export function IndexAutoTunePage() {
               if (!activeSet || !name) {
                 return
               }
-              saveChampion({
+              const savedConfig = saveChampion({
                 trial,
                 snapshot: tuner,
                 set: activeSet,
                 indexName: name,
               })
+              lastSavedConfigIdRef.current = savedConfig.id
               setSaved(tunedConfigsForIndex(name))
               toast.success("Tuned config saved")
+            }}
+            onVerify={() => {
+              if (!activeSet || !name || !tuner.champion) {
+                return
+              }
+              let configId = lastSavedConfigIdRef.current
+              if (configId === null) {
+                const savedConfig = saveChampion({
+                  trial: tuner.champion,
+                  snapshot: tuner,
+                  set: activeSet,
+                  indexName: name,
+                })
+                configId = savedConfig.id
+                lastSavedConfigIdRef.current = configId
+                autoSavedRef.current = tuner.champion.id
+                setSaved(tunedConfigsForIndex(name))
+              }
+              void navigate(
+                `${indexPath(name, "scorecard")}?loadTuned=${
+                  encodeURIComponent(configId)
+                }`,
+              )
             }}
           />
         )
@@ -285,7 +316,7 @@ export function IndexAutoTunePage() {
         configs={saved}
         onApply={(config) => {
           setAppliedNotice(
-            `Loaded “${config.name}”. Open Playground or Scorecard and use Load tuned config.`,
+            `Loaded “${config.name}”. Open Playground or Search and use Load tuned config in Query and weights.`,
           )
           toast.success(`“${config.name}” is available to load`)
         }}
@@ -305,7 +336,7 @@ function saveChampion(options: {
   snapshot: ReturnType<typeof useAutoTune>
   set: GoldenSet
   indexName: string
-}) {
+}): TunedConfig {
   const { trial, snapshot, set, indexName } = options
   const config: TunedConfig = {
     version: TUNED_CONFIG_VERSION,
@@ -323,6 +354,8 @@ function saveChampion(options: {
     noiseFloor: snapshot.noiseFloor,
     rationale: snapshot.rationale,
     createdAt: Date.now(),
+    holdoutSeed: snapshot.holdoutIds.length > 0 ? snapshot.seed : null,
   }
   upsertTunedConfig(config)
+  return config
 }

@@ -330,14 +330,15 @@ describe("tuner brute force oracle", () => {
     expect(championOf(state)!.config.weights).toEqual(TENT_TARGETS)
   })
 
-  it("ignores holdout trials when picking the champion", () => {
+  it("never crowns a holdout trial as champion during search", () => {
     const ids = Array.from({ length: 10 }, (_, index) => `c${index}`)
     const withoutHoldout = runOracle(
       oracleState({ cases: 10 }),
       (config) => tentValue(config),
     )
-    // Score the holdout far above anything a train trial can reach, so an
-    // unguarded champion swap would show up here.
+    // Score every holdout trial far above train. Confirm may switch among
+    // train near-ties by gap, but the champion config must stay a train trial
+    // (never the holdout-scoped row itself).
     const withHoldout = runOracle(
       oracleState({
         cases: 10,
@@ -354,7 +355,7 @@ describe("tuner brute force oracle", () => {
       championOf(withoutHoldout)!.objective.value,
       10,
     )
-    // The holdout still gets reported, just not as the champion.
+    // Holdout is reported on the selected train config, not as the champion.
     expect(withHoldout.holdoutObjective?.value).toBe(10)
   })
 })

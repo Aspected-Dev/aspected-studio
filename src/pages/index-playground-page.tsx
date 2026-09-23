@@ -38,6 +38,7 @@ import { PlaygroundScorecard } from "@/components/playground-scorecard.tsx"
 import { JsonInspectSheet } from "@/components/json-inspect-sheet.tsx"
 import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
+import { TunedConfigLoader } from "@/components/tuned-config-loader.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { Button } from "@/components/ui/button.tsx"
 import {
@@ -98,6 +99,7 @@ import {
   rerank,
 } from "@/lib/aspected/scoring.ts"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
+import { tunedConfigsForIndex } from "@/lib/aspected/tuned-config.ts"
 import type {
   IndexDetail,
   SearchIndexRequest,
@@ -542,6 +544,30 @@ export function IndexPlaygroundPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
+              {name
+                ? (
+                  <TunedConfigLoader
+                    configs={tunedConfigsForIndex(name)}
+                    onLoad={(config) => {
+                      for (
+                        const [aspectName, weight] of Object.entries(
+                          config.weights,
+                        )
+                      ) {
+                        const position = values.aspects.findIndex((aspect) =>
+                          aspect.name === aspectName
+                        )
+                        if (position !== -1) {
+                          form.setValue(
+                            `aspects.${position}.weight`,
+                            weight,
+                          )
+                        }
+                      }
+                    }}
+                  />
+                )
+                : null}
               {fields.map((field, position) => (
                 <div key={field.id} className="grid gap-4">
                   {position > 0 ? <Separator /> : null}

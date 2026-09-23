@@ -58,6 +58,7 @@ const baseValues: AutoTuneSetupValues = {
   customBudget: 1000,
   concurrency: 4,
   useHoldout: false,
+  holdoutSeed: null,
   tuneDepth: true,
   wallClockMinutes: null,
 }

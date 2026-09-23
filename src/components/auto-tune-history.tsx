@@ -20,6 +20,22 @@ export type AutoTuneHistoryProps = {
 }
 
 /**
+ * Formats champion weights for the saved-config list.
+ *
+ * Every aspect is listed. Weight 0 shows as `off`.
+ */
+export function formatTunedWeightLines(
+  weights: Record<string, number>,
+  fetchK: number,
+): string[] {
+  const lines = Object.entries(weights)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([name, weight]) => `${name}: ${weight <= 0 ? "off" : String(weight)}`)
+  lines.push(`fetchK: ${fetchK}`)
+  return lines
+}
+
+/**
  * Saved tuned configs for this index.
  */
 export function AutoTuneHistory({
@@ -59,6 +75,9 @@ export function AutoTuneHistory({
                         {config.holdoutPrimary !== null
                           ? ` · holdout ${config.holdoutPrimary.toFixed(3)}`
                           : ""}
+                        {config.holdoutSeed != null
+                          ? ` · seed ${config.holdoutSeed}`
+                          : ""}
                         {" · "}
                         {new Date(config.createdAt).toLocaleString()}
                       </p>
@@ -90,14 +109,9 @@ export function AutoTuneHistory({
                     </div>
                   </div>
                   <ul className="grid gap-0.5 font-mono text-xs text-muted-foreground">
-                    {Object.entries(config.weights)
-                      .filter(([, weight]) => weight !== 1)
-                      .map(([name, weight]) => (
-                        <li key={name}>
-                          {name}: {weight}
-                        </li>
-                      ))}
-                    <li>fetchK: {config.fetchK}</li>
+                    {formatTunedWeightLines(config.weights, config.fetchK).map(
+                      (line) => <li key={line}>{line}</li>,
+                    )}
                   </ul>
                 </li>
               ))}

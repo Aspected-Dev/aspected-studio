@@ -5,10 +5,12 @@ aspect up?** The [Search](indexes.md#search) page stays the raw API form.
 
 Compose a sparse query with one shared `AspectQueryRow` per aspect (enum/dict
 select, text/raw textarea, number input, datetime picker), then drag the
-log-scale weight sliders. An **Include** switch mirrors participation: on when
-the aspect is in the query, off clears the value. Weight `0` parks a filled
-value without scoring it. Invalid aspect values are caught against the index
-settings before a request is sent. Every search runs with
+log-scale weight sliders. **Load tuned config** (when Auto-tune has saved
+champions for this index) writes those weights onto the sliders so Ranking,
+Compare, and Scorecard share them. An **Include** switch mirrors participation:
+on when the aspect is in the query, off clears the value. Weight `0` parks a
+filled value without scoring it. Invalid aspect values are caught against the
+index settings before a request is sent. Every search runs with
 `withExplanation: true`, so Studio can recover per-aspect distances and re-score
 results already on screen. Ranking updates on the frame without a server round
 trip and without re-embedding the query text. A real search follows on a 300ms

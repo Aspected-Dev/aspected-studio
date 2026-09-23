@@ -27,14 +27,36 @@ export const TUNE_RESULT_HELP = {
   championObjective:
     "Best config found on the train cases under this budget. Compare to Start: a gain within the noise floor is not a real win. Among near-tied configs, Auto-tune prefers fewer aspects, then smaller fetchK (parsimony).",
   holdout:
-    "Same objective on cases held out while searching for weights. Scored once in the Confirm stage. Close to the train champion means the win likely generalizes. Much lower means possible overfit or an unlucky split (noisy on small sets). n/a means holdout was off, the set was too small, or the run ended before Confirm.",
+    "Same objective on cases held out while searching for weights. Scored in the Confirm stage. Prefer a run where holdout stays close to the train champion, then verify on Scorecard with Run set. Do not pick by the highest train or holdout score across reshuffled runs. n/a means holdout was off, the set was too small, or the run ended before Confirm.",
   holdoutSplit:
-    "Reserves about 30% of runnable cases (at least 3 each side) and never uses them while searching. The champion is chosen on train only; Confirm scores holdout once. Turn off on tiny sets or when you only want a diagnostic run.",
+    "Reserves about 30% of runnable cases (at least 3 each side) and never uses them while searching. The champion is chosen on train; Confirm scores holdout (and may prefer a near-tied train config with a closer holdout). Turn off on tiny sets or when you only want a diagnostic run.",
   perCaseDelta:
     "Primary metric for each train case at the start config versus the champion. Holdout cases are omitted here. Watch for one case collapsing while the average rises.",
   noiseFloor:
     "How much the same start config can wobble when re-run Live. Gains smaller than this are treated as ties when comparing configs.",
 } as const
+
+/** Minimum absolute gap treated as "matched" even when noise is tinier. */
+export const HOLDOUT_GAP_MATCHED_MIN = 0.02
+
+/** Absolute train-minus-holdout lag still labeled mild (above matched band). */
+export const HOLDOUT_GAP_MILD_LAG_MAX = 0.1
+
+/** How holdout compares to the train champion objective. */
+export type HoldoutGapKind =
+  | "matched"
+  | "mild_lag"
+  | "overfit"
+  | "holdout_ahead"
+
+/** Classified holdout vs train gap with UI copy. */
+export type HoldoutGapAssessment = {
+  kind: HoldoutGapKind
+  /** holdout − train champion objective. */
+  delta: number
+  /** One sentence for the Results callout. */
+  message: string
+}
 
 /** Live objective for one scored config. */
 export type TuneObjective = {
@@ -267,6 +289,58 @@ export function noiseLabel(
 }
 
 /**
+ * Classifies holdout versus the train champion for Results guidance.
+ *
+ * Matched: |delta| within max(noiseFloor, {@link HOLDOUT_GAP_MATCHED_MIN}).
+ * Mild lag: train ahead by up to {@link HOLDOUT_GAP_MILD_LAG_MAX}.
+ * Overfit: larger train lead.
+ * Holdout ahead: holdout above train beyond the matched band.
+ */
+export function classifyHoldoutGap(
+  trainChampionValue: number,
+  holdoutValue: number,
+  noiseFloor: number,
+): HoldoutGapAssessment {
+  const delta = holdoutValue - trainChampionValue
+  const matchedBand = Math.max(
+    noiseFloor,
+    NOISE_FLOOR_MIN,
+    HOLDOUT_GAP_MATCHED_MIN,
+  )
+  if (Math.abs(delta) <= matchedBand) {
+    return {
+      kind: "matched",
+      delta,
+      message:
+        "Holdout matches the train champion. Prefer this run, then verify on Scorecard with Run set before you trust the weights.",
+    }
+  }
+  if (delta > matchedBand) {
+    return {
+      kind: "holdout_ahead",
+      delta,
+      message:
+        "Holdout scored higher than train. That can be a lucky holdout slice; still verify on Scorecard with Run set.",
+    }
+  }
+  const lag = -delta
+  if (lag <= HOLDOUT_GAP_MILD_LAG_MAX) {
+    return {
+      kind: "mild_lag",
+      delta,
+      message:
+        "Holdout is a little behind the train champion. Inspect the per-case table, then verify on Scorecard with Run set.",
+    }
+  }
+  return {
+    kind: "overfit",
+    delta,
+    message:
+      "Holdout lagged the train champion by a wide margin. The win may not generalize; inspect the per-case table and prefer a run where holdout stays closer before applying in production.",
+  }
+}
+
+/**
  * Effective noise epsilon from a baseline repeat delta.
  */
 export function measuredNoiseFloor(repeatDelta: number): number {
@@ -287,6 +361,12 @@ function mulberry32(seed: number): () => number {
 
 /** Default when holdout is on and the set is large enough. */
 export const HOLDOUT_MIN_CASES = 8
+
+/**
+ * Below this runnable count (and at or above {@link HOLDOUT_MIN_CASES}), Setup
+ * shows a plain-language note that the held-out slice is small.
+ */
+export const HOLDOUT_NOISY_CASE_MAX = 24
 
 /** Rough holdout fraction. */
 export const HOLDOUT_FRACTION = 0.3

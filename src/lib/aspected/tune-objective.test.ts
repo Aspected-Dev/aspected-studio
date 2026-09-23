@@ -5,7 +5,9 @@ import type { CaseRun } from "./scorecard.ts"
 import {
   caseDeltas,
   casePrimaries,
+  classifyHoldoutGap,
   enabledAspectCount,
+  HOLDOUT_GAP_MILD_LAG_MAX,
   isBetterConfig,
   liveObjective,
   measuredNoiseFloor,
@@ -323,6 +325,34 @@ describe("noise helpers", () => {
   it("labels small gains as noise", () => {
     expect(noiseLabel(0.001, 0.004)).toBe("noise")
     expect(noiseLabel(0.02, 0.004)).toBe("real")
+  })
+})
+
+describe("classifyHoldoutGap", () => {
+  it("labels a tiny gap as matched", () => {
+    const assessment = classifyHoldoutGap(0.637, 0.64, 0.002)
+    expect(assessment.kind).toBe("matched")
+    expect(assessment.message).toMatch(/matches the train champion/i)
+  })
+
+  it("labels a moderate train lead as mild lag", () => {
+    const assessment = classifyHoldoutGap(0.676, 0.614, 0.002)
+    expect(assessment.kind).toBe("mild_lag")
+    expect(assessment.delta).toBeCloseTo(-0.062)
+    expect(assessment.message).toMatch(/a little behind/i)
+  })
+
+  it("labels a wide train lead as overfit", () => {
+    const assessment = classifyHoldoutGap(0.723, 0.494, 0.002)
+    expect(assessment.kind).toBe("overfit")
+    expect(-assessment.delta).toBeGreaterThan(HOLDOUT_GAP_MILD_LAG_MAX)
+    expect(assessment.message).toMatch(/wide margin/i)
+  })
+
+  it("labels holdout ahead of train", () => {
+    const assessment = classifyHoldoutGap(0.5, 0.55, 0.002)
+    expect(assessment.kind).toBe("holdout_ahead")
+    expect(assessment.message).toMatch(/higher than train/i)
   })
 })
 
