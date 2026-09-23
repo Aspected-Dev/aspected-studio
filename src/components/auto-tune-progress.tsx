@@ -7,8 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx"
+import { MetricHelp } from "@/components/metric-tile.tsx"
 import type { AutoTuneSnapshot } from "@/hooks/use-auto-tune.ts"
-import { noiseLabel } from "@/lib/aspected/tune-objective.ts"
+import { noiseLabel, TUNE_RESULT_HELP } from "@/lib/aspected/tune-objective.ts"
 import type { TuneStage } from "@/lib/aspected/tuner.ts"
 
 const STAGES: TuneStage[] = [
@@ -104,7 +105,13 @@ export function AutoTuneProgressPanel({
         </div>
 
         <div className="rounded-lg border p-3">
-          <p className="text-sm font-medium">Best so far</p>
+          <div className="flex min-w-0 items-center gap-1">
+            <p className="text-sm font-medium">Best so far</p>
+            <MetricHelp
+              label="noise floor"
+              text={TUNE_RESULT_HELP.noiseFloor}
+            />
+          </div>
           {champion && baseline
             ? (
               <p className="mt-1 text-sm">

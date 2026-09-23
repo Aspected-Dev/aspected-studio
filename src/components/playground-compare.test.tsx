@@ -15,14 +15,12 @@ function form(
       {
         name: "title",
         type: "text",
-        enabled: true,
         value: "rake",
         weight: 1,
       },
       {
         name: "price",
         type: "number",
-        enabled: true,
         value: "20",
         weight: 1,
       },
@@ -85,14 +83,12 @@ const currentValues = form({
     {
       name: "title",
       type: "text",
-      enabled: true,
       value: "rake",
       weight: 1,
     },
     {
       name: "price",
       type: "number",
-      enabled: true,
       value: "20",
       weight: 4,
     },

@@ -110,30 +110,43 @@ describe("IndexSearchPage", () => {
     expect(editors[1]).toHaveValue(prettyJson(result.doc))
   })
 
-  it("shows an inline error when weight is not a number", async () => {
+  it("omits weight 1 from the request body", async () => {
     const user = userEvent.setup()
     renderPage()
-    const weightInputs = await screen.findAllByLabelText(/^weight$/i)
-    await user.type(weightInputs[0], "abc")
+    await user.click(
+      await screen.findByRole("combobox", { name: "category value" }),
+    )
+    await user.click(await screen.findByRole("option", { name: "electronics" }))
     await user.click(screen.getByRole("button", { name: "Search" }))
-    expect(
-      await screen.findByText("Weight must be a number"),
-    ).toBeInTheDocument()
-    expect(weightInputs[0]).toHaveAttribute("aria-invalid", "true")
-    expect(connection.client.searchIndex).not.toHaveBeenCalled()
+
+    expect(connection.client.searchIndex).toHaveBeenCalledWith("products", {
+      k: 5,
+      query: { category: "electronics" },
+      withDocs: true,
+      withVectors: false,
+      withExplanation: true,
+    })
   })
 
-  it("shows an inline error when weight is out of range", async () => {
+  it("drops a filled aspect when weight is 0", async () => {
     const user = userEvent.setup()
     renderPage()
-    const weightInputs = await screen.findAllByLabelText(/^weight$/i)
-    await user.clear(weightInputs[0])
-    await user.type(weightInputs[0], "10001")
+    await user.click(
+      await screen.findByRole("combobox", { name: "category value" }),
+    )
+    await user.click(await screen.findByRole("option", { name: "electronics" }))
+    const weight = screen.getByLabelText("Weight for category")
+    await user.clear(weight)
+    await user.type(weight, "0")
     await user.click(screen.getByRole("button", { name: "Search" }))
-    expect(
-      await screen.findByText("Weight must be between 0 and 10000"),
-    ).toBeInTheDocument()
-    expect(connection.client.searchIndex).not.toHaveBeenCalled()
+
+    expect(connection.client.searchIndex).toHaveBeenCalledWith("products", {
+      k: 5,
+      query: {},
+      withDocs: true,
+      withVectors: false,
+      withExplanation: true,
+    })
   })
 
   it("validates number aspects against min and max", async () => {

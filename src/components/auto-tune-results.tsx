@@ -6,8 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card.tsx"
+import { MetricHelp } from "@/components/metric-tile.tsx"
 import type { AutoTuneSnapshot } from "@/hooks/use-auto-tune.ts"
-import { noiseLabel } from "@/lib/aspected/tune-objective.ts"
+import { noiseLabel, TUNE_RESULT_HELP } from "@/lib/aspected/tune-objective.ts"
 import type { TuneConfig, TuneTrial } from "@/lib/aspected/tuner.ts"
 
 /** Props for {@link AutoTuneResults}. */
@@ -81,10 +82,12 @@ export function AutoTuneResults({
           <MetricTile
             label="Start objective"
             value={baseline.objective.value.toFixed(3)}
+            help={TUNE_RESULT_HELP.startObjective}
           />
           <MetricTile
             label="Champion objective"
             value={champion.objective.value.toFixed(3)}
+            help={TUNE_RESULT_HELP.championObjective}
             hint={`${gain >= 0 ? "+" : ""}${gain.toFixed(3)} · ${
               kind === "noise" ? "within" : "above"
             } noise ${noiseFloor.toFixed(3)}`}
@@ -92,6 +95,7 @@ export function AutoTuneResults({
           <MetricTile
             label="Holdout"
             value={holdoutObjective ? holdoutObjective.value.toFixed(3) : "n/a"}
+            help={TUNE_RESULT_HELP.holdout}
             hint={holdoutHint(
               holdoutObjective?.value ?? null,
               champion.objective.value,
@@ -130,7 +134,13 @@ export function AutoTuneResults({
         </div>
 
         <div className="grid min-w-0 gap-2">
-          <p className="text-sm font-medium">Per-case primary delta</p>
+          <div className="flex min-w-0 items-center">
+            <p className="text-sm font-medium">Per-case primary delta</p>
+            <MetricHelp
+              label="per-case primary delta"
+              text={TUNE_RESULT_HELP.perCaseDelta}
+            />
+          </div>
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm" aria-label="Per-case deltas">
               <thead>
@@ -221,14 +231,19 @@ function MetricTile({
   label,
   value,
   hint,
+  help,
 }: {
   label: string
   value: string
   hint?: string
+  help: string
 }) {
   return (
     <div className="rounded-lg border p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="flex min-w-0 items-center">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <MetricHelp label={label} text={help} />
+      </div>
       <p className="mt-1 text-lg font-medium tabular-nums">{value}</p>
       {hint
         ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p>

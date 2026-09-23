@@ -175,6 +175,26 @@ describe("IndexScorecardPage", () => {
       .toBeInTheDocument()
   })
 
+  it("seeds the import sheet editor with a stub when opened", async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(
+      await screen.findByRole("button", { name: /Import one/ }),
+    )
+
+    expect(
+      await screen.findByRole("heading", { name: "Import a golden set" }),
+    ).toBeInTheDocument()
+    // Stub is non-empty, so Import is enabled (controlled opens do not use
+    // Sheet onOpenChange, so seeding must happen on the button click).
+    expect(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Import",
+      }),
+    ).toBeEnabled()
+  })
+
   it("renders a help icon for every metric tile", async () => {
     saveGoldenSets([goldenSet()])
     renderPage()

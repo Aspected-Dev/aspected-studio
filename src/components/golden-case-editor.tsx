@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { CheckIcon, PlusIcon, XIcon } from "lucide-react"
-import { DocsField, DocsHelpIcon } from "@/components/docs-help.tsx"
-import { AspectValueField } from "@/components/aspect-value-field.tsx"
+import { AspectQueryRow } from "@/components/aspect-query-row.tsx"
+import { DocsField } from "@/components/docs-help.tsx"
 import { MetricHelp } from "@/components/metric-tile.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -13,7 +13,6 @@ import { aspectValueSchema } from "@/lib/aspected/aspect-value.ts"
 import type { GoldenCase } from "@/lib/aspected/golden.ts"
 import type { CaseScore } from "@/lib/aspected/relevance.ts"
 import type { StoredAspect } from "@/lib/aspected/types.ts"
-import { docsPageForAspectType } from "@/lib/docs.ts"
 
 /** Tooltip for the graded gain field. */
 const GAIN_HELP =
@@ -126,21 +125,20 @@ export function GoldenCaseEditor({
           const row = item.aspects.find((entry) => entry.name === aspect.name)
           const valueId = `golden-value-${item.id}-${aspect.name}`
           const value = row?.value ?? ""
-          const enabled = row?.enabled ?? false
           const valueError = value.trim() === ""
             ? undefined
             : aspectValueSchema(aspect).safeParse(value).error?.issues[0]
               ?.message
 
-          const update = (patch: { enabled?: boolean; value?: string }) => {
+          const updateValue = (next: string) => {
             const existing = item.aspects.some((entry) =>
               entry.name === aspect.name
             )
             const merged = {
               name: aspect.name,
               type: aspect.type,
-              enabled: patch.enabled ?? enabled,
-              value: patch.value ?? value,
+              enabled: next.trim() !== "",
+              value: next,
             }
             onChange({
               ...item,
@@ -153,32 +151,14 @@ export function GoldenCaseEditor({
           }
 
           return (
-            <div key={aspect.name} className="grid gap-2">
-              <div className="flex flex-wrap items-center gap-0.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Switch
-                    checked={enabled}
-                    onCheckedChange={(checked) =>
-                      update({ enabled: Boolean(checked) })}
-                    aria-label={`Use ${aspect.name}`}
-                  />
-                  <span className="font-mono text-sm">{aspect.name}</span>
-                  <Badge variant="secondary">{aspect.type}</Badge>
-                </div>
-                <DocsHelpIcon
-                  page={docsPageForAspectType(aspect.type)}
-                  label={aspect.name}
-                />
-              </div>
-              <AspectValueField
-                aspect={aspect}
-                id={valueId}
-                value={value}
-                error={valueError}
-                invalid={Boolean(valueError)}
-                onChange={(next) => update({ value: next, enabled: true })}
-              />
-            </div>
+            <AspectQueryRow
+              key={aspect.name}
+              aspect={aspect}
+              id={valueId}
+              value={value}
+              onChange={updateValue}
+              error={valueError}
+            />
           )
         })}
       </div>

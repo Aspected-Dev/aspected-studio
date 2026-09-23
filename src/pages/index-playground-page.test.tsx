@@ -143,8 +143,8 @@ describe("IndexPlaygroundPage", () => {
   it("renders one control block per schema aspect", async () => {
     renderPage()
 
-    expect(await screen.findByLabelText("Use title")).toBeInTheDocument()
-    expect(screen.getByLabelText("Use price")).toBeInTheDocument()
+    expect(await screen.findByLabelText("Include title")).toBeInTheDocument()
+    expect(screen.getByLabelText("Include price")).toBeInTheDocument()
     expect(screen.getByLabelText("title value")).toBeInTheDocument()
     expect(screen.getByLabelText("Weight for price")).toHaveValue(1)
   })
@@ -155,7 +155,7 @@ describe("IndexPlaygroundPage", () => {
     expect(await screen.findByRole("button", { name: "Run search" }))
       .toBeDisabled()
     expect(
-      screen.getByText("Give at least one enabled aspect a value to search."),
+      screen.getByText("Give at least one aspect a value to search."),
     ).toBeInTheDocument()
   })
 
@@ -176,10 +176,10 @@ describe("IndexPlaygroundPage", () => {
     })
   })
 
-  it("drops a disabled aspect from the request", async () => {
+  it("drops an aspect when its include switch is turned off", async () => {
     const user = await setupManual()
     await fillQuery(user)
-    await user.click(screen.getByLabelText("Use title"))
+    await user.click(screen.getByLabelText("Include title"))
     await user.click(screen.getByRole("button", { name: "Run search" }))
 
     await waitFor(() => {
@@ -280,18 +280,35 @@ describe("IndexPlaygroundPage", () => {
     expect(screen.getByText("Stale")).toBeInTheDocument()
   })
 
-  it("shows the per-aspect split for a selected result", async () => {
+  it("shows the per-aspect split for a selected result in a sheet", async () => {
     const user = await setupManual()
     await fillQuery(user)
     await user.click(screen.getByRole("button", { name: "Run search" }))
     await user.click(await screen.findByText("title-match"))
 
-    const inspector = await screen.findByRole("table", {
+    const sheet = await screen.findByRole("dialog")
+    expect(within(sheet).getByRole("heading", { name: "title-match" }))
+      .toBeInTheDocument()
+    const inspector = within(sheet).getByRole("table", {
       name: "Aspect contributions",
     })
     // Title contributes 0.1 of the 1.0 total at equal weights.
     expect(within(inspector).getByText("10.0%")).toBeInTheDocument()
     expect(within(inspector).getByText("90.0%")).toBeInTheDocument()
+  })
+
+  it("closes the contribution sheet when switching tabs", async () => {
+    const user = await setupManual()
+    await fillQuery(user)
+    await user.click(screen.getByRole("button", { name: "Run search" }))
+    await user.click(await screen.findByText("title-match"))
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+
+    // The sheet marks the page inert, so the tab is only reachable as hidden.
+    fireEvent.click(
+      screen.getByRole("tab", { name: "Compare", hidden: true }),
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
   it("opens an inspect sheet for a stored contribution value", async () => {
@@ -327,7 +344,7 @@ describe("IndexPlaygroundPage", () => {
   it("keeps Compare pinning unavailable until a search has run", async () => {
     const user = userEvent.setup()
     renderPage()
-    await screen.findByLabelText("Use title")
+    await screen.findByLabelText("title value")
 
     await user.click(screen.getByRole("tab", { name: "Compare" }))
 
@@ -380,7 +397,7 @@ describe("IndexPlaygroundPage", () => {
   it("points the Scorecard tab at the page when no golden set exists", async () => {
     const user = userEvent.setup()
     renderPage()
-    await screen.findByLabelText("Use title")
+    await screen.findByLabelText("title value")
 
     await user.click(screen.getByRole("tab", { name: "Scorecard" }))
 

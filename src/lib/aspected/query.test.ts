@@ -3,18 +3,17 @@ import {
   buildSparseSearchRequest,
   parseAccessFilter,
   searchFormSchema,
-  searchWeightSchema,
 } from "./query.ts"
-import { MAX_WEIGHT } from "./playground.ts"
 import type { StoredAspect } from "./types.ts"
 
 describe("buildSparseSearchRequest", () => {
-  it("omits blank aspects", () => {
+  it("omits blank aspects and weight 1", () => {
     const request = buildSparseSearchRequest({
       k: 5,
       aspects: [
-        { name: "category", type: "enum", value: "electronics", weight: "2" },
-        { name: "colour", type: "text", value: "  ", weight: "" },
+        { name: "category", type: "enum", value: "electronics", weight: 2 },
+        { name: "colour", type: "text", value: "  ", weight: 1 },
+        { name: "brand", type: "text", value: "aurora", weight: 1 },
       ],
       accessFilter: "",
       includeNullAccess: false,
@@ -23,21 +22,42 @@ describe("buildSparseSearchRequest", () => {
       withExplanation: true,
     })
 
-    expect(request.query).toEqual({ category: "electronics" })
+    expect(request.query).toEqual({
+      category: "electronics",
+      brand: "aurora",
+    })
     expect(request.weights).toEqual({ category: 2 })
     expect(request.accessFilter).toBeUndefined()
+  })
+
+  it("drops a filled aspect when its weight clamps to 0", () => {
+    const request = buildSparseSearchRequest({
+      k: 5,
+      aspects: [
+        { name: "title", type: "text", value: "rake", weight: 0 },
+        { name: "price", type: "number", value: "20", weight: 3 },
+      ],
+      accessFilter: "",
+      includeNullAccess: false,
+      withDocs: true,
+      withVectors: false,
+      withExplanation: false,
+    })
+
+    expect(request.query).toEqual({ price: 20 })
+    expect(request.weights).toEqual({ price: 3 })
   })
 
   it("coerces number and raw aspect values by type", () => {
     const request = buildSparseSearchRequest({
       k: 3,
       aspects: [
-        { name: "price", type: "number", value: "12.5", weight: "" },
+        { name: "price", type: "number", value: "12.5", weight: 1 },
         {
           name: "embedding",
           type: "raw",
           value: "[0.1, 0.2]",
-          weight: "",
+          weight: 1,
         },
       ],
       accessFilter: "",
@@ -51,22 +71,7 @@ describe("buildSparseSearchRequest", () => {
       price: 12.5,
       embedding: { $raw: [0.1, 0.2] },
     })
-  })
-})
-
-describe("searchWeightSchema", () => {
-  it("allows blank and in-range numbers", () => {
-    expect(searchWeightSchema.safeParse("").success).toBe(true)
-    expect(searchWeightSchema.safeParse("1").success).toBe(true)
-    expect(searchWeightSchema.safeParse("0").success).toBe(true)
-    expect(searchWeightSchema.safeParse(String(MAX_WEIGHT)).success).toBe(true)
-  })
-
-  it("rejects non-numbers and out-of-range values", () => {
-    expect(searchWeightSchema.safeParse("abc").success).toBe(false)
-    expect(searchWeightSchema.safeParse("-1").success).toBe(false)
-    expect(searchWeightSchema.safeParse(String(MAX_WEIGHT + 1)).success)
-      .toBe(false)
+    expect(request.weights).toBeUndefined()
   })
 })
 
@@ -80,11 +85,11 @@ describe("searchFormSchema", () => {
     },
   ]
 
-  it("rejects out-of-range aspect values and weights", () => {
+  it("rejects out-of-range aspect values", () => {
     const result = searchFormSchema(schema).safeParse({
       k: "5",
       aspects: [
-        { name: "price", type: "number", value: "250", weight: "abc" },
+        { name: "price", type: "number", value: "250", weight: 1 },
       ],
       accessFilter: "",
       includeNullAccess: false,

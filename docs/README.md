@@ -13,16 +13,18 @@ here. That site ships from the sibling `aspects.dev` repo and is what
 
 Hands-on walkthroughs. Tutorials 1–3 stay lean; 4–5 go deep on how to
 **interpret** Compare and Scorecard metrics while tuning weights; 6 runs Live
-Auto-tune:
+Auto-tune on the catalog; 7 loads TMDB movies for a larger Auto-tune readiness
+pass:
 
-| # | Tutorial                                                         | Time       |
-| - | ---------------------------------------------------------------- | ---------- |
-| 1 | [Connect and seed the catalog](tutorials/01-connect-and-seed.md) | ~10 min    |
-| 2 | [Indexes and documents](tutorials/02-indexes-and-documents.md)   | ~15 min    |
-| 3 | [Search](tutorials/03-search.md)                                 | ~10 min    |
-| 4 | [Playground](tutorials/04-playground.md)                         | ~25 min    |
-| 5 | [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md)      | ~40–50 min |
-| 6 | [Auto-tune the catalog](tutorials/06-auto-tune.md)               | ~15–25 min |
+| # | Tutorial                                                         | Time        |
+| - | ---------------------------------------------------------------- | ----------- |
+| 1 | [Connect and seed the catalog](tutorials/01-connect-and-seed.md) | ~10 min     |
+| 2 | [Indexes and documents](tutorials/02-indexes-and-documents.md)   | ~15 min     |
+| 3 | [Search](tutorials/03-search.md)                                 | ~10 min     |
+| 4 | [Playground](tutorials/04-playground.md)                         | ~25 min     |
+| 5 | [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md)      | ~40–50 min  |
+| 6 | [Auto-tune the catalog](tutorials/06-auto-tune.md)               | ~15–25 min  |
+| 7 | [Movies Auto-tune readiness](tutorials/07-movies-auto-tune.md)   | seed + runs |
 
 Index of tutorials: [tutorials/README.md](tutorials/README.md).
 

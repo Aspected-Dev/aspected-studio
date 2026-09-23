@@ -58,6 +58,10 @@ export type JsonEditorProps = {
  * Uses Studio's `aspected-light` / `aspected-dark` themes so the editor chrome
  * matches shadcn cards instead of stock VS Code colors. Read-only instances
  * show a copy button in the top-right corner.
+ *
+ * Default `fitContent` sizes the editor to its text. For a flex parent that
+ * should claim remaining height, set `fitContent={false}`, `height="100%"`,
+ * and `className="min-h-0 flex-1"`.
  */
 export function JsonEditor({
   value,
@@ -101,7 +105,11 @@ export function JsonEditor({
     monaco.editor.setTheme(monacoTheme)
 
     const layoutToContainer = () => {
-      const width = containerRef.current?.clientWidth
+      const container = containerRef.current
+      if (!container) {
+        return
+      }
+      const width = container.clientWidth
       if (!width) {
         return
       }
@@ -114,7 +122,10 @@ export function JsonEditor({
         editor.layout({ width, height: next })
         return
       }
-      editor.layout({ width, height: editor.getLayoutInfo().height })
+      const next = container.clientHeight
+      if (next > 0) {
+        editor.layout({ width, height: next })
+      }
     }
 
     layoutToContainer()
@@ -132,6 +143,7 @@ export function JsonEditor({
       className={cn(
         "relative w-full min-w-0 max-w-full overflow-hidden rounded-lg border border-border bg-card",
         "[&_.monaco-editor]:max-w-full [&_.overflow-guard]:max-w-full",
+        !fitContent && "h-full min-h-0",
         className,
       )}
     >
@@ -186,7 +198,7 @@ export function JsonEditor({
           overviewRulerLanes: 0,
           hideCursorInOverviewRuler: true,
           scrollbar: {
-            vertical: fitContent && fittedHeight >= maxHeight
+            vertical: !fitContent || fittedHeight >= maxHeight
               ? "auto"
               : "hidden",
             horizontal: "hidden",

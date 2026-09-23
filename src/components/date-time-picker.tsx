@@ -47,6 +47,10 @@ export type DateTimePickerProps = {
   invalid?: boolean
   /** Disables the trigger and time input. */
   disabled?: boolean
+  /** Controlled open state for the calendar popover. */
+  open?: boolean
+  /** Called when the calendar popover opens or closes. */
+  onOpenChange?: (open: boolean) => void
   /** Optional class names for the outer wrapper. */
   className?: string
 }
@@ -63,13 +67,23 @@ export function DateTimePicker({
   ariaLabel,
   invalid = false,
   disabled = false,
+  open,
+  onOpenChange,
   className,
 }: DateTimePickerProps) {
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const isOpen = open ?? uncontrolledOpen
+
+  function setIsOpen(next: boolean) {
+    onOpenChange?.(next)
+    if (open === undefined) {
+      setUncontrolledOpen(next)
+    }
+  }
 
   return (
-    <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <Popover open={open} onOpenChange={setOpen}>
+    <div className={cn("flex w-full flex-wrap items-center gap-2", className)}>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger
           disabled={disabled}
           render={
@@ -81,7 +95,7 @@ export function DateTimePicker({
               aria-label={ariaLabel}
               aria-invalid={invalid || undefined}
               data-empty={!value}
-              className="min-w-48 justify-start text-left font-normal data-[empty=true]:text-muted-foreground"
+              className="h-8 min-w-0 flex-1 justify-start text-left font-normal data-[empty=true]:text-muted-foreground"
             />
           }
         >
@@ -104,7 +118,7 @@ export function DateTimePicker({
                 : next
               onChange(merged)
               if (!withTime) {
-                setOpen(false)
+                setIsOpen(false)
               }
             }}
           />

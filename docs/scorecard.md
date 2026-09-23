@@ -56,7 +56,11 @@ documents that did not make the cut are listed beside the ranking.
 - Name field saves on **blur** or Enter, not every keystroke.
 - Sets live in `localStorage`, keyed per index.
 - **Export** writes repo-friendly JSON with no local ids or timestamps.
-- **Import** accepts a file or pasted text and assigns fresh ids.
+- **Import** accepts a chosen or dropped JSON file, or pasted text, and assigns
+  fresh ids. The editor opens on a stub with every export field (and aspect rows
+  from the index schema), and fills the remaining sheet height between the file
+  control and Import. Dragging a file over the sheet shows a dashed drop target
+  below the title and subtitle.
 
 Playground Scorecard reloads sets on mount and when the window regains focus, so
 a set created on the Scorecard page appears without a full remount.
@@ -94,6 +98,10 @@ Create/edit/import stay on the Scorecard page. Deeper demo:
 [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md). Pipeline detail:
 [Architecture](architecture.md#scorecard-runner).
 
+For the TMDB movies corpus, import `utility/movies-golden-set.json` and
+`utility/movies-planted-set.json` after `deno task seed:movies`. See
+[Movies Auto-tune readiness](tutorials/07-movies-auto-tune.md).
+
 ## Related
 
 - [Playground](playground.md)
@@ -101,3 +109,5 @@ Create/edit/import stay on the Scorecard page. Deeper demo:
 - [Architecture](architecture.md)
 - Seed + golden JSON: `utility/seed-catalog.ts`,
   `utility/catalog-golden-set.json`
+- Movies seed + golden JSON: `utility/seed-movies.ts`,
+  `utility/movies-golden-set.json`, `utility/movies-planted-set.json`

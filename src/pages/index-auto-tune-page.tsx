@@ -205,6 +205,7 @@ export function IndexAutoTunePage() {
         : (
           <AutoTuneSetup
             sets={sets}
+            startWeights={startWeights}
             values={setup}
             onChange={setSetup}
             runnableCaseCount={runnableCount}

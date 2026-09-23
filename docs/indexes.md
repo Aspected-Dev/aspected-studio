@@ -36,18 +36,24 @@ a success toast. Match that pattern for other destructive actions.
 
 ## Search
 
-`/indexes/:name/search` is the raw sparse search form: query fields per aspect,
-optional weights, `k`, flags such as `withDocs`. Each aspect control follows its
-resolver type (dropdown for enum/dict, textarea for text/raw, number input,
-granularity-aware datetime picker) and validates against the aspect settings
-with Zod before the request is sent. Fields use shadcn `Field` invalid styling
-and helper text for accepted values; the form uses `noValidate` so the browser
-does not show native constraint popups. Blank aspect values stay sparse.
+`/indexes/:name/search` is the raw sparse search form. Controls sit in a left
+card (query, log-scale weight sliders, `k`, Advanced flags); results and the
+Request Inspector sit on the right. Each aspect control follows its resolver
+type (dropdown for enum/dict, textarea for text/raw, number input,
+granularity-aware datetime picker) via the shared `AspectQueryRow`, and
+validates against the aspect settings with Zod before the request is sent.
+Fields use shadcn `Field` invalid styling and helper text for accepted values;
+the form uses `noValidate` so the browser does not show native constraint
+popups. An **Include** switch shows which aspects are in the query: it turns on
+when a value is filled and the weight is positive, turns off to clear the value,
+and turns back on to restore weight `1` when a value was parked at weight `0`.
+Inactive rows are dimmed so active ones stand out.
 
-Weights are optional numbers from `0` to `10000`. Blank means omit (server
-default `1`). `0` effectively turns the aspect off for scoring. Click a result
-row to open an inspect sheet with distance, explanation JSON, and document JSON
-when those fields are present.
+Weights default to `1`. The form omits weight `1` from the request body (server
+default) and omits any aspect whose weight clamps to `0`. Use JSON mode when you
+need weights spelled out explicitly. Click a result row to open an inspect sheet
+with distance, explanation JSON, and document JSON when those fields are
+present.
 
 Weight tuning belongs on the [Playground](playground.md). Quality measurement
 belongs on the [Scorecard](scorecard.md).
@@ -61,11 +67,15 @@ payload.
 For concurrent scorecard searches, see
 [Architecture: Request Inspector](architecture.md#request-inspector-and-concurrent-runs).
 
-## Demo index
+## Demo indexes
 
 `deno task seed:catalog` builds a 100-document `catalog` index for demos and
 manual scorecard testing. See
 [Catalog scorecard](tutorials/05-catalog-scorecard-demo.md).
+
+`deno task seed:movies` builds the TMDB 5000 `movies` index (~4.8k films, ten
+aspects) for larger Auto-tune readiness work. CSVs live in `utility/`. See
+[Movies Auto-tune readiness](tutorials/07-movies-auto-tune.md).
 
 ## Related
 

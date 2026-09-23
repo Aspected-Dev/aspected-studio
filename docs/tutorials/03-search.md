@@ -22,7 +22,8 @@ This tutorial stays on Search. Metric interpretation starts in
 
 1. Sidebar → **catalog** → **Search**\
    (URL: `/indexes/catalog/search`)
-2. Notice one field (or control) per aspect, plus `k` and optional weights
+2. Notice the left **Query and weights** card (one row per aspect with a weight
+   slider) and results on the right
 
 ## Step 2: Build a sparse query
 
@@ -35,15 +36,16 @@ Try this:
 2. Choose **category** `laptop` from the dropdown
 3. Set **price** to `900` (number input, validated against min/max)
 4. Leave **brand**, **rating**, and **released** empty
-5. Set **k** to `5` (or `10` if you want a longer list)
+5. Leave weights at `1` (midpoint on the slider)
+6. Set **k** to `5` (or `10` if you want a longer list)
 
 ## Step 3: Run the search
 
 1. Click **Search** (submit on the form)
-2. Results appear with ids and distances
+2. Results appear on the right with ids and distances
 3. Click a result row to open the inspect sheet (distance, explanation JSON, and
    document JSON when enabled)
-4. Open the Request Inspector
+4. Open the Request Inspector under the table
 
 Confirm the body looks roughly like:
 
@@ -58,8 +60,8 @@ Confirm the body looks roughly like:
 }
 ```
 
-Weights may be omitted when everything is `1`, depending on how the form builds
-the request. Lower distance is better (closer match).
+Weights of `1` are omitted from the body. Lower distance is better (closer
+match).
 
 ## Step 4: Read the ranking
 
@@ -70,7 +72,8 @@ fix with weights.
 
 ## Step 5: Optional flags
 
-If the form exposes **withDocs** or **withExplanation**:
+Open **Advanced** on the left card for `withDocs`, `withExplanation`,
+`withVectors`, and `accessFilter`:
 
 - Search page may not need explanations for a quick look
 - Playground always wants explanations so it can re-rank locally

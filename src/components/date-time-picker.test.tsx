@@ -29,15 +29,16 @@ describe("DateTimePicker", () => {
     expect(next.getDate()).toBe(15)
   })
 
-  it("shows a time input when withTime is set", () => {
+  it("makes the trigger fill the row width", () => {
     render(
       <DateTimePicker
-        value={new Date(2024, 0, 2, 9, 30)}
+        value={null}
         onChange={vi.fn()}
-        withTime
         ariaLabel="released value"
       />,
     )
-    expect(screen.getByLabelText("released value time")).toHaveValue("09:30")
+    expect(screen.getByRole("button", { name: "released value" })).toHaveClass(
+      "flex-1",
+    )
   })
 })

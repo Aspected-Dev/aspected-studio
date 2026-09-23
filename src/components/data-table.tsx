@@ -140,7 +140,7 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className="min-w-0 max-w-full">
-      <div className="overflow-x-auto rounded-md border">
+      <div className="overflow-x-auto rounded-xl border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

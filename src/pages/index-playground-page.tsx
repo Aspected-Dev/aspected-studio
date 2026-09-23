@@ -24,7 +24,8 @@ import {
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 import { AnimatedNumber } from "@/components/animated-number.tsx"
-import { AspectValueField } from "@/components/aspect-value-field.tsx"
+import { AspectQueryRow } from "@/components/aspect-query-row.tsx"
+import { AspectWeightSlider } from "@/components/aspect-weight-slider.tsx"
 import {
   DocsField,
   DocsHelpIcon,
@@ -56,7 +57,6 @@ import {
 } from "@/components/ui/chart.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
-import { Slider } from "@/components/ui/slider.tsx"
 import { Switch } from "@/components/ui/switch.tsx"
 import {
   Table,
@@ -80,7 +80,6 @@ import {
 } from "@/components/ui/tooltip.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
 import { type RecordedRequest } from "@/lib/aspected/client.ts"
-import { aspectValueDescription } from "@/lib/aspected/aspect-value.ts"
 import {
   activeAspects,
   aspectRowsFromSchema,
@@ -90,9 +89,6 @@ import {
   playgroundFormSchema,
   type PlaygroundFormValues,
   scoringWeights,
-  SLIDER_STEPS,
-  sliderToWeight,
-  weightToSlider,
 } from "@/lib/aspected/playground.ts"
 import type { PinnedRun } from "@/lib/aspected/compare.ts"
 import {
@@ -108,7 +104,7 @@ import type {
   SearchResultRow,
   StoredAspect,
 } from "@/lib/aspected/types.ts"
-import { DOCS_HASH, docsPageForAspectType } from "@/lib/docs.ts"
+import { DOCS_HASH } from "@/lib/docs.ts"
 import { countLabel } from "@/lib/utils.ts"
 
 /** Reorder feel: springy enough that fast slider drags interrupt cleanly. */
@@ -152,12 +148,10 @@ const CHART_DISTANCE_EPSILON = 1e-6
  */
 function querySignature(values: PlaygroundFormValues): string | null {
   try {
-    const entries = values.aspects
-      .filter((aspect) => aspect.enabled && aspect.value.trim() !== "")
-      .map(
-        (aspect) =>
-          [aspect.name, coerceAspectValue(aspect.type, aspect.value)] as const,
-      )
+    const entries = activeAspects(values).map(
+      (aspect) =>
+        [aspect.name, coerceAspectValue(aspect.type, aspect.value)] as const,
+    )
     return JSON.stringify({
       k: Number(values.k),
       query: Object.fromEntries(entries),
@@ -188,98 +182,39 @@ function AspectControl({
   aspect: StoredAspect
   error?: string
 }) {
-  const multiplier = aspect.multiplier ?? 1
   const valueId = `playground-value-${index}`
   const weightId = `playground-weight-${index}`
 
   return (
-    <div className="grid gap-3">
-      <div className="flex flex-wrap items-center gap-0.5">
-        <div className="flex flex-wrap items-center gap-2">
-          <Controller
-            control={control}
-            name={`aspects.${index}.enabled`}
-            render={({ field }) => (
-              <Switch
-                checked={field.value}
-                onCheckedChange={(checked) => field.onChange(Boolean(checked))}
-                aria-label={`Use ${aspect.name}`}
-              />
-            )}
-          />
-          <span className="font-mono text-sm">{aspect.name}</span>
-          <Badge variant="secondary">{aspect.type}</Badge>
-          {multiplier !== 1
-            ? <Badge variant="outline">multiplier {multiplier}</Badge>
-            : null}
-        </div>
-        <DocsHelpIcon
-          page={docsPageForAspectType(aspect.type)}
-          label={aspect.name}
-        />
-      </div>
-
-      <Controller
-        control={control}
-        name={`aspects.${index}.value`}
-        render={({ field }) => (
-          <DocsField
-            label="Value"
-            htmlFor={valueId}
-            page="resolvers"
-            hash={DOCS_HASH.combiningResolvers}
-            blurb="Leave blank to keep this aspect out of the query."
-            description={aspectValueDescription(aspect)}
-            error={error}
-          >
-            <AspectValueField
+    <Controller
+      control={control}
+      name={`aspects.${index}.value`}
+      render={({ field: valueField }) => (
+        <Controller
+          control={control}
+          name={`aspects.${index}.weight`}
+          render={({ field: weightField }) => (
+            <AspectQueryRow
               aspect={aspect}
               id={valueId}
-              value={field.value}
-              onChange={field.onChange}
-              invalid={Boolean(error)}
+              value={valueField.value}
+              onChange={valueField.onChange}
+              error={error}
+              weight={weightField.value}
+              onWeightChange={weightField.onChange}
+              weightControl={
+                <AspectWeightSlider
+                  aspectName={aspect.name}
+                  id={weightId}
+                  value={weightField.value}
+                  onChange={weightField.onChange}
+                />
+              }
             />
-          </DocsField>
-        )}
-      />
-
-      <Controller
-        control={control}
-        name={`aspects.${index}.weight`}
-        render={({ field }) => (
-          <div className="grid gap-1.5">
-            <span className="text-xs text-muted-foreground">Weight</span>
-            <div className="flex items-center gap-3">
-              <Slider
-                className="flex-1"
-                min={0}
-                max={SLIDER_STEPS}
-                step={1}
-                value={[weightToSlider(field.value)]}
-                onValueChange={(next) =>
-                  field.onChange(
-                    sliderToWeight(Array.isArray(next) ? next[0] : next),
-                  )}
-                aria-label={`Weight slider for ${aspect.name}`}
-              />
-              <Input
-                id={weightId}
-                type="number"
-                step="0.1"
-                min="0"
-                className="w-20"
-                value={field.value}
-                onChange={(event) => {
-                  const parsed = Number(event.target.value)
-                  field.onChange(Number.isFinite(parsed) ? parsed : 0)
-                }}
-                aria-label={`Weight for ${aspect.name}`}
-              />
-            </div>
-          </div>
-        )}
-      />
-    </div>
+          )}
+        />
+      )}
+    />
   )
 }
 
@@ -308,6 +243,7 @@ export function IndexPlaygroundPage() {
   const [pinned, setPinned] = useState<PinnedRun | null>(null)
   const [running, setRunning] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("ranking")
   const [inspectValue, setInspectValue] = useState<
     { title: string; value: unknown } | null
   >(null)
@@ -674,7 +610,7 @@ export function IndexPlaygroundPage() {
               {activeNames.length === 0
                 ? (
                   <p className="text-sm text-muted-foreground">
-                    Give at least one enabled aspect a value to search.
+                    Give at least one aspect a value to search.
                   </p>
                 )
                 : null}
@@ -682,7 +618,14 @@ export function IndexPlaygroundPage() {
           </Card>
 
           <div className="grid min-w-0 gap-6">
-            <Tabs defaultValue="ranking" className="min-w-0 gap-4">
+            <Tabs
+              value={activeTab}
+              onValueChange={(next) => {
+                setActiveTab(next)
+                setSelectedId(null)
+              }}
+              className="min-w-0 gap-4"
+            >
               <div className="flex flex-wrap items-center gap-3">
                 <TabsList>
                   <TabsTrigger value="ranking">Ranking</TabsTrigger>
@@ -917,95 +860,92 @@ export function IndexPlaygroundPage() {
               </TabsContent>
             </Tabs>
 
-            {selected
-              ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="font-mono text-sm">
-                      {selected.row.id}
-                    </CardTitle>
-                    <CardDescription>
-                      Which aspects account for this result's distance.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table aria-label="Aspect contributions">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Aspect</TableHead>
-                          <TableHead>Stored value</TableHead>
-                          <TableHead>Grade</TableHead>
-                          <TableHead>Weight</TableHead>
-                          <TableHead>Contribution</TableHead>
-                          <TableHead>Share</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selected.grades.map((grade) => {
-                          const contribution = selected.contributions.find(
-                            (entry) => entry.name === grade.name,
-                          )
-                          const share = contribution && selectedTotal !== 0
-                            ? contribution.amount / selectedTotal * 100
-                            : null
-                          return (
-                            <TableRow key={grade.name}>
-                              <TableCell className="font-mono text-xs">
-                                {grade.name}
-                              </TableCell>
-                              <TableCell>
-                                <JsonPreviewCell
-                                  value={grade.value}
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-label={`Inspect stored value for ${grade.name}`}
-                                  onClick={(event) => {
+            <JsonInspectSheet
+              open={selected !== null && activeTab === "ranking"}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setSelectedId(null)
+                }
+              }}
+              title={selected?.row.id ?? ""}
+              description="Which aspects account for this result's distance."
+            >
+              {selected
+                ? (
+                  <Table aria-label="Aspect contributions">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Aspect</TableHead>
+                        <TableHead>Stored value</TableHead>
+                        <TableHead>Grade</TableHead>
+                        <TableHead>Weight</TableHead>
+                        <TableHead>Contribution</TableHead>
+                        <TableHead>Share</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selected.grades.map((grade) => {
+                        const contribution = selected.contributions.find(
+                          (entry) => entry.name === grade.name,
+                        )
+                        const share = contribution && selectedTotal !== 0
+                          ? contribution.amount / selectedTotal * 100
+                          : null
+                        return (
+                          <TableRow key={grade.name}>
+                            <TableCell className="font-mono text-xs">
+                              {grade.name}
+                            </TableCell>
+                            <TableCell>
+                              <JsonPreviewCell
+                                value={grade.value}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Inspect stored value for ${grade.name}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setInspectValue({
+                                    title: grade.name,
+                                    value: grade.value,
+                                  })
+                                }}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key === "Enter" ||
+                                    event.key === " "
+                                  ) {
+                                    event.preventDefault()
                                     event.stopPropagation()
                                     setInspectValue({
                                       title: grade.name,
                                       value: grade.value,
                                     })
-                                  }}
-                                  onKeyDown={(event) => {
-                                    if (
-                                      event.key === "Enter" ||
-                                      event.key === " "
-                                    ) {
-                                      event.preventDefault()
-                                      event.stopPropagation()
-                                      setInspectValue({
-                                        title: grade.name,
-                                        value: grade.value,
-                                      })
-                                    }
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {grade.raw === null
-                                  ? "—"
-                                  : grade.raw.toFixed(3)}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {weights[grade.name] ?? 0}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {contribution
-                                  ? contribution.amount.toFixed(3)
-                                  : "—"}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {share === null ? "—" : `${share.toFixed(1)}%`}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )
-              : null}
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {grade.raw === null ? "—" : grade.raw.toFixed(3)}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {weights[grade.name] ?? 0}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {contribution
+                                ? contribution.amount.toFixed(3)
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs">
+                              {share === null ? "—" : `${share.toFixed(1)}%`}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                )
+                : null}
+            </JsonInspectSheet>
 
             <RequestInspector request={lastRequest} density="compact" />
           </div>

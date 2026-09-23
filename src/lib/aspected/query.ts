@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { aspectValueSchema } from "./aspect-value.ts"
-import { coerceAspectValue, MAX_WEIGHT } from "./playground.ts"
+import { clampWeight, coerceAspectValue } from "./playground.ts"
 import {
   type AspectType,
   aspectTypeSchema,
@@ -8,39 +8,18 @@ import {
   type StoredAspect,
 } from "./types.ts"
 
-/**
- * Optional search weight string. Blank means omit (server default 1).
- * Otherwise a finite number in `0`…{@link MAX_WEIGHT}.
- */
-export const searchWeightSchema = z.string().superRefine((value, ctx) => {
-  const trimmed = value.trim()
-  if (trimmed === "") {
-    return
-  }
-  const parsed = Number(trimmed)
-  if (!Number.isFinite(parsed)) {
-    ctx.addIssue({ code: "custom", message: "Weight must be a number" })
-    return
-  }
-  if (parsed < 0 || parsed > MAX_WEIGHT) {
-    ctx.addIssue({
-      code: "custom",
-      message: `Weight must be between 0 and ${MAX_WEIGHT}`,
-    })
-  }
-})
-
 /** A single aspect field on the sparse search form. */
 export type SparseAspectInput = {
   name: string
   type: AspectType
   value: string
-  weight: string
+  weight: number
 }
 
 /**
- * Builds a search body from the sparse form. Blank aspect values are omitted
- * so those dimensions stay undefined on the server.
+ * Builds a search body from the sparse form. Blank aspect values and weights
+ * that clamp to `0` are omitted. Weight `1` is also omitted from the request
+ * body because that is already the server default.
  */
 export function buildSparseSearchRequest(input: {
   k: number
@@ -56,14 +35,13 @@ export function buildSparseSearchRequest(input: {
 
   for (const aspect of input.aspects) {
     const trimmed = aspect.value.trim()
-    if (!trimmed) {
+    const weight = clampWeight(aspect.weight)
+    if (!trimmed || weight <= 0) {
       continue
     }
 
     query[aspect.name] = coerceAspectValue(aspect.type, aspect.value)
-
-    const weight = Number(aspect.weight)
-    if (aspect.weight.trim() !== "" && !Number.isNaN(weight)) {
+    if (weight !== 1) {
       weights[aspect.name] = weight
     }
   }
@@ -92,7 +70,7 @@ const searchAspectRowSchema = z.object({
   name: z.string(),
   type: aspectTypeSchema,
   value: z.string(),
-  weight: searchWeightSchema,
+  weight: z.number().finite().min(0),
 })
 
 /**

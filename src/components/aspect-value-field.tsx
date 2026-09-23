@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { FocusEvent, ReactNode } from "react"
 import { DateTimePicker } from "@/components/date-time-picker.tsx"
 import { FieldError } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
@@ -38,6 +38,12 @@ export type AspectValueFieldProps = {
   invalid?: boolean
   /** Inline validation message when no parent Field wrapper shows one. */
   error?: string
+  /** Controlled open state for Select and date popover controls. */
+  open?: boolean
+  /** Called when a Select or date popover opens or closes. */
+  onOpenChange?: (open: boolean) => void
+  /** Called when a free-text control blurs. */
+  onBlur?: (event: FocusEvent<HTMLElement>) => void
 }
 
 /**
@@ -57,6 +63,9 @@ export function AspectValueField({
   disabled = false,
   invalid = false,
   error,
+  open,
+  onOpenChange,
+  onBlur,
 }: AspectValueFieldProps) {
   const ariaLabel = `${aspect.name} value`
   const ariaInvalid = invalid || Boolean(error)
@@ -70,6 +79,8 @@ export function AspectValueField({
       <Select
         value={value}
         disabled={disabled}
+        open={open}
+        onOpenChange={onOpenChange}
         onValueChange={(next) => {
           if (typeof next === "string") {
             onChange(next)
@@ -104,6 +115,7 @@ export function AspectValueField({
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid || undefined}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
       />
     )
   } else if (aspect.type === "raw") {
@@ -117,6 +129,7 @@ export function AspectValueField({
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid || undefined}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
       />
     )
   } else if (aspect.type === "number") {
@@ -130,6 +143,7 @@ export function AspectValueField({
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid || undefined}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
       />
     )
   } else if (aspect.type === "datetime" && control === "weekday") {
@@ -137,6 +151,8 @@ export function AspectValueField({
       <Select
         value={value}
         disabled={disabled}
+        open={open}
+        onOpenChange={onOpenChange}
         onValueChange={(next) => {
           if (typeof next === "string") {
             onChange(next)
@@ -170,6 +186,7 @@ export function AspectValueField({
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid || undefined}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
       />
     )
   } else if (aspect.type === "datetime") {
@@ -181,6 +198,8 @@ export function AspectValueField({
         disabled={disabled}
         invalid={ariaInvalid}
         withTime={withTime}
+        open={open}
+        onOpenChange={onOpenChange}
         value={parseDatetimeValue(aspect, value)}
         onChange={(next) => {
           onChange(next ? formatDatetimeValue(aspect, next) : "")
@@ -197,6 +216,7 @@ export function AspectValueField({
         aria-label={ariaLabel}
         aria-invalid={ariaInvalid || undefined}
         onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
       />
     )
   }

@@ -3,7 +3,8 @@
 Hands-on walkthroughs for Aspected Studio. Early tutorials stay short: which
 control to use and what you should see. Tutorials 4 and 5 go deep on
 **metrics**: what each number means, when it matters, and how to use it while
-tuning weights. Tutorial 6 runs Live Auto-tune.
+tuning weights. Tutorial 6 runs Live Auto-tune. Tutorial 7 seeds TMDB movies for
+a larger Auto-tune readiness pass.
 
 Do these in order the first time. Later, jump to the one you need.
 
@@ -15,6 +16,7 @@ Do these in order the first time. Later, jump to the one you need.
 | 4 | [Playground](04-playground.md)                         | Tune weights, pin Compare A/B, interpret Overlap, RBO, and movement     |
 | 5 | [Catalog scorecard](05-catalog-scorecard-demo.md)      | Import a golden set, grade quality, sweep / Quick suggest, Verify       |
 | 6 | [Auto-tune the catalog](06-auto-tune.md)               | Budgeted Live search for weights, on/off, and depth                     |
+| 7 | [Movies Auto-tune readiness](07-movies-auto-tune.md)   | Seed TMDB 5000, import golden sets, run Auto-tune readiness             |
 
 Reference docs (definitions without the walkthrough):
 [Overview](../overview.md), [Connections](../connections.md),

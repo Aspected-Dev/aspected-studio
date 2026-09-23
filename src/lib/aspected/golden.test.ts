@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   caseFromPlaygroundValues,
   caseK,
+  DEFAULT_GOLDEN_K,
+  DEFAULT_THRESHOLDS,
   duplicateGoldenSet,
   emptyGoldenCase,
   emptyGoldenSet,
@@ -9,6 +11,7 @@ import {
   GOLDEN_SETS_STORAGE_KEY,
   goldenSetDisplayName,
   goldenSetFilename,
+  goldenSetImportStub,
   goldenSetsForIndex,
   judgementMap,
   loadGoldenSets,
@@ -45,8 +48,8 @@ function form(
     k: "20",
     autoRun: true,
     aspects: [
-      { name: "title", type: "text", enabled: true, value: "rake", weight: 4 },
-      { name: "price", type: "number", enabled: true, value: "", weight: 1 },
+      { name: "title", type: "text", value: "rake", weight: 4 },
+      { name: "price", type: "number", value: "", weight: 1 },
     ],
     ...overrides,
   }
@@ -175,6 +178,57 @@ describe("duplicateGoldenSet", () => {
 
   it("keeps an unnamed original unnamed instead of naming it copy", () => {
     expect(duplicateGoldenSet(set({ name: "" })).name).toBe("")
+  })
+})
+
+describe("goldenSetImportStub", () => {
+  it("emits every export field and parses cleanly", () => {
+    const json = goldenSetImportStub("products", [
+      {
+        name: "title",
+        type: "text",
+        path: "$.title",
+        settings: { model: "minilm" },
+      },
+      {
+        name: "price",
+        type: "number",
+        path: "$.price",
+        settings: { min: 0, max: 100 },
+      },
+    ])
+    const raw = JSON.parse(json)
+
+    expect(raw).toMatchObject({
+      version: GOLDEN_SET_VERSION,
+      name: "",
+      indexName: "products",
+      k: DEFAULT_GOLDEN_K,
+      thresholds: DEFAULT_THRESHOLDS,
+      cases: [{
+        name: "",
+        enabled: true,
+        k: null,
+        aspects: [
+          { name: "title", type: "text", enabled: false, value: "" },
+          { name: "price", type: "number", enabled: false, value: "" },
+        ],
+        expected: [{ id: "document-id", gain: 1 }],
+        forbidden: ["must-not-rank"],
+        tags: [],
+        notes: "",
+      }],
+    })
+
+    const parsed = parseGoldenSet(json, "products")
+    expect(parsed.ok).toBe(true)
+  })
+
+  it("falls back to a sample aspect when the schema is empty", () => {
+    const raw = JSON.parse(goldenSetImportStub("catalog"))
+    expect(raw.cases[0].aspects).toEqual([
+      { name: "title", type: "text", enabled: true, value: "" },
+    ])
   })
 })
 

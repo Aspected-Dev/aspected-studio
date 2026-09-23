@@ -17,6 +17,10 @@ import {
   PageDocsButton,
 } from "@/components/docs-help.tsx"
 import { JsonEditor } from "@/components/json-editor.tsx"
+import {
+  assignFileToInput,
+  JsonFileDropzone,
+} from "@/components/json-file-dropzone.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import {
   CaseChips,
@@ -74,6 +78,7 @@ import {
   type GoldenSet,
   goldenSetDisplayName,
   goldenSetFilename,
+  goldenSetImportStub,
   goldenSetsForIndex,
   parseGoldenSet,
   removeGoldenSet,
@@ -127,6 +132,8 @@ export function IndexScorecardPage() {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState("")
+  /** Remounts the file input so a prior drop does not keep showing a name. */
+  const [importFileInputKey, setImportFileInputKey] = useState(0)
   const [pendingDeleteSet, setPendingDeleteSet] = useState<GoldenSet | null>(
     null,
   )
@@ -137,6 +144,7 @@ export function IndexScorecardPage() {
     { id: string; value: string } | null
   >(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const importFileInputRef = useRef<HTMLInputElement>(null)
 
   const scorecard = useScorecard(name ?? "")
 
@@ -340,7 +348,23 @@ export function IndexScorecardPage() {
   }
 
   const importFile = async (file: File) => {
+    assignFileToInput(importFileInputRef.current, file)
     setImportText(await file.text())
+  }
+
+  /**
+   * Opens the import sheet with a filled stub so the export shape is visible
+   * before a file is chosen.
+   *
+   * Seeding happens here rather than in Sheet `onOpenChange`: controlled opens
+   * via `setImportOpen(true)` do not call that callback.
+   */
+  const openImport = () => {
+    if (name) {
+      setImportText(goldenSetImportStub(name, schema))
+    }
+    setImportFileInputKey((key) => key + 1)
+    setImportOpen(true)
   }
 
   const previewing = scorecard.ranWeights !== null &&
@@ -693,7 +717,7 @@ export function IndexScorecardPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setImportOpen(true)}
+                        onClick={openImport}
                       >
                         <UploadIcon />
                         Import
@@ -717,7 +741,7 @@ export function IndexScorecardPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setImportOpen(true)}
+                      onClick={openImport}
                     >
                       <UploadIcon />
                       Import one
@@ -840,41 +864,61 @@ export function IndexScorecardPage() {
       </div>
 
       <Sheet open={importOpen} onOpenChange={setImportOpen}>
-        <SheetContent className="w-full sm:max-w-xl">
-          <SheetHeader>
-            <SheetTitle>Import a golden set</SheetTitle>
-            <SheetDescription>
-              Paste an exported set, or choose a JSON file. Ids are regenerated
-              so the same file can live in a repo and in several browsers.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="grid min-w-0 gap-4 px-4">
-            <Input
-              type="file"
-              accept="application/json,.json"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) {
-                  void importFile(file)
-                }
-              }}
-              aria-label="Golden set file"
-            />
-            <JsonEditor
-              value={importText}
-              onChange={setImportText}
-              maxHeight={360}
-            />
-          </div>
-          <SheetFooter>
-            <Button
-              type="button"
-              disabled={importText.trim() === ""}
-              onClick={importSet}
-            >
-              Import
-            </Button>
-          </SheetFooter>
+        <SheetContent className="flex h-full min-h-0 w-full flex-col sm:max-w-xl">
+          <JsonFileDropzone
+            label="Drop JSON file to import"
+            onFile={(file) => {
+              void importFile(file)
+            }}
+            onReject={() => {
+              toast.error("Could not import golden set", {
+                description: "Drop a .json file, or paste JSON below.",
+              })
+            }}
+            header={
+              <SheetHeader className="shrink-0">
+                <SheetTitle>Import a golden set</SheetTitle>
+                <SheetDescription>
+                  Paste an exported set, or choose or drop a JSON file. Ids are
+                  regenerated so the same file can live in a repo and in several
+                  browsers.
+                </SheetDescription>
+              </SheetHeader>
+            }
+          >
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <Input
+                key={importFileInputKey}
+                ref={importFileInputRef}
+                type="file"
+                accept="application/json,.json"
+                className="shrink-0"
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) {
+                    void importFile(file)
+                  }
+                }}
+                aria-label="Golden set file"
+              />
+              <JsonEditor
+                value={importText}
+                onChange={setImportText}
+                fitContent={false}
+                height="100%"
+                className="min-h-0 flex-1"
+              />
+            </div>
+            <SheetFooter className="mt-0 shrink-0 p-0">
+              <Button
+                type="button"
+                disabled={importText.trim() === ""}
+                onClick={importSet}
+              >
+                Import
+              </Button>
+            </SheetFooter>
+          </JsonFileDropzone>
         </SheetContent>
       </Sheet>
 

@@ -1,0 +1,814 @@
+{
+  "version": 1,
+  "name": "Movies planted truth",
+  "indexName": "movies",
+  "k": 10,
+  "thresholds": {
+    "metric": "ndcg",
+    "green": 0.7,
+    "amber": 0.4
+  },
+  "cases": [
+    {
+      "name": "Smoke: title Dark Knight",
+      "notes": "Smoke check only: title should keep the-dark-knight-2008 near the top at all weights 1. Pass if primary stays high (~0.9+). Not a test that title weight must rise.",
+      "tags": [
+        "planted",
+        "smoke",
+        "title"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": true,
+          "value": "The Dark Knight"
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "en"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": true,
+          "value": "6"
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "the-dark-knight-2008",
+          "gain": 3
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "credits Spielberg SF",
+      "notes": "Lever: credits (+ Science Fiction). Expect Auto-tune to help Jurassic Park / E.T. when credits rises relative to distractors. Proven mid-band lift.",
+      "tags": [
+        "planted",
+        "credits"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": true,
+          "value": "Steven Spielberg"
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Science Fiction"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "en"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": true,
+          "value": "2.5"
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "jurassic-park-1993",
+          "gain": 3
+        },
+        {
+          "id": "e-t-the-extra-terrestrial-1982",
+          "gain": 2
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "credits Nolan",
+      "notes": "Lever: credits. Mid band when not already perfect. Pass if Nolan films stay strong; do not require a global credits weight increase.",
+      "tags": [
+        "planted",
+        "credits"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": true,
+          "value": "Christopher Nolan"
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "en"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": true,
+          "value": "6"
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": true,
+          "value": "130"
+        }
+      ],
+      "expected": [
+        {
+          "id": "inception-2010",
+          "gain": 3
+        },
+        {
+          "id": "the-dark-knight-2008",
+          "gain": 2
+        },
+        {
+          "id": "interstellar-2014",
+          "gain": 2
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "overview toys alive",
+      "notes": "Lever: overview. Toy Story plot text should beat Animation-only noise. Proven lift when overview is weighted.",
+      "tags": [
+        "planted",
+        "overview"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": true,
+          "value": "cowboy doll and space ranger toy compete for a boy affection"
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Animation"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": true,
+          "value": "100"
+        }
+      ],
+      "expected": [
+        {
+          "id": "toy-story-1995",
+          "gain": 3
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "overview dream heist",
+      "notes": "Lever: overview. Dream-heist wording for Inception. Ceiling (~1.0) at all-1 is OK; pass if it does not collapse when other aspects move.",
+      "tags": [
+        "planted",
+        "overview"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": true,
+          "value": "thief infiltrates dreams to steal corporate secrets"
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Action"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "en"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": true,
+          "value": "6"
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "inception-2010",
+          "gain": 3
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "genre Documentary food",
+      "notes": "Lever: genre + themes. Documentary alone is sparse; food/corporation themes recover Food Inc and Super Size Me. No language/runtime distractors (they drowned the old planted case).",
+      "tags": [
+        "planted",
+        "genre",
+        "themes"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": true,
+          "value": "food, corporations, health"
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Documentary"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "food-inc-2008",
+          "gain": 3
+        },
+        {
+          "id": "super-size-me-2004",
+          "gain": 2
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "language French Am\u00e9lie",
+      "notes": "Lever: language + overview. Pure fr enum is too soft; Paris-waitress overview makes Am\u00e9lie recoverable. Expect language/overview not demoted into a zero.",
+      "tags": [
+        "planted",
+        "language",
+        "overview"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": true,
+          "value": "shy waitress in Paris secretly orchestrates the lives of those around her"
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Romance"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "fr"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "amelie-2001",
+          "gain": 3
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "language Japanese fantasy",
+      "notes": "Lever: language + genre. ja + Fantasy without a mid rating distractor. Expect Spirited Away (and Mononoke) when language is not turned off.",
+      "tags": [
+        "planted",
+        "language"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Fantasy"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "ja"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "spirited-away-2001",
+          "gain": 3
+        },
+        {
+          "id": "princess-mononoke-1997",
+          "gain": 2
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "rating 8.5 drama",
+      "notes": "Lever: rating. High rating + Drama should surface Shawshank / Godfather. Proven lift.",
+      "tags": [
+        "planted",
+        "rating"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": true,
+          "value": "Drama"
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "en"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": true,
+          "value": "8.5"
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": true,
+          "value": "140"
+        }
+      ],
+      "expected": [
+        {
+          "id": "the-shawshank-redemption-1994",
+          "gain": 3
+        },
+        {
+          "id": "the-godfather-1972",
+          "gain": 2
+        }
+      ],
+      "forbidden": []
+    },
+    {
+      "name": "themes YA dystopia",
+      "notes": "Lever: themes. Mid band at all-1. Pass if Hunger Games / Divergent do not collapse when themes is demoted or dropped.",
+      "tags": [
+        "planted",
+        "themes"
+      ],
+      "aspects": [
+        {
+          "name": "title",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "overview",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "themes",
+          "type": "text",
+          "enabled": true,
+          "value": "dystopia, teenage, survival, based on novel"
+        },
+        {
+          "name": "credits",
+          "type": "text",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "genre",
+          "type": "enum",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "language",
+          "type": "enum",
+          "enabled": true,
+          "value": "en"
+        },
+        {
+          "name": "released",
+          "type": "datetime",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "rating",
+          "type": "number",
+          "enabled": true,
+          "value": "6"
+        },
+        {
+          "name": "popularity",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        },
+        {
+          "name": "runtime",
+          "type": "number",
+          "enabled": false,
+          "value": ""
+        }
+      ],
+      "expected": [
+        {
+          "id": "the-hunger-games-2012",
+          "gain": 3
+        },
+        {
+          "id": "divergent-2014",
+          "gain": 2
+        }
+      ],
+      "forbidden": []
+    }
+  ]
+}

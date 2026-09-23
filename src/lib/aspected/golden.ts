@@ -208,7 +208,7 @@ export function caseFromPlaygroundValues(
     aspects: values.aspects.map((aspect) => ({
       name: aspect.name,
       type: aspect.type,
-      enabled: aspect.enabled && aspect.value.trim() !== "",
+      enabled: aspect.value.trim() !== "",
       value: aspect.value,
     })),
     expected: expectedIds.map((id) => ({ id, gain: 1 })),
@@ -324,6 +324,56 @@ export function serializeGoldenSet(set: GoldenSet): string {
         tags: item.tags,
         notes: item.notes,
       })),
+    },
+    null,
+    2,
+  )
+}
+
+/**
+ * Pretty-printed import template with every export field present.
+ *
+ * Used to fill the import editor when no file has been chosen yet, so the
+ * shape is visible without leaving the sheet. Aspect rows follow `schema`
+ * when provided; otherwise one sample text aspect is included.
+ */
+export function goldenSetImportStub(
+  indexName: string,
+  schema: StoredAspect[] = [],
+): string {
+  const aspects = schema.length > 0
+    ? schema.map((aspect) => ({
+      name: aspect.name,
+      type: aspect.type,
+      enabled: false,
+      value: "",
+    }))
+    : [{
+      name: "title",
+      type: "text" as const,
+      enabled: true,
+      value: "",
+    }]
+
+  return JSON.stringify(
+    {
+      version: GOLDEN_SET_VERSION,
+      name: "",
+      indexName,
+      k: DEFAULT_GOLDEN_K,
+      thresholds: { ...DEFAULT_THRESHOLDS },
+      cases: [
+        {
+          name: "",
+          enabled: true,
+          k: null,
+          aspects,
+          expected: [{ id: "document-id", gain: 1 }],
+          forbidden: ["must-not-rank"],
+          tags: [],
+          notes: "",
+        },
+      ],
     },
     null,
     2,

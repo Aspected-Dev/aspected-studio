@@ -61,7 +61,19 @@ Builds a 100-document `catalog` index for Playground and Scorecard demos. Import
 Full talk track:
 [`docs/tutorials/05-catalog-scorecard-demo.md`](docs/tutorials/05-catalog-scorecard-demo.md).
 
-To check that tutorial's numbers without a browser:
+For a larger Auto-tune readiness corpus (TMDB 5000):
+
+```bash
+deno task seed:movies
+deno task check:movies
+```
+
+Requires `utility/tmdb_5000_movies.csv` and `utility/tmdb_5000_credits.csv`.
+Import `utility/movies-golden-set.json` and `utility/movies-planted-set.json`
+from `/indexes/movies/scorecard`. Walkthrough:
+[`docs/tutorials/07-movies-auto-tune.md`](docs/tutorials/07-movies-auto-tune.md).
+
+To check that tutorial 5's numbers without a browser:
 
 ```bash
 deno task verify:tutorials
@@ -81,6 +93,8 @@ against the cheat sheet stays a human read.
 | Dev (all)           | `deno task dev:all`          | Vite + MkDocs together              |
 | Dev (desktop)       | `deno task dev:desktop`      | `deno desktop --hmr .`              |
 | Seed demo           | `deno task seed:catalog`     | 100 document `catalog` index        |
+| Seed movies         | `deno task seed:movies`      | TMDB 5000 `movies` index            |
+| Check movies        | `deno task check:movies`     | Offline (and `--live`) golden check |
 | Verify tutorial 5   | `deno task verify:tutorials` | Grade the demo set headless         |
 | Build               | `deno task build`            | Production assets in `dist/`        |
 | Preview             | `deno task preview`          | Serve production build              |

@@ -66,7 +66,6 @@ export function clampWeight(weight: number): number {
 export const playgroundAspectSchema = z.object({
   name: z.string(),
   type: aspectTypeSchema,
-  enabled: z.boolean(),
   value: z.string(),
   weight: z.number(),
 })
@@ -114,7 +113,7 @@ export type PlaygroundFormValues = z.infer<
 >
 
 /**
- * Seeds one form row per index aspect, all enabled at weight `1`.
+ * Seeds one form row per index aspect at weight `1`. Blank values stay sparse.
  */
 export function aspectRowsFromSchema(
   schema: StoredAspect[],
@@ -122,7 +121,6 @@ export function aspectRowsFromSchema(
   return schema.map((aspect) => ({
     name: aspect.name,
     type: aspect.type,
-    enabled: true,
     value: "",
     weight: 1,
   }))
@@ -187,13 +185,17 @@ export function coerceAspectValue(
   return trimmed
 }
 
-/** Aspect rows that will take part in the next search. */
+/**
+ * Aspect rows that will take part in the next search.
+ *
+ * Participation is derived from a non-blank value and a positive weight.
+ * Weight `0` keeps a filled value parked without scoring it.
+ */
 export function activeAspects(
   values: PlaygroundFormValues,
 ): PlaygroundAspectValues[] {
   return values.aspects.filter((aspect) =>
-    aspect.enabled && aspect.value.trim() !== "" &&
-    clampWeight(aspect.weight) > 0
+    aspect.value.trim() !== "" && clampWeight(aspect.weight) > 0
   )
 }
 
@@ -248,9 +250,9 @@ export function formWeights(
 /**
  * Builds the search body for the current playground state.
  *
- * Disabled aspects, blank values, and weights that clamp to `0` are all left
- * out of `query` so the server treats those dimensions as sparse rather than
- * scoring them against an empty value.
+ * Blank values and weights that clamp to `0` are left out of `query` so the
+ * server treats those dimensions as sparse rather than scoring them against
+ * an empty value.
  *
  * @throws SyntaxError when an aspect value cannot be coerced for its resolver.
  */

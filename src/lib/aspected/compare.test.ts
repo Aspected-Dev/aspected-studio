@@ -29,14 +29,12 @@ function form(
       {
         name: "title",
         type: "text",
-        enabled: true,
         value: "rake",
         weight: 1,
       },
       {
         name: "price",
         type: "number",
-        enabled: true,
         value: "30",
         weight: 1,
       },
@@ -182,7 +180,7 @@ describe("diffConfigs", () => {
     expect(diffConfigs(form(), form())).toEqual([])
   })
 
-  it("reports k, weight, enabled, and value changes", () => {
+  it("reports k, weight, and value changes", () => {
     const a = form()
     const b = form({
       k: "50",
@@ -190,15 +188,13 @@ describe("diffConfigs", () => {
         {
           name: "title",
           type: "text",
-          enabled: true,
           value: "hose",
           weight: 4,
         },
         {
           name: "price",
           type: "number",
-          enabled: false,
-          value: "30",
+          value: "",
           weight: 1,
         },
       ],
@@ -208,7 +204,7 @@ describe("diffConfigs", () => {
       { kind: "k", from: "20", to: "50" },
       { kind: "value", name: "title", from: "rake", to: "hose" },
       { kind: "weight", name: "title", from: 1, to: 4 },
-      { kind: "enabled", name: "price", from: true, to: false },
+      { kind: "value", name: "price", from: "30", to: "" },
     ])
   })
 })

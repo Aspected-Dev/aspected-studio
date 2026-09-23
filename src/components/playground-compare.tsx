@@ -406,8 +406,6 @@ function formatChange(change: ConfigChange): string {
       return `k ${change.from} to ${change.to}`
     case "weight":
       return `${change.name} weight ${change.from} to ${change.to}`
-    case "enabled":
-      return change.to ? `${change.name} on` : `${change.name} off`
     case "value":
       return `${change.name} value changed`
   }

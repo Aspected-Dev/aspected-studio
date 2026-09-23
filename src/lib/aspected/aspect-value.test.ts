@@ -74,7 +74,7 @@ describe("formatDatetimeValue / parseDatetimeValue", () => {
     ).toBe("2024/07/01 14:05:09")
     expect(
       formatDatetimeValue(aspect("datetime", { granularity: "year" }), sample),
-    ).toBe("2024/07/01")
+    ).toBe("2024")
     expect(
       formatDatetimeValue(aspect("datetime", { granularity: "month" }), sample),
     ).toBe("07/01")
@@ -94,9 +94,13 @@ describe("formatDatetimeValue / parseDatetimeValue", () => {
 
   it("round-trips year and month-day strings", () => {
     const yearAspect = aspect("datetime", { granularity: "year" })
-    const parsed = parseDatetimeValue(yearAspect, "2024/07/01")
+    const parsed = parseDatetimeValue(yearAspect, "2024")
     expect(parsed).not.toBeNull()
-    expect(formatDatetimeValue(yearAspect, parsed!)).toBe("2024/07/01")
+    expect(formatDatetimeValue(yearAspect, parsed!)).toBe("2024")
+
+    expect(parseDatetimeValue(yearAspect, "2024/07")).not.toBeNull()
+    expect(parseDatetimeValue(yearAspect, "2024/07/01 00:00:00")).not.toBeNull()
+    expect(parseDatetimeValue(yearAspect, "2024/07/01")).toBeNull()
 
     const monthAspect = aspect("datetime", { granularity: "month" })
     const monthParsed = parseDatetimeValue(monthAspect, "07/01")

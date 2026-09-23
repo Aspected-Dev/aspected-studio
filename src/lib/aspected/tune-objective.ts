@@ -15,6 +15,27 @@ export const FORBIDDEN_PENALTY = 0.2
 /** Minimum noise floor when the measured repeat delta is tiny. */
 export const NOISE_FLOOR_MIN = 0.002
 
+/**
+ * Hover help for Auto-tune result tiles and related controls.
+ *
+ * Objective = primary metric (usually nDCG) minus a forbidden-case penalty,
+ * macro-averaged over the cases in scope.
+ */
+export const TUNE_RESULT_HELP = {
+  startObjective:
+    "Score of the config you started from (often all weights 1), on the train split when holdout is on. Same objective the search maximizes: primary metric minus forbidden-case penalty. Macro mean: each case counts equally.",
+  championObjective:
+    "Best config found on the train cases under this budget. Compare to Start: a gain within the noise floor is not a real win. Among near-tied configs, Auto-tune prefers fewer aspects, then smaller fetchK (parsimony).",
+  holdout:
+    "Same objective on cases held out while searching for weights. Scored once in the Confirm stage. Close to the train champion means the win likely generalizes. Much lower means possible overfit or an unlucky split (noisy on small sets). n/a means holdout was off, the set was too small, or the run ended before Confirm.",
+  holdoutSplit:
+    "Reserves about 30% of runnable cases (at least 3 each side) and never uses them while searching. The champion is chosen on train only; Confirm scores holdout once. Turn off on tiny sets or when you only want a diagnostic run.",
+  perCaseDelta:
+    "Primary metric for each train case at the start config versus the champion. Holdout cases are omitted here. Watch for one case collapsing while the average rises.",
+  noiseFloor:
+    "How much the same start config can wobble when re-run Live. Gains smaller than this are treated as ties when comparing configs.",
+} as const
+
 /** Live objective for one scored config. */
 export type TuneObjective = {
   /** Primary metric macro mean, graded Live. */

@@ -17,15 +17,21 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
+import { MetricHelp } from "@/components/metric-tile.tsx"
 import type { GoldenSet } from "@/lib/aspected/golden.ts"
 import { goldenSetDisplayName } from "@/lib/aspected/golden.ts"
+import { runnableCases } from "@/lib/aspected/scorecard.ts"
 import { DEFAULT_TUNE_CONCURRENCY } from "@/hooks/use-auto-tune.ts"
 import {
   type AspectTuneSpace,
   BUDGET_PRESETS,
+  defaultTuneSpace,
   type TuneSpace,
 } from "@/lib/aspected/tuner.ts"
-import { HOLDOUT_MIN_CASES } from "@/lib/aspected/tune-objective.ts"
+import {
+  HOLDOUT_MIN_CASES,
+  TUNE_RESULT_HELP,
+} from "@/lib/aspected/tune-objective.ts"
 
 /** Budget preset keys plus custom. */
 export type BudgetPresetKey = keyof typeof BUDGET_PRESETS | "custom"
@@ -45,6 +51,8 @@ export type AutoTuneSetupValues = {
 /** Props for {@link AutoTuneSetup}. */
 export type AutoTuneSetupProps = {
   sets: GoldenSet[]
+  /** Start weights used to rebuild the aspect space when the set changes. */
+  startWeights: Record<string, number>
   values: AutoTuneSetupValues
   onChange: (next: AutoTuneSetupValues) => void
   runnableCaseCount: number
@@ -54,9 +62,13 @@ export type AutoTuneSetupProps = {
 
 /**
  * Setup card: golden set, aspect space, budget, and Start.
+ *
+ * Changing the golden set rebuilds the aspect space from that set's enabled
+ * aspects (unused aspects freeze again), while keeping budget and depth prefs.
  */
 export function AutoTuneSetup({
   sets,
+  startWeights,
   values,
   onChange,
   runnableCaseCount,
@@ -88,7 +100,9 @@ export function AutoTuneSetup({
             )}
             onValueChange={(next) => {
               if (typeof next === "string") {
-                onChange({ ...values, setId: next })
+                onChange(
+                  setupValuesForSet(values, sets, next, startWeights),
+                )
               }
             }}
           >
@@ -120,7 +134,8 @@ export function AutoTuneSetup({
             <p className="text-sm font-medium">Aspect space</p>
             <p className="text-sm text-muted-foreground">
               Tune weight searches the log grid. Allow off tries weight 0 (omit
-              from every case query). Freeze keeps the start weight.
+              from every case query). Freeze keeps the start weight. Switching
+              sets resets these to match which aspects the new set uses.
             </p>
           </div>
           <div className="overflow-x-auto rounded-lg border">
@@ -197,8 +212,8 @@ export function AutoTuneSetup({
 
         <Separator />
 
-        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-          <div className="grid min-w-0 gap-2">
+        <div className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 content-start gap-2">
             <Label>Budget</Label>
             <Select
               value={values.budgetPreset}
@@ -260,7 +275,7 @@ export function AutoTuneSetup({
             </p>
           </div>
 
-          <div className="grid min-w-0 gap-2">
+          <div className="grid min-w-0 content-start gap-2">
             <Label htmlFor="auto-tune-concurrency">Concurrency</Label>
             <Input
               id="auto-tune-concurrency"
@@ -285,8 +300,20 @@ export function AutoTuneSetup({
                 onCheckedChange={(checked) =>
                   onChange({ ...values, useHoldout: checked === true })}
               />
-              Train / holdout split
-              {!holdoutReady ? ` (needs ≥${HOLDOUT_MIN_CASES} cases)` : null}
+              <span className="flex min-w-0 items-center">
+                Train / holdout split
+                <MetricHelp
+                  label="train / holdout split"
+                  text={TUNE_RESULT_HELP.holdoutSplit}
+                />
+                {!holdoutReady
+                  ? (
+                    <span className="text-muted-foreground">
+                      {` (needs ≥${HOLDOUT_MIN_CASES} cases)`}
+                    </span>
+                  )
+                  : null}
+              </span>
             </label>
             <Label htmlFor="auto-tune-wall">
               Wall-clock cap (minutes, optional)
@@ -327,6 +354,37 @@ export function AutoTuneSetup({
       </CardContent>
     </Card>
   )
+}
+
+/**
+ * Rebuilds setup for a newly selected golden set.
+ *
+ * Aspect freeze / tune / allow-off follow {@link defaultTuneSpace} for that
+ * set. Budget and depth prefs stay. Holdout turns off when the set is too
+ * small for a split.
+ */
+export function setupValuesForSet(
+  current: AutoTuneSetupValues,
+  sets: GoldenSet[],
+  setId: string,
+  startWeights: Record<string, number>,
+): AutoTuneSetupValues {
+  const selected = sets.find((item) => item.id === setId)
+  const space = selected
+    ? {
+      ...defaultTuneSpace(selected, startWeights),
+      tuneDepth: current.tuneDepth,
+    }
+    : { aspects: [], tuneDepth: current.tuneDepth }
+  const nextRunnable = selected
+    ? runnableCases(selected, startWeights).length
+    : 0
+  return {
+    ...current,
+    setId,
+    space,
+    useHoldout: nextRunnable >= HOLDOUT_MIN_CASES ? current.useHoldout : false,
+  }
 }
 
 function AspectFlag({

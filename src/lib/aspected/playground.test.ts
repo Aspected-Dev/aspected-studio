@@ -105,12 +105,11 @@ describe("coerceAspectValue", () => {
 })
 
 describe("activeAspects", () => {
-  it("keeps only enabled aspects with a value and a usable weight", () => {
+  it("keeps only aspects with a value and a usable weight", () => {
     const active = activeAspects(values([
-      { name: "keep", type: "text", enabled: true, value: "x", weight: 1 },
-      { name: "off", type: "text", enabled: false, value: "x", weight: 1 },
-      { name: "blank", type: "text", enabled: true, value: "  ", weight: 1 },
-      { name: "zero", type: "text", enabled: true, value: "x", weight: 0 },
+      { name: "keep", type: "text", value: "x", weight: 1 },
+      { name: "blank", type: "text", value: "  ", weight: 1 },
+      { name: "zero", type: "text", value: "x", weight: 0 },
     ]))
 
     expect(active.map((aspect) => aspect.name)).toEqual(["keep"])
@@ -120,8 +119,8 @@ describe("activeAspects", () => {
 describe("activeWeights", () => {
   it("clamps the weights it reports", () => {
     expect(activeWeights(values([
-      { name: "big", type: "text", enabled: true, value: "x", weight: 99999 },
-      { name: "ok", type: "text", enabled: true, value: "x", weight: 2 },
+      { name: "big", type: "text", value: "x", weight: 99999 },
+      { name: "ok", type: "text", value: "x", weight: 2 },
     ]))).toEqual({ big: MAX_WEIGHT, ok: 2 })
   })
 })
@@ -129,25 +128,24 @@ describe("activeWeights", () => {
 describe("scoringWeights", () => {
   it("pins aspects that are not being queried to zero", () => {
     expect(scoringWeights(values([
-      { name: "asked", type: "text", enabled: true, value: "x", weight: 3 },
-      { name: "off", type: "text", enabled: false, value: "x", weight: 3 },
-      { name: "blank", type: "text", enabled: true, value: "", weight: 3 },
-    ]))).toEqual({ asked: 3, off: 0, blank: 0 })
+      { name: "asked", type: "text", value: "x", weight: 3 },
+      { name: "blank", type: "text", value: "", weight: 3 },
+      { name: "zero", type: "text", value: "x", weight: 0 },
+    ]))).toEqual({ asked: 3, blank: 0, zero: 0 })
   })
 })
 
 describe("buildPlaygroundRequest", () => {
   it("builds a sparse query with weights and explanation enabled", () => {
     const request = buildPlaygroundRequest(values([
-      { name: "title", type: "text", enabled: true, value: "rake", weight: 3 },
+      { name: "title", type: "text", value: "rake", weight: 3 },
       {
         name: "price",
         type: "number",
-        enabled: true,
         value: "20",
         weight: 0.5,
       },
-      { name: "colour", type: "enum", enabled: false, value: "red", weight: 1 },
+      { name: "colour", type: "enum", value: "", weight: 1 },
     ], "25"))
 
     expect(request).toEqual({
@@ -161,7 +159,7 @@ describe("buildPlaygroundRequest", () => {
 
   it("omits weights entirely when nothing is active", () => {
     const request = buildPlaygroundRequest(values([
-      { name: "title", type: "text", enabled: false, value: "x", weight: 1 },
+      { name: "title", type: "text", value: "", weight: 1 },
     ]))
 
     expect(request.query).toEqual({})
@@ -171,22 +169,22 @@ describe("buildPlaygroundRequest", () => {
   it("propagates coercion failures", () => {
     expect(() =>
       buildPlaygroundRequest(values([
-        { name: "vec", type: "raw", enabled: true, value: "nope", weight: 1 },
+        { name: "vec", type: "raw", value: "nope", weight: 1 },
       ]))
     ).toThrow()
   })
 })
 
 describe("aspectRowsFromSchema", () => {
-  it("enables every aspect at weight 1 with no value", () => {
+  it("seeds every aspect at weight 1 with no value", () => {
     const schema: StoredAspect[] = [
       { name: "title", type: "text", path: "$.title", settings: {} },
       { name: "year", type: "number", path: "$.year", settings: {} },
     ]
 
     expect(aspectRowsFromSchema(schema)).toEqual([
-      { name: "title", type: "text", enabled: true, value: "", weight: 1 },
-      { name: "year", type: "number", enabled: true, value: "", weight: 1 },
+      { name: "title", type: "text", value: "", weight: 1 },
+      { name: "year", type: "number", value: "", weight: 1 },
     ])
   })
 })

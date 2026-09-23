@@ -7,6 +7,8 @@ import {
 } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useParams } from "react-router"
+import { AspectQueryRow } from "@/components/aspect-query-row.tsx"
+import { AspectWeightSlider } from "@/components/aspect-weight-slider.tsx"
 import { createDataTableColumnHelper } from "@/components/data-table-features.ts"
 import { DataTable } from "@/components/data-table.tsx"
 import {
@@ -15,13 +17,19 @@ import {
   DocsTextLink,
   PageDocsButton,
 } from "@/components/docs-help.tsx"
-import { AspectValueField } from "@/components/aspect-value-field.tsx"
 import { JsonEditor } from "@/components/json-editor.tsx"
 import { JsonInspectSheet } from "@/components/json-inspect-sheet.tsx"
 import { JsonPreviewCell } from "@/components/json-preview-cell.tsx"
 import { CopyableReadonlyField } from "@/components/copyable-readonly-field.tsx"
 import { RequestInspector } from "@/components/request-inspector.tsx"
 import { Button } from "@/components/ui/button.tsx"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card.tsx"
 import { Checkbox } from "@/components/ui/checkbox.tsx"
 import {
   Collapsible,
@@ -30,10 +38,10 @@ import {
 } from "@/components/ui/collapsible.tsx"
 import { Field, FieldLabel } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
+import { Separator } from "@/components/ui/separator.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
 import { type RecordedRequest } from "@/lib/aspected/client.ts"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
-import { aspectValueDescription } from "@/lib/aspected/aspect-value.ts"
 import {
   buildSparseSearchRequest,
   searchFormSchema,
@@ -147,7 +155,7 @@ export function IndexSearchPage() {
           name: aspect.name,
           type: aspect.type,
           value: "",
-          weight: "",
+          weight: 1,
         })),
       )
     }).catch((caught) => {
@@ -207,232 +215,8 @@ export function IndexSearchPage() {
   const errors = form.formState.errors
   const selectedExplanation = usedExplanation(selected?.explanation)
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="grid min-w-0 gap-6"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          Leave an aspect blank to keep it sparse. Combine aspects as in the
-          {" "}
-          <DocsTextLink
-            page="resolvers"
-            hash={DOCS_HASH.combiningResolvers}
-          >
-            resolver docs
-          </DocsTextLink>
-          .
-        </p>
-        <div className="flex shrink-0 items-center gap-2">
-          <PageDocsButton
-            page="resolvers"
-            hash={DOCS_HASH.combiningResolvers}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => jsonMode ? setJsonMode(false) : switchToJson()}
-          >
-            {jsonMode ? "Use form" : "Use JSON"}
-          </Button>
-        </div>
-      </div>
-
-      {jsonMode
-        ? <JsonEditor value={jsonText} onChange={setJsonText} />
-        : (
-          <div className="grid gap-4">
-            <div className="max-w-32">
-              <DocsField
-                label="k"
-                htmlFor="k"
-                page="tutorial"
-                hash={DOCS_HASH.tutorialSearch}
-                blurb="Positive integer. How many nearest neighbours to return."
-                error={errors.k?.message}
-                mono
-              >
-                <Input
-                  id="k"
-                  type="number"
-                  step={1}
-                  aria-invalid={errors.k ? true : undefined}
-                  {...form.register("k")}
-                />
-              </DocsField>
-            </div>
-            {aspectFields.map((field, index) => {
-              const aspect = indexSchema.find((entry) =>
-                entry.name === field.name
-              ) ?? {
-                name: field.name,
-                type: field.type,
-                path: `$.${field.name}`,
-                settings: {},
-              }
-              const valueError = errors.aspects?.[index]?.value?.message
-              const weightError = errors.aspects?.[index]?.weight?.message
-              return (
-                <div
-                  key={field.id}
-                  className="grid gap-3 sm:grid-cols-[1fr_8rem]"
-                >
-                  <DocsField
-                    label={field.name}
-                    htmlFor={`q-${field.name}`}
-                    page="resolvers"
-                    hash={DOCS_HASH.combiningResolvers}
-                    blurb="Leave blank to omit this aspect from the query."
-                    description={aspectValueDescription(aspect)}
-                    error={valueError}
-                  >
-                    <Controller
-                      control={form.control}
-                      name={`aspects.${index}.value`}
-                      render={({ field: valueField }) => (
-                        <AspectValueField
-                          aspect={aspect}
-                          id={`q-${field.name}`}
-                          value={valueField.value}
-                          onChange={valueField.onChange}
-                          invalid={Boolean(valueError)}
-                        />
-                      )}
-                    />
-                  </DocsField>
-                  <DocsField
-                    label="Weight"
-                    htmlFor={`w-${field.name}`}
-                    page="resolvers"
-                    hash={DOCS_HASH.inspectingResolvers}
-                    blurb="Scales this aspect in the query. Blank uses 1. Valid range is 0 to 10000. Use explanation to tune weights."
-                    error={weightError}
-                  >
-                    <Input
-                      id={`w-${field.name}`}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="1"
-                      aria-invalid={weightError ? true : undefined}
-                      {...form.register(`aspects.${index}.weight`)}
-                    />
-                  </DocsField>
-                </div>
-              )
-            })}
-            <div className="flex flex-wrap gap-4">
-              <Controller
-                control={form.control}
-                name="withDocs"
-                render={({ field }) => (
-                  <Field orientation="horizontal">
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={(checked) =>
-                        field.onChange(Boolean(checked))}
-                    />
-                    <FieldLabel className="font-mono">withDocs</FieldLabel>
-                  </Field>
-                )}
-              />
-              <Controller
-                control={form.control}
-                name="withExplanation"
-                render={({ field }) => (
-                  <Field orientation="horizontal">
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={(checked) =>
-                        field.onChange(Boolean(checked))}
-                    />
-                    <FieldLabel className="font-mono">
-                      withExplanation
-                      <span className="-ml-1.5">
-                        <DocsHelpIcon
-                          page="resolvers"
-                          hash={DOCS_HASH.inspectingResolvers}
-                          label="withExplanation"
-                        />
-                      </span>
-                    </FieldLabel>
-                  </Field>
-                )}
-              />
-            </div>
-            <Collapsible>
-              <CollapsibleTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="bg-muted hover:bg-muted/70 dark:hover:bg-muted/50"
-                  />
-                }
-              >
-                Advanced
-              </CollapsibleTrigger>
-              <CollapsibleContent className="grid gap-3 pt-3">
-                <Controller
-                  control={form.control}
-                  name="withVectors"
-                  render={({ field }) => (
-                    <Field orientation="horizontal">
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={(checked) =>
-                          field.onChange(Boolean(checked))}
-                      />
-                      <FieldLabel className="font-mono">withVectors</FieldLabel>
-                    </Field>
-                  )}
-                />
-                <DocsField
-                  label="accessFilter"
-                  htmlFor="access-filter"
-                  page="accessControl"
-                  hash={DOCS_HASH.accessFiltering}
-                  description="Comma-separated keys. Documents need at least one match. [null] is not the same as omitting the filter."
-                  mono
-                >
-                  <Input
-                    id="access-filter"
-                    {...form.register("accessFilter")}
-                    placeholder="team-a, team-b"
-                  />
-                </DocsField>
-                <Controller
-                  control={form.control}
-                  name="includeNullAccess"
-                  render={({ field }) => (
-                    <Field orientation="horizontal">
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={(checked) =>
-                          field.onChange(Boolean(checked))}
-                      />
-                      <FieldLabel>
-                        Include documents with no access keys
-                        <span className="-ml-1.5">
-                          <DocsHelpIcon
-                            page="accessControl"
-                            hash={DOCS_HASH.accessNull}
-                            label="Documents with no access keys"
-                          />
-                        </span>
-                      </FieldLabel>
-                    </Field>
-                  )}
-                />
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        )}
-
-      <Button type="submit">Search</Button>
-
+  const resultsPane = (
+    <div className="grid min-w-0 gap-6">
       <DataTable
         columns={columns}
         data={results}
@@ -486,7 +270,245 @@ export function IndexSearchPage() {
           : null}
       </JsonInspectSheet>
 
-      <RequestInspector request={lastRequest} />
+      <RequestInspector request={lastRequest} density="compact" />
+    </div>
+  )
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      noValidate
+      className="grid min-w-0 gap-6"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Leave an aspect blank to keep it sparse. Combine aspects as in the
+          {" "}
+          <DocsTextLink
+            page="resolvers"
+            hash={DOCS_HASH.combiningResolvers}
+          >
+            resolver docs
+          </DocsTextLink>
+          .
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <PageDocsButton
+            page="resolvers"
+            hash={DOCS_HASH.combiningResolvers}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => jsonMode ? setJsonMode(false) : switchToJson()}
+          >
+            {jsonMode ? "Use form" : "Use JSON"}
+          </Button>
+        </div>
+      </div>
+
+      {jsonMode
+        ? (
+          <div className="grid min-w-0 gap-6">
+            <JsonEditor value={jsonText} onChange={setJsonText} />
+            <Button type="submit">Search</Button>
+            {resultsPane}
+          </div>
+        )
+        : (
+          <div className="grid min-w-0 gap-6 xl:grid-cols-[24rem_1fr] xl:items-start">
+            <Card>
+              <CardHeader>
+                <CardTitle>Query and weights</CardTitle>
+                <CardDescription>
+                  Turn aspects on to include them. Leave the rest empty.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4">
+                {aspectFields.map((field, index) => {
+                  const aspect = indexSchema.find((entry) =>
+                    entry.name === field.name
+                  ) ?? {
+                    name: field.name,
+                    type: field.type,
+                    path: `$.${field.name}`,
+                    settings: {},
+                  }
+                  const valueError = errors.aspects?.[index]?.value?.message
+                  return (
+                    <div key={field.id} className="grid gap-4">
+                      {index > 0 ? <Separator /> : null}
+                      <Controller
+                        control={form.control}
+                        name={`aspects.${index}.value`}
+                        render={({ field: valueField }) => (
+                          <Controller
+                            control={form.control}
+                            name={`aspects.${index}.weight`}
+                            render={({ field: weightField }) => (
+                              <AspectQueryRow
+                                aspect={aspect}
+                                id={`q-${field.name}`}
+                                value={valueField.value}
+                                onChange={valueField.onChange}
+                                error={valueError}
+                                weight={weightField.value}
+                                onWeightChange={weightField.onChange}
+                                weightControl={
+                                  <AspectWeightSlider
+                                    aspectName={field.name}
+                                    id={`w-${field.name}`}
+                                    value={weightField.value}
+                                    onChange={weightField.onChange}
+                                  />
+                                }
+                              />
+                            )}
+                          />
+                        )}
+                      />
+                    </div>
+                  )
+                })}
+
+                <Separator />
+
+                <div className="max-w-28">
+                  <DocsField
+                    label="k"
+                    htmlFor="k"
+                    page="tutorial"
+                    hash={DOCS_HASH.tutorialSearch}
+                    blurb="Positive integer. How many nearest neighbours to return."
+                    error={errors.k?.message}
+                    mono
+                  >
+                    <Input
+                      id="k"
+                      type="number"
+                      step={1}
+                      aria-invalid={errors.k ? true : undefined}
+                      {...form.register("k")}
+                    />
+                  </DocsField>
+                </div>
+
+                <Collapsible>
+                  <CollapsibleTrigger
+                    render={
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="bg-muted hover:bg-muted/70 dark:hover:bg-muted/50"
+                      />
+                    }
+                  >
+                    Advanced
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="grid gap-3 pt-3">
+                    <Controller
+                      control={form.control}
+                      name="withDocs"
+                      render={({ field }) => (
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) =>
+                              field.onChange(Boolean(checked))}
+                          />
+                          <FieldLabel className="font-mono">
+                            withDocs
+                          </FieldLabel>
+                        </Field>
+                      )}
+                    />
+                    <Controller
+                      control={form.control}
+                      name="withExplanation"
+                      render={({ field }) => (
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) =>
+                              field.onChange(Boolean(checked))}
+                          />
+                          <FieldLabel className="font-mono">
+                            withExplanation
+                            <span className="-ml-1.5">
+                              <DocsHelpIcon
+                                page="resolvers"
+                                hash={DOCS_HASH.inspectingResolvers}
+                                label="withExplanation"
+                              />
+                            </span>
+                          </FieldLabel>
+                        </Field>
+                      )}
+                    />
+                    <Controller
+                      control={form.control}
+                      name="withVectors"
+                      render={({ field }) => (
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) =>
+                              field.onChange(Boolean(checked))}
+                          />
+                          <FieldLabel className="font-mono">
+                            withVectors
+                          </FieldLabel>
+                        </Field>
+                      )}
+                    />
+                    <DocsField
+                      label="accessFilter"
+                      htmlFor="access-filter"
+                      page="accessControl"
+                      hash={DOCS_HASH.accessFiltering}
+                      description="Comma-separated keys. Documents need at least one match. [null] is not the same as omitting the filter."
+                      mono
+                    >
+                      <Input
+                        id="access-filter"
+                        {...form.register("accessFilter")}
+                        placeholder="team-a, team-b"
+                      />
+                    </DocsField>
+                    <Controller
+                      control={form.control}
+                      name="includeNullAccess"
+                      render={({ field }) => (
+                        <Field orientation="horizontal">
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) =>
+                              field.onChange(Boolean(checked))}
+                          />
+                          <FieldLabel>
+                            Include documents with no access keys
+                            <span className="-ml-1.5">
+                              <DocsHelpIcon
+                                page="accessControl"
+                                hash={DOCS_HASH.accessNull}
+                                label="Documents with no access keys"
+                              />
+                            </span>
+                          </FieldLabel>
+                        </Field>
+                      )}
+                    />
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Button type="submit">Search</Button>
+              </CardContent>
+            </Card>
+
+            {resultsPane}
+          </div>
+        )}
     </form>
   )
 }

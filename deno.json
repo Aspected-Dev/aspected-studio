@@ -6,6 +6,8 @@
     "dev:all": "VITE_DOCS_LOCAL=true deno run -A npm:concurrently --kill-others \"deno task dev\" \"deno task dev:docs\"",
     "dev:desktop": "deno desktop --hmr .",
     "seed:catalog": "deno run -A utility/seed-catalog.ts",
+    "seed:movies": "deno run -A utility/seed-movies.ts",
+    "check:movies": "deno run -A utility/check-movies.ts",
     "verify:tutorials": "deno run -A utility/verify-tutorials.ts",
     "build": "deno run -A npm:vite build",
     "preview": "deno run -A npm:vite preview",

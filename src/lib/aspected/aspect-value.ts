@@ -105,7 +105,8 @@ export function formatDatetimeValue(
     case "date": {
       const modes = new Set(aspectGranularities(aspect))
       if (modes.has("year")) {
-        return `${year}/${month}/${day}`
+        // Year-only resolvers accept YYYY and YYYY/MM, not YYYY/MM/DD.
+        return `${year}`
       }
       if (modes.has("month")) {
         return `${month}/${day}`
@@ -174,6 +175,41 @@ export function parseDatetimeValue(
     return date
   }
 
+  const modes = new Set(aspectGranularities(aspect))
+
+  // Year-only: server accepts YYYY, YYYY/MM, and full date-time, not bare
+  // YYYY/MM/DD.
+  if (modes.has("year") && control === "date") {
+    const yearOnly = /^(\d{4})$/.exec(trimmed)
+    if (yearOnly) {
+      return new Date(Number(yearOnly[1]), 0, 1, 0, 0, 0)
+    }
+    const yearMonth = /^(\d{4})\/(\d{2})$/.exec(trimmed)
+    if (yearMonth) {
+      return new Date(
+        Number(yearMonth[1]),
+        Number(yearMonth[2]) - 1,
+        1,
+        0,
+        0,
+        0,
+      )
+    }
+    const full = /^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+      .exec(trimmed)
+    if (full) {
+      return new Date(
+        Number(full[1]),
+        Number(full[2]) - 1,
+        Number(full[3]),
+        Number(full[4]),
+        Number(full[5]),
+        Number(full[6]),
+      )
+    }
+    return null
+  }
+
   const dateTime = /^(\d{4})\/(\d{2})\/(\d{2})(?: (\d{2}):(\d{2}):(\d{2}))?$/
     .exec(trimmed)
   if (dateTime) {
@@ -224,7 +260,7 @@ function datetimePattern(aspect: StoredAspect): RegExp {
     case "date": {
       const modes = new Set(aspectGranularities(aspect))
       if (modes.has("year")) {
-        return /^\d{4}\/\d{2}\/\d{2}$/
+        return /^(?:\d{4}|\d{4}\/\d{2}|\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2})$/
       }
       if (modes.has("month")) {
         return /^\d{2}\/\d{2}$/
@@ -282,7 +318,7 @@ export function aspectValueDescription(aspect: StoredAspect): string {
       case "date": {
         const modes = new Set(aspectGranularities(aspect))
         if (modes.has("year")) {
-          return `Date as YYYY/MM/DD. ${omit}`
+          return `Year as YYYY, YYYY/MM, or YYYY/MM/DD HH:MM:SS. ${omit}`
         }
         if (modes.has("month")) {
           return `Month and day as MM/DD. ${omit}`

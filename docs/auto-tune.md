@@ -57,7 +57,8 @@ number you set, never a whole queued batch past it.
 ## Setup controls
 
 - Golden set
-- Per-aspect: tune weight / allow off / freeze
+- Per-aspect: tune weight / allow off / freeze. Defaults freeze aspects the
+  selected set never queries; switching sets rebuilds those defaults.
 - Budget presets: Quick 250, Standard 1000, Thorough 4000, or custom
 - Concurrency (default 4)
 - Train/holdout split (on when the set has enough runnable cases)
@@ -67,7 +68,16 @@ number you set, never a whole queued batch past it.
 
 When a run finishes (or you Stop), the champion is auto-saved under
 `aspected-studio.tuned-configs`. The results card shows start vs champion,
-holdout, rationale, per-case deltas, and a leaderboard.
+holdout, rationale, per-case deltas, and a leaderboard. Each result tile has a
+help icon with the same wording as below.
+
+### Reading the three tiles
+
+| Tile                   | Meaning                                                                                                                                                                                                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Start objective**    | Score of the config you began with (often all weights 1), on the **train** split when holdout is on. Objective = primary metric (usually nDCG) minus a forbidden-case penalty; each case counts equally.                                                                                        |
+| **Champion objective** | Best config found on **train** under the budget. Compare to Start. A gain within the noise floor is treated as a tie (parsimony may still change which config wins).                                                                                                                            |
+| **Holdout**            | Same objective on cases **not** used while searching. Scored once in Confirm. Close to the train champion → the win likely generalizes. Much lower → possible overfit or an unlucky split (especially on small sets). `n/a` means holdout was off, the set was too small, or Confirm never ran. |
 
 Per-case deltas compare the baseline runs against the **champion's** runs, so
 they always describe the config you are about to save rather than whichever
@@ -96,3 +106,4 @@ judgements first.
 - [Playground](playground.md) (Quick suggest is Preview-only)
 - [Architecture](architecture.md)
 - Tutorial: [Auto-tune the catalog](tutorials/06-auto-tune.md)
+- Tutorial: [Movies Auto-tune readiness](tutorials/07-movies-auto-tune.md)

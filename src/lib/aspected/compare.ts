@@ -61,7 +61,6 @@ export type ComparisonSummary = OverlapAtDepth & {
 export type ConfigChange =
   | { kind: "k"; from: string; to: string }
   | { kind: "weight"; name: string; from: number; to: number }
-  | { kind: "enabled"; name: string; from: boolean; to: boolean }
   | { kind: "value"; name: string; from: string; to: string }
 
 /** Recharts-friendly two-stage series for a bump chart. */
@@ -304,15 +303,6 @@ export function diffConfigs(
     const aspectB = byName.get(aspectA.name)
     if (aspectB === undefined) {
       continue
-    }
-
-    if (aspectA.enabled !== aspectB.enabled) {
-      changes.push({
-        kind: "enabled",
-        name: aspectA.name,
-        from: aspectA.enabled,
-        to: aspectB.enabled,
-      })
     }
 
     if (aspectA.value !== aspectB.value) {

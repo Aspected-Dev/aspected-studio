@@ -3,9 +3,11 @@
 `/indexes/:name/playground` answers: **what happens to my ranking if I turn this
 aspect up?** The [Search](indexes.md#search) page stays the raw API form.
 
-Compose a sparse query with one control per aspect (shared `AspectValueField`:
-enum/dict select, text/raw textarea, number input, datetime picker), then drag
-the log-scale weight sliders. Invalid aspect values are caught against the index
+Compose a sparse query with one shared `AspectQueryRow` per aspect (enum/dict
+select, text/raw textarea, number input, datetime picker), then drag the
+log-scale weight sliders. An **Include** switch mirrors participation: on when
+the aspect is in the query, off clears the value. Weight `0` parks a filled
+value without scoring it. Invalid aspect values are caught against the index
 settings before a request is sent. Every search runs with
 `withExplanation: true`, so Studio can recover per-aspect distances and re-score
 results already on screen. Ranking updates on the frame without a server round
@@ -21,9 +23,10 @@ debounce while **Auto-run** is on.
 | Stale   | The query changed, or grades cannot be recovered                 |
 
 Every metric stacks per-aspect contributions that sum to the total distance, so
-a shorter bar is always a closer match. Select a ranking row to open the aspect
-contribution table. Click a truncated **Stored value** cell to open an inspect
-sheet with the full JSON.
+a shorter bar is always a closer match. Select a ranking row to open a sheet
+with the aspect contribution table. Click a truncated **Stored value** cell to
+open a nested inspect sheet with the full JSON. Leaving Ranking clears the
+selection so the sheet does not linger on Compare or Scorecard.
 
 ### Limits
 
