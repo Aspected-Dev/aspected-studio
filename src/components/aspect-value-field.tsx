@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/select.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
 import {
+  aspectDatetimeYearBounds,
+  aspectGranularities,
   datetimeControl,
   formatDatetimeValue,
   parseDatetimeValue,
@@ -191,6 +193,10 @@ export function AspectValueField({
     )
   } else if (aspect.type === "datetime") {
     const withTime = control === "date-time" || control === "timestamp"
+    const modes = new Set(aspectGranularities(aspect))
+    const yearOnly = control === "date" && modes.has("year") &&
+      !modes.has("month") && !modes.has("day")
+    const { minYear, maxYear } = aspectDatetimeYearBounds(aspect)
     body = (
       <DateTimePicker
         id={id}
@@ -198,6 +204,9 @@ export function AspectValueField({
         disabled={disabled}
         invalid={ariaInvalid}
         withTime={withTime}
+        yearOnly={yearOnly}
+        minYear={minYear}
+        maxYear={maxYear}
         open={open}
         onOpenChange={onOpenChange}
         value={parseDatetimeValue(aspect, value)}

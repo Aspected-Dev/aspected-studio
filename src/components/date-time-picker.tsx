@@ -16,16 +16,18 @@ function pad2(value: number): string {
 }
 
 function timeFromDate(date: Date): string {
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${
+    pad2(date.getSeconds())
+  }`
 }
 
 function mergeTime(date: Date, time: string): Date {
-  const [hours, minutes] = time.split(":").map(Number)
+  const [hours, minutes, seconds] = time.split(":").map(Number)
   const next = new Date(date)
   next.setHours(
     Number.isFinite(hours) ? hours : 0,
     Number.isFinite(minutes) ? minutes : 0,
-    0,
+    Number.isFinite(seconds) ? seconds : 0,
     0,
   )
   return next
@@ -37,8 +39,17 @@ export type DateTimePickerProps = {
   value: Date | null
   /** Called when the calendar or time input changes. */
   onChange: (next: Date | null) => void
-  /** When true, show an `HH:mm` time input beside the calendar trigger. */
+  /** When true, show an `HH:mm:ss` time input beside the calendar trigger. */
   withTime?: boolean
+  /**
+   * When true, the trigger shows the year only (YYYY). Used for year-granularity
+   * datetime aspects whose query string is just a year.
+   */
+  yearOnly?: boolean
+  /** Inclusive earliest selectable year from aspect settings. */
+  minYear?: number | null
+  /** Inclusive latest selectable year from aspect settings. */
+  maxYear?: number | null
   /** Optional id for the trigger button. */
   id?: string
   /** Accessible name for the trigger. */
@@ -56,13 +67,17 @@ export type DateTimePickerProps = {
 }
 
 /**
- * Popover calendar with an optional time input, composed from shadcn Popover
- * and Calendar.
+ * Popover calendar with month/year dropdowns and an optional time input.
+ *
+ * Bounds come from datetime aspect `minYear` / `maxYear` when set.
  */
 export function DateTimePicker({
   value,
   onChange,
   withTime = false,
+  yearOnly = false,
+  minYear = null,
+  maxYear = null,
   id,
   ariaLabel,
   invalid = false,
@@ -80,6 +95,22 @@ export function DateTimePicker({
       setUncontrolledOpen(next)
     }
   }
+
+  const startMonth = minYear !== null && minYear !== undefined
+    ? new Date(minYear, 0)
+    : undefined
+  const endMonth = maxYear !== null && maxYear !== undefined
+    ? new Date(maxYear, 11)
+    : undefined
+  const defaultMonth = value ??
+    endMonth ??
+    startMonth ??
+    new Date()
+
+  const disabledMatchers = [
+    ...(startMonth ? [{ before: startMonth }] : []),
+    ...(endMonth ? [{ after: new Date(endMonth.getFullYear(), 11, 31) }] : []),
+  ]
 
   return (
     <div className={cn("flex w-full flex-wrap items-center gap-2", className)}>
@@ -101,13 +132,26 @@ export function DateTimePicker({
         >
           <CalendarIcon />
           {value
-            ? format(value, withTime ? "PPP p" : "PPP")
+            ? format(
+              value,
+              yearOnly ? "yyyy" : withTime ? "PPP p" : "PPP",
+            )
             : <span>Pick a date</span>}
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent
+          className="w-auto overflow-hidden p-0"
+          align="start"
+        >
           <Calendar
             mode="single"
+            captionLayout="dropdown"
             selected={value ?? undefined}
+            defaultMonth={defaultMonth}
+            startMonth={startMonth}
+            endMonth={endMonth}
+            disabled={disabledMatchers.length > 0
+              ? disabledMatchers
+              : undefined}
             onSelect={(next) => {
               if (!next) {
                 onChange(null)
@@ -128,10 +172,11 @@ export function DateTimePicker({
         ? (
           <Input
             type="time"
+            step="1"
             disabled={disabled || value === null}
             value={value ? timeFromDate(value) : ""}
             aria-label={ariaLabel ? `${ariaLabel} time` : "Time"}
-            className="w-32"
+            className="w-32 appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
             onChange={(event) => {
               if (!value) {
                 return

@@ -42,6 +42,24 @@ export function aspectGranularities(
 }
 
 /**
+ * Reads optional `minYear` / `maxYear` bounds from a datetime aspect.
+ */
+export function aspectDatetimeYearBounds(aspect: StoredAspect): {
+  minYear: number | null
+  maxYear: number | null
+} {
+  if (aspect.type !== "datetime") {
+    return { minYear: null, maxYear: null }
+  }
+  const min = aspect.settings.minYear
+  const max = aspect.settings.maxYear
+  return {
+    minYear: typeof min === "number" && Number.isFinite(min) ? min : null,
+    maxYear: typeof max === "number" && Number.isFinite(max) ? max : null,
+  }
+}
+
+/**
  * Picks the UI control for a datetime aspect from its configured granularities.
  *
  * Wider modes win: timestamp, then year (optionally with time), then month,
@@ -318,7 +336,17 @@ export function aspectValueDescription(aspect: StoredAspect): string {
       case "date": {
         const modes = new Set(aspectGranularities(aspect))
         if (modes.has("year")) {
-          return `Year as YYYY, YYYY/MM, or YYYY/MM/DD HH:MM:SS. ${omit}`
+          const { minYear, maxYear } = aspectDatetimeYearBounds(aspect)
+          if (minYear !== null && maxYear !== null) {
+            return `Year between ${minYear} and ${maxYear}. ${omit}`
+          }
+          if (minYear !== null) {
+            return `Year >= ${minYear}. ${omit}`
+          }
+          if (maxYear !== null) {
+            return `Year <= ${maxYear}. ${omit}`
+          }
+          return `Year as YYYY. ${omit}`
         }
         if (modes.has("month")) {
           return `Month and day as MM/DD. ${omit}`

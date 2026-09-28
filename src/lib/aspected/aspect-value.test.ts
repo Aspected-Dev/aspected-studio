@@ -122,6 +122,18 @@ describe("aspectValueDescription", () => {
       ),
     ).toBe("One of: laptop, phone. Leave blank to omit.")
   })
+
+  it("describes year-only datetime bounds without advertising time", () => {
+    expect(
+      aspectValueDescription(
+        aspect("datetime", {
+          granularity: ["year"],
+          minYear: 1910,
+          maxYear: 2020,
+        }),
+      ),
+    ).toBe("Year between 1910 and 2020. Leave blank to omit.")
+  })
 })
 
 describe("aspectValueSchema", () => {
