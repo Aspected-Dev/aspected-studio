@@ -13,10 +13,23 @@ vi.mock("@/components/connection-dialog.tsx", () => ({
   }),
 }))
 
+const studioConfig = vi.hoisted(() => ({
+  config: null as { bundled: boolean; apiPort?: number } | null,
+  defaultBaseUrl: "http://localhost:8080",
+  bundled: false,
+}))
+
+vi.mock("@/hooks/use-studio-config.tsx", () => ({
+  useStudioConfig: () => studioConfig,
+}))
+
 describe("WelcomePage", () => {
   afterEach(() => {
     cleanup()
     openNew.mockReset()
+    studioConfig.bundled = false
+    studioConfig.config = null
+    studioConfig.defaultBaseUrl = "http://localhost:8080"
   })
 
   it("prompts the user to add a connection", async () => {
@@ -24,6 +37,9 @@ describe("WelcomePage", () => {
     render(<WelcomePage />)
     expect(
       screen.getByRole("heading", { name: "Welcome to Aspected Studio" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/The default Docker port is 8080/),
     ).toBeInTheDocument()
     const addButton = screen.getByRole("button", {
       name: "Add new connection",
@@ -35,5 +51,22 @@ describe("WelcomePage", () => {
       .toHaveAttribute("href", docsUrl("gettingStarted"))
     expect(screen.getByRole("link", { name: /tutorial/ }))
       .toHaveAttribute("href", docsUrl("tutorial"))
+  })
+
+  it("shows Studio and API ports when served from the container", () => {
+    studioConfig.bundled = true
+    studioConfig.config = { bundled: true, apiPort: 8080 }
+    vi.stubGlobal("location", {
+      ...window.location,
+      port: "8081",
+      protocol: "http:",
+      origin: "http://localhost:8081",
+    })
+    render(<WelcomePage />)
+    expect(
+      screen.getByText(/Aspected container on port 8081/),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/API listens on port 8080/)).toBeInTheDocument()
+    vi.unstubAllGlobals()
   })
 })

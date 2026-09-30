@@ -56,7 +56,7 @@ describe("DocsHelpMenu", () => {
   })
 
   it("lists This page, catalog entries, and Documentation home", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null, pointerEventsCheck: 0 })
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null)
 
     renderWithProviders(
@@ -82,7 +82,6 @@ describe("DocsHelpMenu", () => {
     expect(openSpy).toHaveBeenCalled()
   })
 })
-
 describe("SettingsDialog", () => {
   afterEach(() => {
     cleanup()

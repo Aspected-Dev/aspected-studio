@@ -383,7 +383,7 @@ describe("IndexScorecardPage", () => {
 
   it("confirms before deleting a case", async () => {
     saveGoldenSets([goldenSet()])
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null, pointerEventsCheck: 0 })
     renderPage()
 
     await user.click(await findRunButton())

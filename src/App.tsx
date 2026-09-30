@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router"
 import { AppShell } from "@/components/app-shell.tsx"
 import { IndexLayout } from "@/components/index-layout.tsx"
 import { ConnectionProvider } from "@/hooks/use-connection.tsx"
+import { StudioConfigProvider } from "@/hooks/use-studio-config.tsx"
 import { CreateIndexPage } from "@/pages/create-index-page.tsx"
 import { IndexAutoTunePage } from "@/pages/index-auto-tune-page.tsx"
 import { IndexDocsPage } from "@/pages/index-docs-page.tsx"
@@ -37,9 +38,11 @@ const router = createBrowserRouter([
 /** Studio root: connection provider plus React Router 7 routes. */
 export function App() {
   return (
-    <ConnectionProvider>
-      <RouterProvider router={router} />
-    </ConnectionProvider>
+    <StudioConfigProvider>
+      <ConnectionProvider>
+        <RouterProvider router={router} />
+      </ConnectionProvider>
+    </StudioConfigProvider>
   )
 }
 

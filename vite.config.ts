@@ -38,5 +38,10 @@ export default defineConfig({
     environment: "jsdom",
     globals: false,
     setupFiles: ["./src/test/setup.ts"],
+    // RTL + userEvent suites routinely exceed Vitest's 5s default when the
+    // full suite runs in parallel on a busy machine. Also set via deno.json
+    // (`--testTimeout=15000`) so the CLI always wins.
+    testTimeout: 15_000,
+    maxWorkers: "50%",
   },
 })

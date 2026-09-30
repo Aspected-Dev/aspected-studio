@@ -22,10 +22,11 @@ import {
 } from "@/components/ui/dialog.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
+import { useStudioConfig } from "@/hooks/use-studio-config.tsx"
+import { AspectedApiError } from "@/lib/aspected/client.ts"
 import {
   connectionFormSchema,
   type ConnectionFormValues,
-  DEFAULT_BASE_URL,
   displayHost,
   type SavedConnection,
 } from "@/lib/aspected/connection.ts"
@@ -36,11 +37,16 @@ type ConnectionDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   connection?: SavedConnection | null
+  /** When true, focus the API token field (e.g. after a 401). */
+  requireToken?: boolean
 }
 
 type ConnectionDialogApi = {
   openNew: () => void
-  openEdit: (connection: SavedConnection) => void
+  openEdit: (
+    connection: SavedConnection,
+    options?: { requireToken?: boolean },
+  ) => void
 }
 
 const ConnectionDialogContext = createContext<
@@ -57,14 +63,17 @@ export function ConnectionDialogProvider({
 }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<SavedConnection | null>(null)
+  const [requireToken, setRequireToken] = useState(false)
   const api = useMemo<ConnectionDialogApi>(
     () => ({
       openNew: () => {
         setEditing(null)
+        setRequireToken(false)
         setOpen(true)
       },
-      openEdit: (connection) => {
+      openEdit: (connection, options) => {
         setEditing(connection)
+        setRequireToken(options?.requireToken === true)
         setOpen(true)
       },
     }),
@@ -77,10 +86,12 @@ export function ConnectionDialogProvider({
       <ConnectionDialog
         open={open}
         connection={editing}
+        requireToken={requireToken}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen)
           if (!nextOpen) {
             setEditing(null)
+            setRequireToken(false)
           }
         }}
       />
@@ -103,6 +114,9 @@ export function useConnectionDialog(): ConnectionDialogApi {
 
 type SubmitAction = "save" | "connect" | "saveAndConnect"
 
+const TOKEN_REQUIRED_MESSAGE =
+  "This server requires an API token. Paste ASPECTED_SERVER_STATIC_API_TOKEN as a Bearer token."
+
 /**
  * Modal to save and/or connect to an Aspected server.
  */
@@ -110,15 +124,18 @@ export function ConnectionDialog({
   open,
   onOpenChange,
   connection,
+  requireToken = false,
 }: ConnectionDialogProps) {
   const { connecting, upsertConnection, connect } = useConnection()
+  const { defaultBaseUrl, bundled } = useStudioConfig()
   const editing = connection ?? null
+  const tokenInputRef = useRef<HTMLInputElement | null>(null)
 
   const form = useForm<ConnectionFormValues>({
     resolver: zodResolver(connectionFormSchema),
     defaultValues: {
       name: "",
-      baseUrl: DEFAULT_BASE_URL,
+      baseUrl: defaultBaseUrl,
       apiToken: "",
     },
   })
@@ -136,12 +153,29 @@ export function ConnectionDialog({
         baseUrl: editing.baseUrl,
         apiToken: editing.apiToken,
       })
+      if (requireToken) {
+        form.setError("apiToken", { message: TOKEN_REQUIRED_MESSAGE })
+      }
       return
     }
-    form.reset({ name: "", baseUrl: DEFAULT_BASE_URL, apiToken: "" })
-  }, [open, editing, form])
+    form.reset({ name: "", baseUrl: defaultBaseUrl, apiToken: "" })
+  }, [open, editing, form, defaultBaseUrl, requireToken])
+
+  useEffect(() => {
+    if (!open || !requireToken) {
+      return
+    }
+    const frame = requestAnimationFrame(() => {
+      tokenInputRef.current?.focus()
+      tokenInputRef.current?.select()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [open, requireToken])
 
   const baseUrlValue = form.watch("baseUrl")
+  const { ref: tokenRegisterRef, ...tokenRegisterRest } = form.register(
+    "apiToken",
+  )
 
   function persist(values: ConnectionFormValues) {
     return upsertConnection({
@@ -150,6 +184,18 @@ export function ConnectionDialog({
       baseUrl: values.baseUrl.trim(),
       apiToken: values.apiToken.trim(),
     })
+  }
+
+  function handleAuthFailure(caught: unknown) {
+    if (caught instanceof AspectedApiError && caught.status === 401) {
+      form.setError("apiToken", { message: TOKEN_REQUIRED_MESSAGE })
+      // Focus after the submit button releases focus from the click.
+      queueMicrotask(() => {
+        tokenInputRef.current?.focus()
+        tokenInputRef.current?.select()
+      })
+    }
+    toastCaughtError(caught, "Cannot reach Aspected")
   }
 
   async function runConnect(target: Parameters<typeof connect>[0]) {
@@ -176,7 +222,7 @@ export function ConnectionDialog({
           apiToken: values.apiToken.trim(),
         })
       } catch (caught) {
-        toastCaughtError(caught, "Cannot reach Aspected")
+        handleAuthFailure(caught)
       }
       return
     }
@@ -186,7 +232,7 @@ export function ConnectionDialog({
     try {
       await runConnect(saved)
     } catch (caught) {
-      toastCaughtError(caught, "Cannot reach Aspected")
+      handleAuthFailure(caught)
     }
   })
 
@@ -200,8 +246,9 @@ export function ConnectionDialog({
             {editing ? "Edit connection" : "New connection"}
           </DialogTitle>
           <DialogDescription>
-            Save a server for later, or connect now. Studio does not connect
-            until you choose one.
+            {bundled
+              ? "This Studio UI is served by the Aspected container. Connect to the API on this host, or save another server."
+              : "Save a server for later, or connect now. Studio does not connect until you choose one."}
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-3" onSubmit={handleSubmit}>
@@ -210,7 +257,7 @@ export function ConnectionDialog({
               id="connection-name"
               {...form.register("name")}
               placeholder={displayHost(
-                baseUrlValue.trim() || DEFAULT_BASE_URL,
+                baseUrlValue.trim() || defaultBaseUrl,
               )}
               autoComplete="off"
             />
@@ -219,13 +266,15 @@ export function ConnectionDialog({
             label="Server URL"
             htmlFor="connection-url"
             page="gettingStarted"
-            description="Docker publishes Aspected on port 8080 by default."
+            description={bundled
+              ? "Defaults to the API port on this host. Studio and the API use separate ports."
+              : "Docker publishes Aspected on port 8080 by default."}
             error={form.formState.errors.baseUrl?.message}
           >
             <Input
               id="connection-url"
               {...form.register("baseUrl")}
-              placeholder={DEFAULT_BASE_URL}
+              placeholder={defaultBaseUrl}
               autoComplete="off"
             />
           </DocsField>
@@ -234,12 +283,17 @@ export function ConnectionDialog({
             htmlFor="connection-token"
             page="security"
             hash={DOCS_HASH.apiToken}
-            description="Leave empty when the server has no staticApiToken. Otherwise send it as a Bearer token."
+            description="Leave empty when the server has no staticApiToken. Otherwise paste ASPECTED_SERVER_STATIC_API_TOKEN as a Bearer token."
+            error={form.formState.errors.apiToken?.message}
           >
             <Input
               id="connection-token"
               type="password"
-              {...form.register("apiToken")}
+              {...tokenRegisterRest}
+              ref={(element) => {
+                tokenRegisterRef(element)
+                tokenInputRef.current = element
+              }}
               placeholder="Optional Bearer token"
               autoComplete="off"
             />

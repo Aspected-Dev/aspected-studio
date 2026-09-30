@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { createMemoryRouter, RouterProvider } from "react-router"
@@ -69,8 +69,25 @@ function renderPage() {
 
 async function openRowMenu() {
   const user = userEvent.setup()
+  // A prior menu action can leave the popup mid-close; wait it out.
+  if (screen.queryByRole("menuitem", { name: "Schema" })) {
+    await user.keyboard("{Escape}")
+    await waitFor(() => {
+      expect(screen.queryByRole("menuitem", { name: "Schema" })).toBeNull()
+    })
+  }
   await user.click(await screen.findByRole("button", { name: "Open menu" }))
+  await screen.findByRole("menuitem", { name: "Schema" })
   return user
+}
+
+async function clickMenuItem(
+  user: ReturnType<typeof userEvent.setup>,
+  name: string | RegExp,
+) {
+  const item = await screen.findByRole("menuitem", { name })
+  // Popup wrappers briefly use pointer-events: none while opening.
+  await user.click(item, { pointerEventsCheck: 0 })
 }
 
 describe("IndexesPage", () => {
@@ -137,7 +154,7 @@ describe("IndexesPage", () => {
   it("navigates to schema from the row menu", async () => {
     const { router } = renderPage()
     const user = await openRowMenu()
-    await user.click(await screen.findByRole("menuitem", { name: "Schema" }))
+    await clickMenuItem(user, "Schema")
     expect(router.state.location.pathname).toBe(indexPath("products"))
     expect(screen.getByText("schema page")).toBeInTheDocument()
   })
@@ -145,16 +162,14 @@ describe("IndexesPage", () => {
   it("navigates to documents from the row menu", async () => {
     renderPage()
     const user = await openRowMenu()
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Documents" }),
-    )
+    await clickMenuItem(user, "Documents")
     expect(screen.getByText("docs page")).toBeInTheDocument()
   })
 
   it("navigates to search from the row menu", async () => {
     renderPage()
     const user = await openRowMenu()
-    await user.click(await screen.findByRole("menuitem", { name: "Search" }))
+    await clickMenuItem(user, "Search")
     expect(screen.getByText("search page")).toBeInTheDocument()
   })
 
@@ -165,31 +180,23 @@ describe("IndexesPage", () => {
     const curl = buildCurlCommand({ method: "GET", url: apiUrl })
 
     let user = await openRowMenu()
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Copy name" }),
-    )
+    await clickMenuItem(user, "Copy name")
     expect(copyToClipboard).toHaveBeenCalledWith("products")
     expect(toast.success).toHaveBeenCalledWith("Copied index name")
 
     user = await openRowMenu()
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Copy Studio URL" }),
-    )
+    await clickMenuItem(user, "Copy Studio URL")
     expect(copyToClipboard).toHaveBeenCalledWith(studioUrl)
     expect(toast.success).toHaveBeenCalledWith("Copied Studio URL")
 
     user = await openRowMenu()
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Copy API URL" }),
-    )
+    await clickMenuItem(user, "Copy API URL")
     expect(copyToClipboard).toHaveBeenCalledWith(apiUrl)
     expect(toast.success).toHaveBeenCalledWith("Copied API URL")
     expect(apiUrl).not.toContain("secret")
 
     user = await openRowMenu()
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Copy GET curl" }),
-    )
+    await clickMenuItem(user, "Copy GET curl")
     expect(copyToClipboard).toHaveBeenCalledWith(curl)
     expect(toast.success).toHaveBeenCalledWith("Copied curl")
     expect(curl).not.toContain("secret")
@@ -199,7 +206,7 @@ describe("IndexesPage", () => {
   it("confirms delete before calling the API", async () => {
     renderPage()
     const user = await openRowMenu()
-    await user.click(await screen.findByRole("menuitem", { name: "Delete" }))
+    await clickMenuItem(user, "Delete")
     expect(await screen.findByRole("heading", { name: "Delete index" }))
       .toBeInTheDocument()
     expect(connection.client.deleteIndex).not.toHaveBeenCalled()

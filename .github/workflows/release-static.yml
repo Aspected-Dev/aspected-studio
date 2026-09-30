@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  IMAGE: xillio/aspected-studio-static
+
+jobs:
+  publish:
+    name: Build and publish static assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package.json version matches tag
+        run: |
+          pkg_version="$(jq -r .version package.json)"
+          tag_version="${{ steps.version.outputs.version }}"
+          if [ "$pkg_version" != "$tag_version" ]; then
+            echo "package.json version ($pkg_version) does not match tag ($tag_version)"
+            exit 1
+          fi
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        run: deno install --frozen
+
+      - name: CI (fmt, lint, check, test, build)
+        run: deno task ci
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push static image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.static
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:latest
+
+      - name: Package dist tarball
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          tar -C dist -czf "aspected-studio-dist-${version}.tar.gz" .
+          sha256sum "aspected-studio-dist-${version}.tar.gz" \
+            > "aspected-studio-dist-${version}.tar.gz.sha256"
+
+      - name: Write release body
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          digest="${{ steps.push.outputs.digest }}"
+          {
+            echo "Static image: \`${{ env.IMAGE }}:${version}@${digest}\`"
+            echo
+          } > release-body.md
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-body.md
+          generate_release_notes: true
+          files: |
+            aspected-studio-dist-${{ steps.version.outputs.version }}.tar.gz
+            aspected-studio-dist-${{ steps.version.outputs.version }}.tar.gz.sha256

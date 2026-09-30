@@ -75,6 +75,7 @@ describe("ConnectionFooter", () => {
     cleanup()
     connection.disconnect.mockReset()
     connection.deleteConnection.mockReset()
+    connection.connect.mockReset()
     openEdit.mockReset()
     connection.connections = [saved]
     connection.activeId = "conn-1"
@@ -139,5 +140,18 @@ describe("ConnectionFooter", () => {
     expect(
       await screen.findByRole("menuitem", { name: "Remove" }),
     ).toBeInTheDocument()
+  })
+
+  it("opens the edit dialog for a token when connect returns 401", async () => {
+    connection.status = null
+    connection.activeId = null
+    const { AspectedApiError } = await import("@/lib/aspected/client.ts")
+    connection.connect.mockRejectedValue(
+      new AspectedApiError("Missing bearer token", 401),
+    )
+    const user = userEvent.setup()
+    render(<ConnectionFooter />)
+    await user.click(screen.getByRole("button", { name: "Connect" }))
+    expect(openEdit).toHaveBeenCalledWith(saved, { requireToken: true })
   })
 })

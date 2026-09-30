@@ -40,6 +40,14 @@ vi.mock("@/hooks/use-connection.tsx", () => ({
   useConnection: () => connection,
 }))
 
+vi.mock("@/hooks/use-studio-config.tsx", () => ({
+  useStudioConfig: () => ({
+    config: null,
+    defaultBaseUrl: "http://localhost:8080",
+    bundled: false,
+  }),
+}))
+
 vi.mock("@/components/ui/sonner.tsx", () => ({
   Toaster: () => null,
 }))

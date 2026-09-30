@@ -99,7 +99,7 @@ function renderPage() {
  * when the server is asked. Auto-run has its own test.
  */
 async function setupManual() {
-  const user = userEvent.setup()
+  const user = userEvent.setup({ delay: null })
   renderPage()
   await user.click(await screen.findByLabelText("Auto-run searches"))
   return user

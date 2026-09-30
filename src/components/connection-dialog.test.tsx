@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react"
+import { cleanup, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { ConnectionDialog } from "./connection-dialog.tsx"
@@ -37,6 +37,14 @@ const { connection } = vi.hoisted(() => {
 
 vi.mock("@/hooks/use-connection.tsx", () => ({
   useConnection: () => connection,
+}))
+
+vi.mock("@/hooks/use-studio-config.tsx", () => ({
+  useStudioConfig: () => ({
+    config: null,
+    defaultBaseUrl: DEFAULT_BASE_URL,
+    bundled: false,
+  }),
 }))
 
 vi.mock("sonner", () => ({
@@ -130,5 +138,22 @@ describe("ConnectionDialog", () => {
       await screen.findByText(/must be a valid url/i),
     ).toBeInTheDocument()
     expect(connection.upsertConnection).not.toHaveBeenCalled()
+  })
+
+  it("focuses the API token field when connect returns 401", async () => {
+    const user = userEvent.setup()
+    const { AspectedApiError } = await import("@/lib/aspected/client.ts")
+    connection.connect.mockRejectedValue(
+      new AspectedApiError("Missing bearer token", 401),
+    )
+    renderDialog()
+    await user.click(screen.getByRole("button", { name: "Connect" }))
+    expect(
+      await screen.findByText(/requires an API token/i),
+    ).toBeInTheDocument()
+    const tokenInput = screen.getByPlaceholderText("Optional Bearer token")
+    await waitFor(() => {
+      expect(document.activeElement).toBe(tokenInput)
+    })
   })
 })

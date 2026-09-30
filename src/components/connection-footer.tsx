@@ -38,6 +38,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
+import { AspectedApiError } from "@/lib/aspected/client.ts"
 import {
   displayHost,
   type SavedConnection,
@@ -78,6 +79,9 @@ export function ConnectionFooter() {
       )
     } catch (caught) {
       toastCaughtError(caught, "Cannot reach Aspected")
+      if (caught instanceof AspectedApiError && caught.status === 401) {
+        openEdit(connection, { requireToken: true })
+      }
     }
   }
 

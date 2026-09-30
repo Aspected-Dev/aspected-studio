@@ -1,0 +1,4 @@
+# Static Studio assets only. Official Aspected images pin and COPY this image
+# into /app/studio (see aspects.dev Dockerfile ARG STUDIO_VERSION).
+FROM scratch
+COPY dist/ /

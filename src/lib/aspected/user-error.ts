@@ -207,7 +207,7 @@ function fromApiError(
       title: "Authentication required",
       description: withAction(
         serverMessage || "The server rejected this request.",
-        "Open Server in the sidebar and paste a valid API token.",
+        "Open Server in the sidebar and paste the API token from ASPECTED_SERVER_STATIC_API_TOKEN.",
       ),
       docs: { page: "security", hash: DOCS_HASH.apiToken },
     }

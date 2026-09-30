@@ -1,8 +1,9 @@
 # Aspected Studio
 
 Web UI for browsing and working with **Aspected**, a vector database. The MVP is
-a Vite + React app managed with Deno. Desktop packaging (`deno desktop`) and
-shipping alongside the Aspected Docker image come after the web MVP.
+a Vite + React app managed with Deno. Studio also ships inside every official
+Aspected Docker image (disabled by default). Desktop packaging (`deno desktop`)
+comes later.
 
 - **Developers / agents:** start with [`AGENTS.md`](AGENTS.md) and
   [`.cursor/rules`](.cursor/rules/)
@@ -37,6 +38,10 @@ Then start Studio:
 ```bash
 deno task dev
 ```
+
+To use the Studio UI that ships with Aspected Docker images, enable it at
+runtime (see [Connections](docs/connections.md)). Local development still uses
+`deno task dev` as above.
 
 `deno task dev` proxies same-origin `/api` to `http://localhost:8080`. Override
 the proxy target with `ASPECTED_URL` if the server is on another local port.
@@ -105,8 +110,9 @@ against the cheat sheet stays a human read.
 | Typecheck           | `deno task check`            | `src/main.tsx` + `utility/`         |
 | CI locally          | `deno task ci`               | fmt check, lint, check, test, build |
 
-`deno task preview` and production builds do not include the Vite proxy. Use a
-server with CORS enabled, or put Studio behind a reverse proxy to `/api`.
+`deno task preview` and production builds do not include the Vite proxy. Point
+Studio at a server with CORS enabled (bundled Studio enables CORS when the UI is
+on).
 
 ### Local Aspected product docs (`aspects.dev`)
 
@@ -137,7 +143,31 @@ Or point any Vite session at an already running MkDocs server:
 VITE_DOCS_LOCAL=true deno task dev
 ```
 
-## Adding shadcn components
+## Releasing
+
+Studio versions are independent from Aspected. To cut a release:
+
+1. Bump `"version"` in [`package.json`](package.json) to `X.Y.Z`.
+2. Merge to the default branch, then tag and push `vX.Y.Z` (must match
+   `package.json`).
+3. [`.github/workflows/release-static.yml`](.github/workflows/release-static.yml)
+   runs `deno task ci`, pushes `xillio/aspected-studio-static:X.Y.Z` (and
+   `:latest`) for `linux/amd64` and `linux/arm64`, and creates a GitHub Release
+   with `aspected-studio-dist-X.Y.Z.tar.gz` plus its `.sha256` checksum.
+4. In the sibling `aspects.dev` repo, bump `ARG STUDIO_VERSION` in the
+   Dockerfile to `X.Y.Z` so the next Aspected image bake picks up this Studio.
+
+Local override while developing Studio against an Aspected image:
+
+```bash
+deno task build
+docker build -f Dockerfile.static -t aspected-studio-static:dev .
+```
+
+Then build Aspected with
+`--build-arg STUDIO_IMAGE=aspected-studio-static --build-arg STUDIO_VERSION=dev`.
+
+## Definition of Done
 
 ```bash
 deno run -A npm:shadcn@latest add button

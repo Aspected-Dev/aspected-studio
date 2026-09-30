@@ -157,16 +157,35 @@ export function removeConnection(id: string): SavedConnection[] {
 }
 
 /**
- * Resolves the fetch origin. The default local server uses `/api` so the Vite
- * proxy can avoid CORS. Any other URL is called directly.
+ * Resolves the fetch origin. In Vite `dev`, the Docker default
+ * (`http://localhost:8080`) uses `/api` so the proxy can avoid CORS.
+ * Production / bundled builds always call the absolute Server URL (Studio on
+ * `:8081` must reach the API on `:8080` cross-origin).
  */
-export function resolveApiBase(baseUrl: string): string {
+export function resolveApiBase(
+  baseUrl: string,
+  _pageOrigin = typeof globalThis.location !== "undefined"
+    ? globalThis.location.origin
+    : "",
+): string {
   const normalized = baseUrl.replace(/\/+$/, "")
   if (!normalized || normalized === DEFAULT_BASE_URL) {
-    return LOCAL_API_PREFIX
+    if (isViteDev()) {
+      return LOCAL_API_PREFIX
+    }
+    return normalized || DEFAULT_BASE_URL
   }
 
   return normalized
+}
+
+/**
+ * Vite injects `import.meta.env.DEV`. Deno's ImportMeta has no `env`, so access
+ * it through a narrow cast (used by `deno task check` on utility scripts).
+ */
+function isViteDev(): boolean {
+  const env = (import.meta as ImportMeta & { env?: { DEV?: boolean } }).env
+  return env?.DEV === true
 }
 
 /**

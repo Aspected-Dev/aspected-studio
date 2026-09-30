@@ -169,3 +169,20 @@ vi.mock("@/components/json-editor.tsx", () => {
       ),
   }
 })
+
+/**
+ * Bundled Studio fetches `/config.json` at startup. In jsdom that request is
+ * not served; resolve it as missing so StudioConfigProvider settles immediately.
+ */
+const originalFetch = globalThis.fetch.bind(globalThis)
+globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+  const url = typeof input === "string"
+    ? input
+    : input instanceof URL
+    ? input.href
+    : input.url
+  if (url === "/config.json" || url.endsWith("/config.json")) {
+    return Promise.resolve(new Response(null, { status: 404 }))
+  }
+  return originalFetch(input, init)
+}) as typeof fetch

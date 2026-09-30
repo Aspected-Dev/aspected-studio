@@ -3,12 +3,15 @@ import { InstantAnalysisIllustration } from "@/assets/instant-analysis.tsx"
 import { useConnectionDialog } from "@/components/connection-dialog.tsx"
 import { DocsTextLink } from "@/components/docs-help.tsx"
 import { Button } from "@/components/ui/button.tsx"
+import { useStudioConfig } from "@/hooks/use-studio-config.tsx"
+import { bundledWelcomeCopy } from "@/lib/studio-config.ts"
 
 /**
  * Centered landing screen shown until the user connects to a server.
  */
 export function WelcomePage() {
   const { openNew } = useConnectionDialog()
+  const { bundled, config } = useStudioConfig()
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
@@ -18,8 +21,9 @@ export function WelcomePage() {
           Welcome to Aspected Studio
         </h1>
         <p className="text-muted-foreground">
-          Connect to an Aspected server, or add one to the saved list, to browse
-          indexes. The default Docker port is 8080.
+          {bundled
+            ? bundledWelcomeCopy(undefined, config?.apiPort)
+            : "Connect to an Aspected server, or add one to the saved list, to browse indexes. The default Docker port is 8080."}
         </p>
         <p className="text-sm text-muted-foreground">
           <DocsTextLink page="gettingStarted">Getting started</DocsTextLink>

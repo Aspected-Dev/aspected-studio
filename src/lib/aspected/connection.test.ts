@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 describe("resolveApiBase", () => {
-  it("uses the Vite proxy for the default local URL", () => {
+  it("uses the Vite proxy for the default local URL in DEV", () => {
     expect(resolveApiBase(DEFAULT_BASE_URL)).toBe(LOCAL_API_PREFIX)
     expect(resolveApiBase("http://localhost:8080/")).toBe(LOCAL_API_PREFIX)
     expect(resolveApiBase("")).toBe(LOCAL_API_PREFIX)
@@ -30,6 +30,18 @@ describe("resolveApiBase", () => {
     expect(resolveApiBase("https://aspected.example:9090")).toBe(
       "https://aspected.example:9090",
     )
+    expect(
+      resolveApiBase(
+        "https://aspected.example:9090",
+        "http://localhost:5173",
+      ),
+    ).toBe("https://aspected.example:9090")
+  })
+
+  it("keeps a non-default localhost absolute when it is not the Docker default", () => {
+    expect(
+      resolveApiBase("http://127.0.0.1:8080", "http://127.0.0.1:8081"),
+    ).toBe("http://127.0.0.1:8080")
   })
 })
 

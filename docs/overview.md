@@ -13,10 +13,13 @@ weight tuning from guesswork into measured work.
 
 Web first: Vite + React in the browser, managed with Deno.
 
+Studio ships inside every official Aspected Docker image (disabled by default).
+See [Connections](connections.md) for the bundled quick start (UI on `:8081`,
+API on `:8080`).
+
 Later (not in this MVP):
 
 - Desktop packaging with `deno desktop`
-- Shipping Studio beside the Aspected Docker image
 
 ## How Studio relates to Aspected
 
