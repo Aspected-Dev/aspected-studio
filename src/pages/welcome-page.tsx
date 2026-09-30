@@ -22,7 +22,7 @@ export function WelcomePage() {
         </h1>
         <p className="text-muted-foreground">
           {bundled
-            ? bundledWelcomeCopy(undefined, config?.apiPort)
+            ? bundledWelcomeCopy(config?.apiPort)
             : "Connect to an Aspected server, or add one to the saved list, to browse indexes. The default Docker port is 8080."}
         </p>
         <p className="text-sm text-muted-foreground">

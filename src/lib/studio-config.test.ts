@@ -72,16 +72,26 @@ describe("defaultBaseUrlForStudio", () => {
 describe("bundledWelcomeCopy", () => {
   it("includes Studio and API ports", () => {
     expect(
-      bundledWelcomeCopy({ port: "8081", protocol: "http:" }, 8080),
+      bundledWelcomeCopy(8080, { port: "8081", protocol: "http:" }),
     ).toContain("port 8081")
     expect(
-      bundledWelcomeCopy({ port: "8081", protocol: "http:" }, 8080),
+      bundledWelcomeCopy(8080, { port: "8081", protocol: "http:" }),
     ).toContain("port 8080")
   })
 
   it("uses the default http port when location.port is empty", () => {
     expect(
-      bundledWelcomeCopy({ port: "", protocol: "http:" }),
+      bundledWelcomeCopy(undefined, { port: "", protocol: "http:" }),
     ).toContain("port 80")
+  })
+
+  it("reads globalThis.location when location is omitted", () => {
+    vi.stubGlobal("location", {
+      port: "8081",
+      protocol: "http:",
+    })
+    expect(bundledWelcomeCopy(8080)).toContain("port 8081")
+    expect(bundledWelcomeCopy(8080)).toContain("port 8080")
+    vi.unstubAllGlobals()
   })
 })

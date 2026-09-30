@@ -58,13 +58,18 @@ export function defaultBaseUrlForStudio(
 /**
  * Welcome-screen copy when Studio is served from the Aspected container.
  * Mentions the Studio page port and the API port from `/config.json`.
+ *
+ * @param apiPort API listen port from `/config.json` (optional).
+ * @param location Override for tests. Omit to use `globalThis.location`.
  */
 export function bundledWelcomeCopy(
-  location: Pick<Location, "port" | "protocol"> | null =
-    typeof globalThis.location !== "undefined" ? globalThis.location : null,
   apiPort?: number,
+  location?: Pick<Location, "port" | "protocol"> | null,
 ): string {
-  const studioPort = locationPort(location)
+  const resolvedLocation = location === undefined
+    ? (typeof globalThis.location !== "undefined" ? globalThis.location : null)
+    : location
+  const studioPort = locationPort(resolvedLocation)
   if (studioPort && apiPort != null) {
     return `This UI is served by the Aspected container on port ${studioPort}. The API listens on port ${apiPort}.`
   }
