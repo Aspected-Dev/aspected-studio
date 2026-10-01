@@ -9,6 +9,8 @@
 # "No runtime library found".
 #
 # Stage with desktop.app.name (no dots), then rename to the versioned asset.
+# On macOS the same staging name is used without a trailing ".app", because
+# `deno desktop` appends ".app" itself.
 #
 # For .deb, also rewrite control Version to match deno.json (deno desktop
 # currently embeds 1.0.0) and ensure the webview GTK WebKit package is listed.
@@ -168,13 +170,16 @@ if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb ) ]]; then
 elif [[ -n "$out" && "$out" == *.dmg ]]; then
   out_dir="$(dirname "$out")"
   mkdir -p "$out_dir"
-  app_out="${out%.dmg}.app"
-  rm -rf "$app_out" "$out" "${out%.dmg}.dylib"
+  display_name="$(read_display_name)"
+  # deno desktop appends ".app" to --output. Passing a path that already ends
+  # in ".app" yields "….app.app" and then pack_macos_dmg cannot find the bundle.
+  staging="${out_dir}/${display_name}"
+  rm -rf "$staging" "${staging}.app" "$out" "${staging}.dylib"
   # Build the .app only; we pack the DMG ourselves (see pack_macos_dmg).
   # shellcheck disable=SC2086
-  deno desktop ${args[@]+"${args[@]}"} --output "$app_out" ${extra[@]+"${extra[@]}"} .
-  pack_macos_dmg "$app_out" "$out" "$(read_display_name)"
-  rm -rf "$app_out" "${out%.dmg}.dylib"
+  deno desktop ${args[@]+"${args[@]}"} --output "$staging" ${extra[@]+"${extra[@]}"} .
+  pack_macos_dmg "${staging}.app" "$out" "$display_name"
+  rm -rf "$staging" "${staging}.app" "${staging}.dylib"
 else
   if [[ -n "$out" ]]; then
     args+=(--output "$out")
