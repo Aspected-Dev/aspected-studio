@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { AspectedApiError, AspectedClient } from "./client.ts"
+import { type AspectedApiError, AspectedClient } from "./client.ts"
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

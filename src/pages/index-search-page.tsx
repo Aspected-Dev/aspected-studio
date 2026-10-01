@@ -41,7 +41,7 @@ import { Field, FieldLabel } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Separator } from "@/components/ui/separator.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
-import { type RecordedRequest } from "@/lib/aspected/client.ts"
+import type { RecordedRequest } from "@/lib/aspected/client.ts"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
 import { tunedConfigsForIndex } from "@/lib/aspected/tuned-config.ts"
 import {

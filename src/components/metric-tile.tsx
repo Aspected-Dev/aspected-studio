@@ -1,4 +1,4 @@
-import { type ReactNode } from "react"
+import type { ReactNode } from "react"
 import { CircleHelpIcon } from "lucide-react"
 import { AnimatedNumber } from "@/components/animated-number.tsx"
 import { buttonVariants } from "@/components/ui/button.tsx"

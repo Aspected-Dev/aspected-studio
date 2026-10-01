@@ -11,6 +11,8 @@ node_modules
 package-lock.json
 dist
 dist-ssr
+release
+squashfs-root
 *.local
 
 # Editor directories and files

@@ -102,6 +102,7 @@ against the cheat sheet stays a human read.
 | Check movies        | `deno task check:movies`     | Offline (and `--live`) golden check |
 | Verify tutorial 5   | `deno task verify:tutorials` | Grade the demo set headless         |
 | Build               | `deno task build`            | Production assets in `dist/`        |
+| Build (desktop)     | `deno task build:desktop`    | Unsigned local `deno desktop` app   |
 | Preview             | `deno task preview`          | Serve production build              |
 | Test                | `deno task test`             | Vitest once                         |
 | Test watch          | `deno task test:watch`       | Vitest watch mode                   |
@@ -147,15 +148,23 @@ VITE_DOCS_LOCAL=true deno task dev
 
 Studio versions are independent from Aspected. To cut a release:
 
-1. Bump `"version"` in [`package.json`](package.json) to `X.Y.Z`.
-2. Merge to the default branch, then tag and push `vX.Y.Z` (must match
-   `package.json`).
-3. [`.github/workflows/release-static.yml`](.github/workflows/release-static.yml)
-   runs `deno task ci`, pushes `xillio/aspected-studio-static:X.Y.Z` (and
-   `:latest`) for `linux/amd64` and `linux/arm64`, and creates a GitHub Release
-   with `aspected-studio-dist-X.Y.Z.tar.gz` plus its `.sha256` checksum.
+1. Bump `"version"` in [`package.json`](package.json) **and**
+   [`deno.json`](deno.json) to the same `X.Y.Z`.
+2. Merge to the default branch, then tag and push `vX.Y.Z` (must match both
+   version fields).
+3. [`.github/workflows/release.yml`](.github/workflows/release.yml) runs
+   `deno task ci`, pushes `xillio/aspected-studio-static:X.Y.Z` (and `:latest`)
+   for `linux/amd64` and `linux/arm64`, builds unsigned desktop installers
+   (macOS `.dmg`, Windows `.msi`, Linux `.AppImage` and `.deb`), and creates a
+   GitHub Release with the dist tarball, installers, and `.sha256` checksums.
 4. In the sibling `aspects.dev` repo, bump `ARG STUDIO_VERSION` in the
-   Dockerfile to `X.Y.Z` so the next Aspected image bake picks up this Studio.
+   Dockerfile to `X.Y.Z` so the next Aspected image bake picks up this Studio
+   (once the static Hub image is public).
+
+Desktop installers are unsigned. macOS Gatekeeper and Windows SmartScreen may
+warn until code signing is added later. Smoke a host build with
+`deno task build && deno task build:desktop` (Linux writes a working AppImage
+under `release/`).
 
 Local override while developing Studio against an Aspected image:
 

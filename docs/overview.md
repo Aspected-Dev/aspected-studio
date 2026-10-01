@@ -17,9 +17,9 @@ Studio ships inside every official Aspected Docker image (disabled by default).
 See [Connections](connections.md) for the bundled quick start (UI on `:8081`,
 API on `:8080`).
 
-Later (not in this MVP):
-
-- Desktop packaging with `deno desktop`
+Desktop installers ship on each Studio GitHub Release via `deno desktop`
+(unsigned macOS `.dmg`, Windows `.msi`, Linux `.AppImage` and `.deb`). See
+[README Releasing](../README.md#releasing).
 
 ## How Studio relates to Aspected
 

@@ -1,4 +1,7 @@
 {
+  "name": "aspected-studio",
+  "version": "0.1.0",
+  "exports": "./src/main.tsx",
   "nodeModulesDir": "auto",
   "tasks": {
     "dev": "deno run -A npm:vite",
@@ -10,6 +13,7 @@
     "check:movies": "deno run -A utility/check-movies.ts",
     "verify:tutorials": "deno run -A utility/verify-tutorials.ts",
     "build": "deno run -A npm:vite build",
+    "build:desktop": "./utility/build-desktop.sh",
     "preview": "deno run -A npm:vite preview",
     "test": "deno run -A npm:vitest run --testTimeout=15000 --maxWorkers=50%",
     "test:watch": "deno run -A npm:vitest --testTimeout=15000",
@@ -18,16 +22,28 @@
     "fmt": "deno fmt",
     "ci": "deno task fmt --check && deno task lint && deno task check && deno task test && deno task build"
   },
+  "desktop": {
+    "app": {
+      "name": "Aspected Studio",
+      "identifier": "io.xillio.aspected.studio",
+      "icons": {
+        "macos": "./public/android-chrome-512x512.png",
+        "windows": "./public/favicon.ico",
+        "linux": "./public/android-chrome-512x512.png"
+      }
+    },
+    "backend": "webview"
+  },
   "fmt": {
     "useTabs": false,
     "lineWidth": 80,
     "indentWidth": 2,
     "semiColons": false,
     "singleQuote": false,
-    "exclude": ["node_modules/", "dist/", "deno.lock", "coverage/"]
+    "exclude": ["node_modules/", "dist/", "release/", "deno.lock", "coverage/"]
   },
   "lint": {
-    "exclude": ["node_modules/", "dist/", "coverage/"],
+    "exclude": ["node_modules/", "dist/", "release/", "coverage/"],
     "rules": {
       "exclude": ["no-sloppy-imports", "no-window", "no-window-prefix"]
     }

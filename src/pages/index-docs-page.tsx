@@ -44,7 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
-import { type RecordedRequest } from "@/lib/aspected/client.ts"
+import type { RecordedRequest } from "@/lib/aspected/client.ts"
 import { toastCaughtError } from "@/lib/aspected/user-error.ts"
 import {
   type DocEntry,

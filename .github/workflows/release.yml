@@ -1,0 +1,255 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  IMAGE: xillio/aspected-studio-static
+
+jobs:
+  verify:
+    name: Verify and build web assets
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Resolve version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify package.json and deno.json versions match tag
+        run: |
+          pkg_version="$(jq -r .version package.json)"
+          deno_version="$(jq -r .version deno.json)"
+          tag_version="${{ steps.version.outputs.version }}"
+          if [ "$pkg_version" != "$tag_version" ]; then
+            echo "package.json version ($pkg_version) does not match tag ($tag_version)"
+            exit 1
+          fi
+          if [ "$deno_version" != "$tag_version" ]; then
+            echo "deno.json version ($deno_version) does not match tag ($tag_version)"
+            exit 1
+          fi
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        run: deno install --frozen
+
+      - name: CI (fmt, lint, check, test, build)
+        run: deno task ci
+
+      - name: Upload web dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+          retention-days: 1
+
+  static:
+    name: Build and publish static image
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download web dist
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to DockerHub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push static image
+        id: push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile.static
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ needs.verify.outputs.version }}
+            ${{ env.IMAGE }}:latest
+
+      - name: Package dist tarball and release body
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          digest="${{ steps.push.outputs.digest }}"
+          mkdir -p release-assets
+          tar -C dist -czf "release-assets/aspected-studio-dist-${version}.tar.gz" .
+          sha256sum "release-assets/aspected-studio-dist-${version}.tar.gz" \
+            > "release-assets/aspected-studio-dist-${version}.tar.gz.sha256"
+          {
+            echo "Static image: \`${{ env.IMAGE }}:${version}@${digest}\`"
+            echo
+          } > release-assets/static-release-body.md
+
+      - name: Upload static release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-assets
+          path: release-assets/
+          retention-days: 1
+
+  desktop:
+    name: Desktop ${{ matrix.target }} (${{ matrix.ext }})
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            target: aarch64-apple-darwin
+            ext: dmg
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            ext: dmg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: msi
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: AppImage
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: deb
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install dependencies
+        run: deno install --frozen
+
+      - name: Build web assets
+        run: deno task build
+
+      - name: Package desktop installer
+        shell: bash
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          target="${{ matrix.target }}"
+          ext="${{ matrix.ext }}"
+          asset="aspected-studio-${version}-${target}.${ext}"
+          mkdir -p release
+          ./utility/build-desktop.sh --target "$target" --output "./release/${asset}"
+          ls -la release/
+
+      - name: Checksum installer (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          target="${{ matrix.target }}"
+          ext="${{ matrix.ext }}"
+          asset="aspected-studio-${version}-${target}.${ext}"
+          (
+            cd release
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$asset" > "${asset}.sha256"
+            else
+              shasum -a 256 "$asset" > "${asset}.sha256"
+            fi
+          )
+
+      - name: Checksum installer (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = "${{ needs.verify.outputs.version }}"
+          $target = "${{ matrix.target }}"
+          $ext = "${{ matrix.ext }}"
+          $asset = "aspected-studio-$version-$target.$ext"
+          $path = Join-Path "release" $asset
+          $hash = (Get-FileHash -Algorithm SHA256 $path).Hash.ToLowerInvariant()
+          Set-Content -Path "$path.sha256" -Value "$hash  $asset" -Encoding ascii
+
+      - name: Upload desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}-${{ matrix.ext }}
+          path: release/
+          retention-days: 1
+
+  publish:
+    name: Create GitHub Release
+    needs: [verify, static, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download static assets
+        uses: actions/download-artifact@v4
+        with:
+          name: static-assets
+          path: release-out/
+
+      - name: Download desktop artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: release-out/
+          merge-multiple: true
+
+      - name: Assemble release body
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          {
+            cat release-out/static-release-body.md
+            echo "### Desktop installers"
+            echo
+            echo "Unsigned builds for local use. macOS Gatekeeper and Windows SmartScreen may warn."
+            echo
+            for f in release-out/aspected-studio-"${version}"-*.dmg \
+                     release-out/aspected-studio-"${version}"-*.msi \
+                     release-out/aspected-studio-"${version}"-*.AppImage \
+                     release-out/aspected-studio-"${version}"-*.deb; do
+              [ -e "$f" ] || continue
+              echo "- \`$(basename "$f")\`"
+            done
+            echo
+          } > release-body.md
+          ls -la release-out/
+          cat release-body.md
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: release-body.md
+          generate_release_notes: true
+          files: |
+            release-out/aspected-studio-dist-${{ needs.verify.outputs.version }}.tar.gz
+            release-out/aspected-studio-dist-${{ needs.verify.outputs.version }}.tar.gz.sha256
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-aarch64-apple-darwin.dmg
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-aarch64-apple-darwin.dmg.sha256
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-apple-darwin.dmg
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-apple-darwin.dmg.sha256
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-pc-windows-msvc.msi
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-pc-windows-msvc.msi.sha256
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.AppImage
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.AppImage.sha256
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.deb
+            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.deb.sha256

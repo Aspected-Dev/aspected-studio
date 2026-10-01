@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/select.tsx"
 import { Textarea } from "@/components/ui/textarea.tsx"
 import { useConnection } from "@/hooks/use-connection.tsx"
-import { type RecordedRequest } from "@/lib/aspected/client.ts"
+import type { RecordedRequest } from "@/lib/aspected/client.ts"
 import {
   ASPECT_TYPES,
   type CreateIndexDraft,
