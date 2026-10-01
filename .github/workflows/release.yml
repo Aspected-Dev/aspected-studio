@@ -186,11 +186,6 @@ jobs:
             df -h / "$TMPDIR"
           fi
           ./utility/build-desktop.sh --target "$target" --output "./release/${asset}"
-          # Drop intermediate .app / .dylib once the installer exists.
-          if [[ "$ext" == "dmg" ]]; then
-            stem="./release/aspected-studio-${version}-${target}"
-            rm -rf "${stem}.app" "${stem}.dylib"
-          fi
           ls -la release/
           df -h / || true
 

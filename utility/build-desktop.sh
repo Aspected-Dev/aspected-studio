@@ -88,6 +88,64 @@ fix_deb_control() {
   mv -f "$rebuilt" "$deb"
 }
 
+# Pack a .app into a UDZO DMG with an explicit size budget.
+#
+# deno desktop's own hdiutil path often fails on GitHub macos-14 runners with
+# "No space left on device" even when tens of GB are free: hdiutil underestimates
+# the image when the bundle has hardlinks/sparse files. We stage with ditto and
+# over-provision the RW image; UDZO conversion drops unused sectors.
+pack_macos_dmg() {
+  local app="$1"
+  local dmg="$2"
+  local volname="$3"
+  local staging rw_dmg app_kb size_mb
+
+  if [[ ! -d "$app" ]]; then
+    echo "error: expected app bundle at $app" >&2
+    return 1
+  fi
+  if ! command -v hdiutil >/dev/null 2>&1; then
+    echo "error: hdiutil is required to build macOS .dmg on this host" >&2
+    return 1
+  fi
+
+  staging="$(mktemp -d "${TMPDIR:-/tmp}/aspected-dmg.XXXXXX")"
+  rw_dmg="${staging}/rw.dmg"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$staging'" RETURN
+
+  local app_name root_dir
+  app_name="$(basename "$app")"
+  root_dir="$staging/root"
+  mkdir -p "$root_dir"
+  # ditto materializes hardlinks/sparse files so the measured size matches
+  # what hdiutil will copy into the image.
+  ditto "$app" "$root_dir/$app_name"
+  app_kb="$(du -sk "$root_dir" | awk '{ print $1 }')"
+  # Kilobytes -> MB, 4x headroom + 256 MB for HFS+ catalog metadata.
+  size_mb=$(((app_kb * 4 / 1024) + 256))
+  if [[ "$size_mb" -lt 64 ]]; then
+    size_mb=64
+  fi
+  if [[ "$size_mb" -gt 2048 ]]; then
+    size_mb=2048
+  fi
+
+  echo "Creating DMG (${size_mb} MB image for ${app_kb} KB payload)..."
+  df -h "$(dirname "$dmg")" "$staging" || true
+
+  rm -f "$dmg"
+  hdiutil create \
+    -srcfolder "$root_dir" \
+    -volname "$volname" \
+    -fs HFS+ \
+    -format UDRW \
+    -size "${size_mb}m" \
+    "$rw_dmg"
+  hdiutil convert "$rw_dmg" -format UDZO -imagekey zlib-level=9 -o "$dmg"
+  rm -f "$rw_dmg"
+}
+
 # Bash 3.2 (macOS) treats empty arrays as unbound under `set -u`.
 # Expand with ${arr[@]+"${arr[@]}"} so CI on Apple runners does not fail.
 if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb ) ]]; then
@@ -107,6 +165,16 @@ if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb ) ]]; then
   fi
   # Drop Deno's parallel directory bundle; the installer is the release asset.
   rm -rf "${out_dir}/${display_name}"
+elif [[ -n "$out" && "$out" == *.dmg ]]; then
+  out_dir="$(dirname "$out")"
+  mkdir -p "$out_dir"
+  app_out="${out%.dmg}.app"
+  rm -rf "$app_out" "$out" "${out%.dmg}.dylib"
+  # Build the .app only; we pack the DMG ourselves (see pack_macos_dmg).
+  # shellcheck disable=SC2086
+  deno desktop ${args[@]+"${args[@]}"} --output "$app_out" ${extra[@]+"${extra[@]}"} .
+  pack_macos_dmg "$app_out" "$out" "$(read_display_name)"
+  rm -rf "$app_out" "${out%.dmg}.dylib"
 else
   if [[ -n "$out" ]]; then
     args+=(--output "$out")
