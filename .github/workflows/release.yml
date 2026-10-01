@@ -136,6 +136,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      # macos-14 arm64 runners are tight on disk; hdiutil needs spare space
+      # roughly the size of the .app again while packing a DMG.
+      - name: Free disk space (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          df -h /
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /opt/hostedtoolcache/CodeQL \
+            /opt/hostedtoolcache/go \
+            /opt/hostedtoolcache/Python \
+            /opt/hostedtoolcache/Ruby \
+            /opt/hostedtoolcache/node \
+            /opt/hostedtoolcache/Java \
+            /Library/Developer/CoreSimulator \
+            "$HOME/Library/Developer/CoreSimulator" \
+            "$HOME/Library/Caches/CocoaPods" \
+            "$HOME/Library/Caches/org.swift.swiftpm" \
+            || true
+          brew cleanup -s || true
+          rm -rf "$(brew --cache)" || true
+          df -h /
+
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
@@ -144,19 +169,30 @@ jobs:
       - name: Install dependencies
         run: deno install --frozen
 
-      - name: Build web assets
-        run: deno task build
-
+      # deno desktop detects Vite and builds itself; a prior build only
+      # doubles disk use on small macOS runners.
       - name: Package desktop installer
         shell: bash
         run: |
+          set -euo pipefail
           version="${{ needs.verify.outputs.version }}"
           target="${{ matrix.target }}"
           ext="${{ matrix.ext }}"
           asset="aspected-studio-${version}-${target}.${ext}"
           mkdir -p release
+          # Prefer the runner temp volume for hdiutil scratch files.
+          if [[ "${RUNNER_OS}" == "macOS" ]]; then
+            export TMPDIR="${RUNNER_TEMP}"
+            df -h / "$TMPDIR"
+          fi
           ./utility/build-desktop.sh --target "$target" --output "./release/${asset}"
+          # Drop intermediate .app / .dylib once the installer exists.
+          if [[ "$ext" == "dmg" ]]; then
+            stem="./release/aspected-studio-${version}-${target}"
+            rm -rf "${stem}.app" "${stem}.dylib"
+          fi
           ls -la release/
+          df -h / || true
 
       - name: Checksum installer (Unix)
         if: runner.os != 'Windows'
