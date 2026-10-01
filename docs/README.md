@@ -30,16 +30,17 @@ Index of tutorials: [tutorials/README.md](tutorials/README.md).
 
 ## Reference
 
-| Page                            | What it covers                                          |
-| ------------------------------- | ------------------------------------------------------- |
-| [Overview](overview.md)         | What Studio is, MVP scope, screen map                   |
-| [Architecture](architecture.md) | Design decisions behind preview, scorecard, storage     |
-| [Connections](connections.md)   | Servers, proxy, CORS, tokens, localStorage              |
-| [Indexes](indexes.md)           | Create, schema, documents, search, Request Inspector    |
-| [Playground](playground.md)     | Ranking, Live/Preview/Stale, Compare A/B                |
-| [Scorecard](scorecard.md)       | Golden sets, metrics, Scorecard page and Playground tab |
-| [Auto-tune](auto-tune.md)       | Budgeted Live weight / on-off / depth search            |
-| [Contributing](contributing.md) | Stack, code guidelines, when to update which docs       |
+| Page                            | What it covers                                           |
+| ------------------------------- | -------------------------------------------------------- |
+| [Overview](overview.md)         | What Studio is, MVP scope, screen map                    |
+| [Architecture](architecture.md) | Design decisions behind preview, scorecard, storage      |
+| [Connections](connections.md)   | Servers, proxy, CORS, tokens, localStorage               |
+| [Indexes](indexes.md)           | Create, schema, documents, search, Request Inspector     |
+| [Playground](playground.md)     | Ranking, Live/Preview/Stale, Compare A/B                 |
+| [Scorecard](scorecard.md)       | Golden sets, metrics, Scorecard page and Playground tab  |
+| [Auto-tune](auto-tune.md)       | Budgeted Live weight / on-off / depth search             |
+| [Contributing](contributing.md) | Stack, code guidelines, when to update which docs        |
+| [Changelog](../CHANGELOG.md)    | Release history and Unreleased notes for GitHub Releases |
 
 ## Keeping docs current
 

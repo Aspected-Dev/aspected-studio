@@ -148,16 +148,21 @@ VITE_DOCS_LOCAL=true deno task dev
 
 Studio versions are independent from Aspected. To cut a release:
 
-1. Bump `"version"` in [`package.json`](package.json) **and**
+1. Move bullets from `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md) into a
+   new `## [X.Y.Z] - YYYY-MM-DD` section (product-facing notes, not raw
+   commits).
+2. Bump `"version"` in [`package.json`](package.json) **and**
    [`deno.json`](deno.json) to the same `X.Y.Z`.
-2. Merge to the default branch, then tag and push `vX.Y.Z` (must match both
+3. Merge to the default branch, then tag and push `vX.Y.Z` (must match both
    version fields).
-3. [`.github/workflows/release.yml`](.github/workflows/release.yml) runs
+4. [`.github/workflows/release.yml`](.github/workflows/release.yml) runs
    `deno task ci`, pushes `xillio/aspected-studio-static:X.Y.Z` (and `:latest`)
    for `linux/amd64` and `linux/arm64`, builds unsigned desktop installers
    (macOS `.dmg`, Windows `.msi`, Linux `.AppImage` and `.deb`), and creates a
-   GitHub Release with the dist tarball, installers, and `.sha256` checksums.
-4. In the sibling `aspects.dev` repo, bump `ARG STUDIO_VERSION` in the
+   GitHub Release whose notes come from the matching CHANGELOG section (plus
+   static image and installer lists; auto-generated commit notes only if that
+   section is missing).
+5. In the sibling `aspects.dev` repo, bump `ARG STUDIO_VERSION` in the
    Dockerfile to `X.Y.Z` so the next Aspected image bake picks up this Studio
    (once the static Hub image is public).
 

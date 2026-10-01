@@ -201,6 +201,23 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Extract changelog section
+        id: notes
+        # Pull the section for this version out of CHANGELOG.md (## [0.1.0] ...).
+        # If there's no matching section, leave the file empty so the release
+        # step falls back to GitHub's auto-generated notes.
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' CHANGELOG.md > changelog-notes.md
+          echo "has_notes=$([ -s changelog-notes.md ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
       - name: Download static assets
         uses: actions/download-artifact@v4
         with:
@@ -218,6 +235,10 @@ jobs:
         run: |
           version="${{ needs.verify.outputs.version }}"
           {
+            if [ -s changelog-notes.md ]; then
+              cat changelog-notes.md
+              echo
+            fi
             cat release-out/static-release-body.md
             echo "### Desktop installers"
             echo
@@ -239,7 +260,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           body_path: release-body.md
-          generate_release_notes: true
+          generate_release_notes: ${{ steps.notes.outputs.has_notes != 'true' }}
           files: |
             release-out/aspected-studio-dist-${{ needs.verify.outputs.version }}.tar.gz
             release-out/aspected-studio-dist-${{ needs.verify.outputs.version }}.tar.gz.sha256

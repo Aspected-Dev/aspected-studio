@@ -54,6 +54,7 @@ More UI detail: `.cursor/rules/react-ui.mdc`. Testing:
 | ----------------------------------------------------- | ----------------------------------------------------------------- |
 | Setup, tasks, env vars, Definition of Done checklist  | [README](../README.md)                                            |
 | Cutting a Studio release (version, tag, Hub, desktop) | [README Releasing](../README.md#releasing)                        |
+| User-facing change for the next release notes         | [`CHANGELOG.md`](../CHANGELOG.md) under `## [Unreleased]`         |
 | Feature behavior, workflows, metrics, demos           | Matching page under [`docs/`](README.md)                          |
 | Button-by-button walkthroughs                         | [`docs/tutorials/`](tutorials/README.md)                          |
 | Cross-cutting design decision                         | [Architecture](architecture.md) and/or the feature page           |

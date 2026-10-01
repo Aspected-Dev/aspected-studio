@@ -1,6 +1,6 @@
 ---
 description: README and docs/ conventions when setup, features, or workflows change
-globs: docs/**/*.md,README.md,AGENTS.md
+globs: docs/**/*.md,README.md,AGENTS.md,CHANGELOG.md
 alwaysApply: false
 ---
 
@@ -12,6 +12,8 @@ alwaysApply: false
   Definition of Done, links into `docs/`
 - [`docs/`](docs/README.md) is long-form **Studio** documentation: overview,
   architecture, features, contributing, tutorials, demos
+- [`CHANGELOG.md`](CHANGELOG.md) is the curated release history. GitHub Release
+  notes for each `v*` tag come from the matching version section
 - Aspected **product** docs (resolvers, HTTP API) live in the sibling
   `aspects.dev` repo (`deno task dev:docs`). Do not confuse that tree with
   `docs/`
@@ -23,6 +25,10 @@ alwaysApply: false
 - Update step-by-step tutorials under `docs/tutorials/` when button labels,
   order of steps, or expected results change
 - Update README when setup, tasks, env vars, or the entry checklist change
+- Add a product-facing bullet under `## [Unreleased]` in `CHANGELOG.md` (Added /
+  Changed / Fixed / Removed). Do not paste raw commit subjects
+- On release, move Unreleased into a versioned section per
+  [README Releasing](README.md#releasing)
 - Link new major pages from `docs/README.md`
 - Prefer focused pages and links over duplicating the same manual in two files
 
@@ -40,5 +46,6 @@ alwaysApply: false
 
 - Do not dump Playground / Scorecard / metrics manuals back into the README
 - Do not leave `docs/` stale after shipping a user-visible behavior change
+- Do not leave `CHANGELOG.md` Unreleased empty after shipping user-facing work
 - Keep [`AGENTS.md`](AGENTS.md) short: point at README, `docs/README.md`, and
   `.cursor/rules`
