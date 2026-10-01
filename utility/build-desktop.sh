@@ -88,6 +88,8 @@ fix_deb_control() {
   mv -f "$rebuilt" "$deb"
 }
 
+# Bash 3.2 (macOS) treats empty arrays as unbound under `set -u`.
+# Expand with ${arr[@]+"${arr[@]}"} so CI on Apple runners does not fail.
 if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb ) ]]; then
   out_dir="$(dirname "$out")"
   mkdir -p "$out_dir"
@@ -95,7 +97,8 @@ if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb ) ]]; then
   display_name="$(read_display_name)"
   staging="${out_dir}/${display_name}.${ext}"
   rm -f "$staging"
-  deno desktop "${args[@]}" --output "$staging" "${extra[@]}" .
+  # shellcheck disable=SC2086
+  deno desktop ${args[@]+"${args[@]}"} --output "$staging" ${extra[@]+"${extra[@]}"} .
   if [[ "$staging" != "$out" ]]; then
     mv -f "$staging" "$out"
   fi
@@ -108,5 +111,6 @@ else
   if [[ -n "$out" ]]; then
     args+=(--output "$out")
   fi
-  deno desktop "${args[@]}" "${extra[@]}" .
+  # shellcheck disable=SC2086
+  deno desktop ${args[@]+"${args[@]}"} ${extra[@]+"${extra[@]}"} .
 fi
