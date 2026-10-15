@@ -5,6 +5,7 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
+  SaveIcon,
   Trash2Icon,
   UnlinkIcon,
 } from "lucide-react"
@@ -49,8 +50,9 @@ import { cn } from "@/lib/utils.ts"
 
 /**
  * Sidebar group listing saved connections. The active session shows version
- * and uptime badges below the name. Disconnect and Remove are separate
- * dropdown menu actions.
+ * and uptime badges below the name. An unsaved (Connect without Save) session
+ * appears as a "Not saved" row with Disconnect and Save. Disconnect and Remove
+ * are separate dropdown menu actions.
  */
 export function ConnectionFooter() {
   const {
@@ -63,6 +65,7 @@ export function ConnectionFooter() {
     connect,
     disconnect,
     deleteConnection,
+    upsertConnection,
   } = useConnection()
   const { openNew, openEdit } = useConnectionDialog()
   const [pendingDelete, setPendingDelete] = useState<SavedConnection | null>(
@@ -70,6 +73,8 @@ export function ConnectionFooter() {
   )
 
   const liveUptimeLabel = useLiveUptime(status?.uptime, statusReceivedAt)
+  const showEphemeral = status !== null && activeId === null
+  const listedCount = connections.length + (showEphemeral ? 1 : 0)
 
   async function connectSaved(connection: SavedConnection) {
     try {
@@ -85,14 +90,31 @@ export function ConnectionFooter() {
     }
   }
 
-  async function copyServerUrl(connection: SavedConnection) {
-    const url = serverUrlForCopy(connection.baseUrl)
+  async function copyServerUrl(baseUrl: string) {
+    const url = serverUrlForCopy(baseUrl)
     try {
       await navigator.clipboard.writeText(url)
       toast.success("Copied server URL")
     } catch {
       toastCaughtError(new Error("Clipboard unavailable"), "Could not copy")
     }
+  }
+
+  function saveEphemeral() {
+    const saved = upsertConnection({
+      name: displayHost(settings.baseUrl),
+      baseUrl: settings.baseUrl,
+      apiToken: settings.apiToken,
+    })
+    void connect(saved).then((result) => {
+      toast.success(
+        `Saved and connected to ${
+          displayHost(saved.baseUrl)
+        } (v${result.version})`,
+      )
+    }).catch((caught) => {
+      toastCaughtError(caught, "Cannot reach Aspected")
+    })
   }
 
   function confirmDelete() {
@@ -106,7 +128,7 @@ export function ConnectionFooter() {
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
-        Connections ({connections.length})
+        Connections ({listedCount})
       </SidebarGroupLabel>
       <SidebarGroupAction
         title="Add connection"
@@ -117,6 +139,95 @@ export function ConnectionFooter() {
       </SidebarGroupAction>
       <SidebarGroupContent>
         <SidebarMenu>
+          {showEphemeral
+            ? (
+              <SidebarMenuItem key="ephemeral">
+                <div
+                  className={cn(
+                    "group/connection flex min-w-0 flex-col gap-1.5 rounded-md p-2 pr-1",
+                    "bg-sidebar-accent text-sidebar-accent-foreground",
+                  )}
+                >
+                  <div className="flex min-w-0 items-center gap-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span
+                          aria-hidden
+                          className="size-2 shrink-0 rounded-full bg-emerald-500"
+                        />
+                        <span className="truncate text-sm font-medium">
+                          {displayHost(settings.baseUrl)}
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-sidebar-foreground/50">
+                        Not saved
+                      </p>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="size-5 shrink-0 rounded-md p-0 text-sidebar-foreground hover:bg-sidebar hover:text-sidebar-accent-foreground [&_svg]:size-4"
+                          />
+                        }
+                      >
+                        <MoreHorizontalIcon />
+                        <span className="sr-only">Connection actions</span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        side="top"
+                        className="w-max min-w-40 whitespace-nowrap"
+                      >
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={disconnect}
+                        >
+                          <UnlinkIcon />
+                          Disconnect
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={saveEphemeral}>
+                          <SaveIcon />
+                          Save connection
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => void copyServerUrl(settings.baseUrl)}
+                        >
+                          <CopyIcon />
+                          Copy server URL
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {status
+                    ? (
+                      <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                        <Badge
+                          variant="secondary"
+                          className="h-4 shrink-0 border-transparent bg-sidebar px-1.5 text-[10px] text-sidebar-foreground"
+                        >
+                          v{status.version}
+                        </Badge>
+                        {liveUptimeLabel
+                          ? (
+                            <Badge
+                              variant="outline"
+                              className="h-4 min-w-0 max-w-full truncate border-sidebar-border bg-sidebar px-1.5 text-[10px] font-normal text-sidebar-foreground"
+                            >
+                              {liveUptimeLabel}
+                            </Badge>
+                          )
+                          : null}
+                      </div>
+                    )
+                    : null}
+                </div>
+              </SidebarMenuItem>
+            )
+            : null}
           {connections.map((connection) => {
             const host = displayHost(connection.baseUrl)
             const name = connection.name || host
@@ -216,7 +327,7 @@ export function ConnectionFooter() {
                           Edit connection
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => void copyServerUrl(connection)}
+                          onClick={() => void copyServerUrl(connection.baseUrl)}
                         >
                           <CopyIcon />
                           Copy server URL

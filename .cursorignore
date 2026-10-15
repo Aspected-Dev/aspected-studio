@@ -1,0 +1,48 @@
+# Dependencies and package manager caches
+node_modules/
+**/node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+.deno/
+
+# Build outputs (do not edit generated dist/)
+dist/
+dist-ssr/
+build/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Desktop / packaging artifacts
+release/
+squashfs-root/
+*.AppImage
+*.deb
+*.dmg
+*.exe
+*.msi
+
+# Logs and local env
+logs/
+*.log
+*.local
+.env
+.env.*
+
+# Editor / OS noise
+# Keep .vscode/settings.json and extensions.json readable for setup work.
+# Keep .cursor/rules and hooks readable; agents need those.
+.idea/
+.DS_Store
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Lockfiles: version pins, not source agents should browse
+deno.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

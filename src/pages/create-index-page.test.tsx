@@ -86,4 +86,19 @@ describe("CreateIndexPage", () => {
     ).toBeInTheDocument()
     expect(connection.client.createIndex).not.toHaveBeenCalled()
   })
+
+  it("switches to JSON even when the form draft is incomplete", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    const enumValues = document.getElementById(
+      "aspect-0-values",
+    ) as HTMLTextAreaElement | null
+    if (enumValues) {
+      await user.clear(enumValues)
+    }
+    await user.click(screen.getByRole("button", { name: "Use JSON" }))
+    expect(
+      await screen.findByRole("button", { name: "Use form" }),
+    ).toBeInTheDocument()
+  })
 })

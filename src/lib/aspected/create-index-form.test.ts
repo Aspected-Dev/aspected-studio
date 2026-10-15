@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   createIndexFormSchema,
   draftToCreateRequest,
+  draftToCreateRequestLoose,
   emptyAspectDraft,
   emptyCreateIndexDraft,
 } from "./create-index-form.ts"
@@ -17,6 +18,19 @@ describe("draftToCreateRequest", () => {
       path: "$.category",
     })
     expect(request.hnsw).toBeUndefined()
+  })
+})
+
+describe("draftToCreateRequestLoose", () => {
+  it("serializes an incomplete draft without throwing", () => {
+    const draft = emptyCreateIndexDraft()
+    draft.aspects[0].enumValues = ""
+    draft.aspects[0].name = ""
+    draft.idSize = ""
+    const loose = draftToCreateRequestLoose(draft)
+    expect(loose.idSize).toBe(36)
+    expect(Array.isArray(loose.schema)).toBe(true)
+    expect(() => draftToCreateRequest(draft)).toThrow()
   })
 })
 

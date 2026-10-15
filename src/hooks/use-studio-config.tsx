@@ -1,23 +1,13 @@
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import { createContext, type ReactNode, useContext, useMemo } from "react"
 import {
   defaultBaseUrlForStudio,
-  loadStudioConfig,
-  type StudioConfig,
+  isStudioBundled,
 } from "@/lib/studio-config.ts"
 
 type StudioConfigContextValue = {
-  /** Null while the optional `/config.json` fetch is in flight. */
-  config: StudioConfig | null | undefined
   /** Ready-to-use default Server URL for new connections. */
   defaultBaseUrl: string
-  /** True when Studio is served from the Aspected Docker image. */
+  /** True when Studio is served same-origin from the Aspected process. */
   bundled: boolean
 }
 
@@ -26,33 +16,19 @@ const StudioConfigContext = createContext<StudioConfigContextValue | undefined>(
 )
 
 /**
- * Loads optional bundled Studio config once at startup.
+ * Provides build-time bundled flag and the default Server URL.
+ *
+ * Bundled builds (`/studio/` base) default to `window.location.origin`.
+ * Standalone and desktop default to `http://localhost:8080`.
  */
 export function StudioConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<StudioConfig | null | undefined>(
-    undefined,
-  )
-
-  useEffect(() => {
-    let cancelled = false
-    void loadStudioConfig().then((next) => {
-      if (!cancelled) {
-        setConfig(next)
-      }
-    })
-    return () => {
-      cancelled = true
+  const value = useMemo<StudioConfigContextValue>(() => {
+    const bundled = isStudioBundled()
+    return {
+      defaultBaseUrl: defaultBaseUrlForStudio(bundled),
+      bundled,
     }
   }, [])
-
-  const value = useMemo<StudioConfigContextValue>(() => {
-    const resolved = config === undefined ? null : config
-    return {
-      config,
-      defaultBaseUrl: defaultBaseUrlForStudio(resolved),
-      bundled: resolved?.bundled === true,
-    }
-  }, [config])
 
   return (
     <StudioConfigContext.Provider value={value}>
@@ -62,7 +38,7 @@ export function StudioConfigProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Access optional bundled Studio config (Docker image).
+ * Access bundled Studio defaults (same-origin Aspected serve).
  */
 export function useStudioConfig(): StudioConfigContextValue {
   const context = useContext(StudioConfigContext)

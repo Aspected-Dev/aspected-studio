@@ -112,8 +112,8 @@ against the cheat sheet stays a human read.
 | CI locally          | `deno task ci`               | fmt check, lint, check, test, build |
 
 `deno task preview` and production builds do not include the Vite proxy. Point
-Studio at a server with CORS enabled (bundled Studio enables CORS when the UI is
-on).
+Studio at a server with CORS enabled when Studio is not same-origin. Bundled
+Studio under `/studio/` shares the API origin.
 
 ### Local Aspected product docs (`aspects.dev`)
 
@@ -156,30 +156,31 @@ Studio versions are independent from Aspected. To cut a release:
 3. Merge to the default branch, then tag and push `vX.Y.Z` (must match both
    version fields).
 4. [`.github/workflows/release.yml`](.github/workflows/release.yml) runs
-   `deno task ci`, pushes `xillio/aspected-studio-static:X.Y.Z` (and `:latest`)
-   for `linux/amd64` and `linux/arm64`, builds unsigned desktop installers
+   `deno task ci` (production `dist/` uses base path `/studio/`), packages
+   `aspected-studio-dist-X.Y.Z.tar.gz`, builds unsigned desktop installers
    (macOS `.dmg`, Windows `.msi`, Linux `.AppImage` and `.deb`), and creates a
    GitHub Release whose notes come from the matching CHANGELOG section (plus
-   static image and installer lists; auto-generated commit notes only if that
-   section is missing).
-5. In the sibling `aspects.dev` repo, bump `ARG STUDIO_VERSION` in the
-   Dockerfile to `X.Y.Z` so the next Aspected image bake picks up this Studio
-   (once the static Hub image is public).
+   tarball and installer lists; auto-generated commit notes only if that section
+   is missing).
+5. In the sibling `aspects.dev` repo, download that release tarball into the
+   image build (no Docker Hub static image, no SSH to this repo during the
+   Aspected Docker bake).
 
 Desktop installers are unsigned. macOS Gatekeeper and Windows SmartScreen may
 warn until code signing is added later. Smoke a host build with
 `deno task build && deno task build:desktop` (Linux writes a working AppImage
-under `release/`).
+under `release/`). Desktop builds force `STUDIO_BASE_PATH=/` so the packaged app
+is not prefixed with `/studio/`.
 
-Local override while developing Studio against an Aspected image:
+Override the web base for a one-off build:
 
 ```bash
-deno task build
-docker build -f Dockerfile.static -t aspected-studio-static:dev .
+STUDIO_BASE_PATH=/ deno task build
 ```
 
-Then build Aspected with
-`--build-arg STUDIO_IMAGE=aspected-studio-static --build-arg STUDIO_VERSION=dev`.
+Windows MSI note: Deno Desktop does not expose an MSI wizard finish dialog
+option. The install completes without a confirmation screen. Staging uses the
+display name so the installed executable is not the versioned release filename.
 
 ## Definition of Done
 

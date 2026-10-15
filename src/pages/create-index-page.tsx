@@ -40,9 +40,11 @@ import {
   DATETIME_GRANULARITIES,
   DISTANCE_TYPES,
   draftToCreateRequest,
+  draftToCreateRequestLoose,
   emptyAspectDraft,
   emptyCreateIndexDraft,
 } from "@/lib/aspected/create-index-form.ts"
+
 import {
   type AspectType,
   createIndexRequestSchema,
@@ -77,19 +79,15 @@ export function CreateIndexPage() {
   })
 
   function switchToJson() {
-    try {
-      const values = form.getValues()
-      setJsonText(
-        JSON.stringify(
-          draftToCreateRequest(values as CreateIndexDraft),
-          null,
-          2,
-        ),
-      )
-      setJsonMode(true)
-    } catch (caught) {
-      toastCaughtError(caught, "Could not switch to JSON")
-    }
+    const values = form.getValues()
+    setJsonText(
+      JSON.stringify(
+        draftToCreateRequestLoose(values as CreateIndexDraft),
+        null,
+        2,
+      ),
+    )
+    setJsonMode(true)
   }
 
   function switchToForm() {
@@ -99,7 +97,9 @@ export function CreateIndexPage() {
       form.reset(createRequestToDraft(name, parsed) as CreateIndexFormValues)
       setJsonMode(false)
     } catch (caught) {
-      toastCaughtError(caught, "Could not switch to the form")
+      // Unlock the form view even when JSON is incomplete; submit still validates.
+      toastCaughtError(caught, "JSON is incomplete; form kept previous values")
+      setJsonMode(false)
     }
   }
 

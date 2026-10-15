@@ -34,7 +34,7 @@ Index of tutorials: [tutorials/README.md](tutorials/README.md).
 | ------------------------------- | -------------------------------------------------------- |
 | [Overview](overview.md)         | What Studio is, MVP scope, screen map                    |
 | [Architecture](architecture.md) | Design decisions behind preview, scorecard, storage      |
-| [Connections](connections.md)   | Servers, proxy, CORS, tokens, localStorage               |
+| [Connections](connections.md)   | Servers, `/studio/` base, CORS, tokens, reconnect        |
 | [Indexes](indexes.md)           | Create, schema, documents, search, Request Inspector     |
 | [Playground](playground.md)     | Ranking, Live/Preview/Stale, Compare A/B                 |
 | [Scorecard](scorecard.md)       | Golden sets, metrics, Scorecard page and Playground tab  |

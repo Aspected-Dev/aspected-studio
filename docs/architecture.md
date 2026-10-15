@@ -109,15 +109,17 @@ there. Do not invent a second copy in a component without updating that module.
 
 ## Persistence boundaries
 
-| Data                | Where                      | Survives refresh              |
-| ------------------- | -------------------------- | ----------------------------- |
-| Connections         | localStorage               | Yes (does not auto-reconnect) |
-| Golden sets         | localStorage               | Yes                           |
-| Tuned configs       | localStorage               | Yes                           |
-| Playground pin A    | React state                | No                            |
-| Scorecard run cache | React state (hook)         | No                            |
-| Auto-tune run state | React state (hook)         | No                            |
-| Theme / settings    | As implemented in Settings | See settings code             |
+| Data                  | Where                      | Survives refresh                                  |
+| --------------------- | -------------------------- | ------------------------------------------------- |
+| Connections           | localStorage               | Yes                                               |
+| Last saved session id | localStorage               | Yes (silent reconnect on load)                    |
+| Last unsaved session  | sessionStorage             | Tab only (silent reconnect while the tab is open) |
+| Golden sets           | localStorage               | Yes                                               |
+| Tuned configs         | localStorage               | Yes                                               |
+| Playground pin A      | React state                | No                                                |
+| Scorecard run cache   | React state (hook)         | No                                                |
+| Auto-tune run state   | React state (hook)         | No                                                |
+| Theme / settings      | As implemented in Settings | See settings code                                 |
 
 ## Related pages
 

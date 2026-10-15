@@ -3,95 +3,42 @@ import { DEFAULT_BASE_URL } from "@/lib/aspected/connection.ts"
 import {
   bundledWelcomeCopy,
   defaultBaseUrlForStudio,
-  loadStudioConfig,
-  STUDIO_CONFIG_URL,
+  isStudioBundled,
 } from "./studio-config.ts"
 
 afterEach(() => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
-describe("loadStudioConfig", () => {
-  it("returns null when config is missing", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 404 })
-    expect(await loadStudioConfig(fetchImpl)).toBeNull()
-    expect(fetchImpl).toHaveBeenCalledWith(STUDIO_CONFIG_URL, {
-      cache: "no-store",
-    })
-  })
-
-  it("returns null when fetch throws", async () => {
-    const fetchImpl = vi.fn().mockRejectedValue(
-      new TypeError("Failed to fetch"),
-    )
-    expect(await loadStudioConfig(fetchImpl)).toBeNull()
-  })
-
-  it("returns null for invalid JSON shape", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ bundled: "yes" }),
-    })
-    expect(await loadStudioConfig(fetchImpl)).toBeNull()
-  })
-
-  it("parses a bundled config with apiPort", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ bundled: true, apiPort: 8080 }),
-    })
-    expect(await loadStudioConfig(fetchImpl)).toEqual({
-      bundled: true,
-      apiPort: 8080,
-    })
+describe("isStudioBundled", () => {
+  it("reads the build-time flag from import.meta.env", () => {
+    // Vitest injects VITE_STUDIO_BUNDLED as false for the root-base test run.
+    expect(typeof isStudioBundled()).toBe("boolean")
   })
 })
 
 describe("defaultBaseUrlForStudio", () => {
   it("uses the Docker default when not bundled", () => {
-    expect(defaultBaseUrlForStudio(null)).toBe(DEFAULT_BASE_URL)
-    expect(defaultBaseUrlForStudio({ bundled: false })).toBe(DEFAULT_BASE_URL)
+    expect(defaultBaseUrlForStudio(false)).toBe(DEFAULT_BASE_URL)
+    expect(defaultBaseUrlForStudio(false, "http://127.0.0.1:9000")).toBe(
+      DEFAULT_BASE_URL,
+    )
   })
 
-  it("uses hostname plus apiPort when bundled", () => {
+  it("uses the page origin when bundled", () => {
     expect(
-      defaultBaseUrlForStudio(
-        { bundled: true, apiPort: 8080 },
-        "http://127.0.0.1:8081/",
-      ),
+      defaultBaseUrlForStudio(true, "http://127.0.0.1:8080/studio/"),
     ).toBe("http://127.0.0.1:8080")
   })
 
-  it("falls back to the Docker default when apiPort is missing", () => {
-    expect(
-      defaultBaseUrlForStudio({ bundled: true }, "http://127.0.0.1:8081/"),
-    ).toBe(DEFAULT_BASE_URL)
+  it("falls back to the Docker default when the origin is missing", () => {
+    expect(defaultBaseUrlForStudio(true, "")).toBe(DEFAULT_BASE_URL)
   })
 })
 
 describe("bundledWelcomeCopy", () => {
-  it("includes Studio and API ports", () => {
-    expect(
-      bundledWelcomeCopy(8080, { port: "8081", protocol: "http:" }),
-    ).toContain("port 8081")
-    expect(
-      bundledWelcomeCopy(8080, { port: "8081", protocol: "http:" }),
-    ).toContain("port 8080")
-  })
-
-  it("uses the default http port when location.port is empty", () => {
-    expect(
-      bundledWelcomeCopy(undefined, { port: "", protocol: "http:" }),
-    ).toContain("port 80")
-  })
-
-  it("reads globalThis.location when location is omitted", () => {
-    vi.stubGlobal("location", {
-      port: "8081",
-      protocol: "http:",
-    })
-    expect(bundledWelcomeCopy(8080)).toContain("port 8081")
-    expect(bundledWelcomeCopy(8080)).toContain("port 8080")
-    vi.unstubAllGlobals()
+  it("mentions same-origin serving", () => {
+    expect(bundledWelcomeCopy()).toContain("same origin")
   })
 })

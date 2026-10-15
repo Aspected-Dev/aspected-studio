@@ -50,16 +50,19 @@ More UI detail: `.cursor/rules/react-ui.mdc`. Testing:
 
 ## README vs docs
 
-| Change                                                | Update                                                            |
-| ----------------------------------------------------- | ----------------------------------------------------------------- |
-| Setup, tasks, env vars, Definition of Done checklist  | [README](../README.md)                                            |
-| Cutting a Studio release (version, tag, Hub, desktop) | [README Releasing](../README.md#releasing)                        |
-| User-facing change for the next release notes         | [`CHANGELOG.md`](../CHANGELOG.md) under `## [Unreleased]`         |
-| Feature behavior, workflows, metrics, demos           | Matching page under [`docs/`](README.md)                          |
-| Button-by-button walkthroughs                         | [`docs/tutorials/`](tutorials/README.md)                          |
-| Cross-cutting design decision                         | [Architecture](architecture.md) and/or the feature page           |
-| New major screen or surface                           | New docs page or section, linked from [docs/README.md](README.md) |
-| Agent / contributor policy                            | [AGENTS.md](../AGENTS.md) and `.cursor/rules`                     |
+| Change                                                 | Update                                     |
+| ------------------------------------------------------ | ------------------------------------------ |
+| Setup, tasks, env vars, Definition of Done checklist   | [README](../README.md)                     |
+| Cutting a Studio release (version, tag, dist, desktop) | [README Releasing](../README.md#releasing) |
+
+| User-facing change for the next release notes |
+[`CHANGELOG.md`](../CHANGELOG.md) under `## [Unreleased]` | | Feature behavior,
+workflows, metrics, demos | Matching page under [`docs/`](README.md) | |
+Button-by-button walkthroughs | [`docs/tutorials/`](tutorials/README.md) | |
+Cross-cutting design decision | [Architecture](architecture.md) and/or the
+feature page | | New major screen or surface | New docs page or section, linked
+from [docs/README.md](README.md) | | Agent / contributor policy |
+[AGENTS.md](../AGENTS.md) and `.cursor/rules` |
 
 Do not dump feature manuals back into the README. Do not leave `docs/` stale
 when the product changes.

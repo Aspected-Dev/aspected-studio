@@ -5,9 +5,6 @@ on:
     tags:
       - "v*"
 
-env:
-  IMAGE: xillio/aspected-studio-static
-
 jobs:
   verify:
     name: Verify and build web assets
@@ -47,62 +44,19 @@ jobs:
       - name: CI (fmt, lint, check, test, build)
         run: deno task ci
 
-      - name: Upload web dist
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-dist
-          path: dist/
-          retention-days: 1
-
-  static:
-    name: Build and publish static image
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Download web dist
-        uses: actions/download-artifact@v4
-        with:
-          name: web-dist
-          path: dist/
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to DockerHub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push static image
-        id: push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: Dockerfile.static
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:${{ needs.verify.outputs.version }}
-            ${{ env.IMAGE }}:latest
-
-      - name: Package dist tarball and release body
+      - name: Package dist tarball
         run: |
-          version="${{ needs.verify.outputs.version }}"
-          digest="${{ steps.push.outputs.digest }}"
+          version="${{ steps.version.outputs.version }}"
           mkdir -p release-assets
           tar -C dist -czf "release-assets/aspected-studio-dist-${version}.tar.gz" .
-          sha256sum "release-assets/aspected-studio-dist-${version}.tar.gz" \
-            > "release-assets/aspected-studio-dist-${version}.tar.gz.sha256"
           {
-            echo "Static image: \`${{ env.IMAGE }}:${version}@${digest}\`"
+            echo "Web assets are built with base path \`/studio/\` for same-origin serving by the Aspected process."
+            echo
+            echo "Dist tarball: \`aspected-studio-dist-${version}.tar.gz\`"
             echo
           } > release-assets/static-release-body.md
 
-      - name: Upload static release assets
+      - name: Upload web dist assets
         uses: actions/upload-artifact@v4
         with:
           name: static-assets
@@ -189,35 +143,6 @@ jobs:
           ls -la release/
           df -h / || true
 
-      - name: Checksum installer (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          version="${{ needs.verify.outputs.version }}"
-          target="${{ matrix.target }}"
-          ext="${{ matrix.ext }}"
-          asset="aspected-studio-${version}-${target}.${ext}"
-          (
-            cd release
-            if command -v sha256sum >/dev/null 2>&1; then
-              sha256sum "$asset" > "${asset}.sha256"
-            else
-              shasum -a 256 "$asset" > "${asset}.sha256"
-            fi
-          )
-
-      - name: Checksum installer (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $version = "${{ needs.verify.outputs.version }}"
-          $target = "${{ matrix.target }}"
-          $ext = "${{ matrix.ext }}"
-          $asset = "aspected-studio-$version-$target.$ext"
-          $path = Join-Path "release" $asset
-          $hash = (Get-FileHash -Algorithm SHA256 $path).Hash.ToLowerInvariant()
-          Set-Content -Path "$path.sha256" -Value "$hash  $asset" -Encoding ascii
-
       - name: Upload desktop artifact
         uses: actions/upload-artifact@v4
         with:
@@ -227,7 +152,7 @@ jobs:
 
   publish:
     name: Create GitHub Release
-    needs: [verify, static, desktop]
+    needs: [verify, desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -294,14 +219,8 @@ jobs:
           generate_release_notes: ${{ steps.notes.outputs.has_notes != 'true' }}
           files: |
             release-out/aspected-studio-dist-${{ needs.verify.outputs.version }}.tar.gz
-            release-out/aspected-studio-dist-${{ needs.verify.outputs.version }}.tar.gz.sha256
             release-out/aspected-studio-${{ needs.verify.outputs.version }}-aarch64-apple-darwin.dmg
-            release-out/aspected-studio-${{ needs.verify.outputs.version }}-aarch64-apple-darwin.dmg.sha256
             release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-apple-darwin.dmg
-            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-apple-darwin.dmg.sha256
             release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-pc-windows-msvc.msi
-            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-pc-windows-msvc.msi.sha256
             release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.AppImage
-            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.AppImage.sha256
             release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.deb
-            release-out/aspected-studio-${{ needs.verify.outputs.version }}-x86_64-unknown-linux-gnu.deb.sha256

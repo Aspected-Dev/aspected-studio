@@ -39,15 +39,17 @@ export const DOCS_PAGES = {
     blurb: "Graph knobs that trade recall, memory, and speed.",
   },
   security: {
-    path: "/user-manual/security/",
-    title: "Security",
-    blurb: "HTTPS and a static API token on the Authorization header.",
+    path: "/user-manual/security/authentication/",
+    title: "Authentication",
+    blurb:
+      "Static API token and granular JWT access on the Authorization header.",
   },
   accessControl: {
-    path: "/user-manual/access-control/",
-    title: "Access control",
+    path: "/user-manual/document-access-control/",
+    title: "Document access control",
     blurb: "Tag documents with access keys and filter search results.",
   },
+
   resolvers: {
     path: "/resolvers/",
     title: "Resolvers",
@@ -95,7 +97,8 @@ export const DOCS_HASH = {
   combiningResolvers: "combining-resolvers",
   inspectingResolvers: "inspecting-resolvers",
   downloadingModels: "downloading-models",
-  apiToken: "api-token-authentication",
+  apiToken: "static-api-token-010",
+
   tutorialCreate: "step-1-create-the-index",
   tutorialTrain: "step-3-train-the-index",
   tutorialSearch: "step-4-search-single-aspect",

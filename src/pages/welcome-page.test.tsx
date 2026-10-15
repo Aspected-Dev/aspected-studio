@@ -14,7 +14,6 @@ vi.mock("@/components/connection-dialog.tsx", () => ({
 }))
 
 const studioConfig = vi.hoisted(() => ({
-  config: null as { bundled: boolean; apiPort?: number } | null,
   defaultBaseUrl: "http://localhost:8080",
   bundled: false,
 }))
@@ -28,7 +27,6 @@ describe("WelcomePage", () => {
     cleanup()
     openNew.mockReset()
     studioConfig.bundled = false
-    studioConfig.config = null
     studioConfig.defaultBaseUrl = "http://localhost:8080"
   })
 
@@ -53,20 +51,9 @@ describe("WelcomePage", () => {
       .toHaveAttribute("href", docsUrl("tutorial"))
   })
 
-  it("shows Studio and API ports when served from the container", () => {
+  it("shows same-origin copy when served from the Aspected process", () => {
     studioConfig.bundled = true
-    studioConfig.config = { bundled: true, apiPort: 8080 }
-    vi.stubGlobal("location", {
-      ...window.location,
-      port: "8081",
-      protocol: "http:",
-      origin: "http://localhost:8081",
-    })
     render(<WelcomePage />)
-    expect(
-      screen.getByText(/Aspected container on port 8081/),
-    ).toBeInTheDocument()
-    expect(screen.getByText(/API listens on port 8080/)).toBeInTheDocument()
-    vi.unstubAllGlobals()
+    expect(screen.getByText(/same origin/)).toBeInTheDocument()
   })
 })

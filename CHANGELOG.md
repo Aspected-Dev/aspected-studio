@@ -8,7 +8,7 @@ and this project follows
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-09-30
+## [0.1.0] - 2026-10-15
 
 ### Added
 
@@ -16,12 +16,14 @@ and this project follows
 
 - Connection manager for multiple Aspected servers, with welcome and sidebar
   flows, disconnect handling, and reconnect.
-- Bundled Studio UI support for official Aspected Docker images (cross-port API
-  and static listener on `:8081`).
-- GitHub Releases for the static Hub image (`xillio/aspected-studio-static`) and
-  dist tarball on `v*` tags.
-- Unsigned desktop installers on GitHub Releases via `deno desktop` (macOS
-  `.dmg`, Windows `.msi`, Linux `.AppImage` and `.deb`), with SHA-256 checksums.
+- Silent reconnect on reload for the last saved or unsaved session. Unsaved
+  sessions show as **Not saved** in the sidebar with Disconnect and Save.
+- Bundled Studio under `/studio/` on the same origin as the Aspected API
+  (auto-connects to `window.location.origin`).
+- GitHub Releases with a production dist tarball (`/studio/` base) and unsigned
+  desktop installers via `deno desktop` (macOS `.dmg`, Windows `.msi`, Linux
+  `.AppImage` and `.deb`).
+- Catch-all 404 page and root route error boundary.
 
 #### Indexes, documents, and search
 
@@ -29,6 +31,7 @@ and this project follows
   Aspected HTTP API.
 - Request Inspector for inspecting API traffic from Studio screens.
 - Year-only and richer datetime handling in aspect value fields.
+- Create-index form ↔ JSON toggle works with incomplete drafts.
 
 #### Playground, Scorecard, and Auto-tune
 
@@ -42,4 +45,8 @@ and this project follows
 
 - In-app Studio docs and tutorials (connect, indexes, search, Playground,
   Scorecard, Auto-tune, movies readiness).
+- Docs catalog paths aligned with the live docs site (authentication, document
+  access control, static API token hash).
 - Sidebar navigation and branding updates (favicon and app chrome).
+- Desktop app icons for Linux and Windows, including a `.desktop` entry on deb
+  packages.

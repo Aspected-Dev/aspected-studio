@@ -11,7 +11,7 @@ import { bundledWelcomeCopy } from "@/lib/studio-config.ts"
  */
 export function WelcomePage() {
   const { openNew } = useConnectionDialog()
-  const { bundled, config } = useStudioConfig()
+  const { bundled } = useStudioConfig()
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10 text-center">
@@ -22,7 +22,7 @@ export function WelcomePage() {
         </h1>
         <p className="text-muted-foreground">
           {bundled
-            ? bundledWelcomeCopy(config?.apiPort)
+            ? bundledWelcomeCopy()
             : "Connect to an Aspected server, or add one to the saved list, to browse indexes. The default Docker port is 8080."}
         </p>
         <p className="text-sm text-muted-foreground">

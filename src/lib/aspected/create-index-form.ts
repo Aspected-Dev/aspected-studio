@@ -110,11 +110,25 @@ export function emptyCreateIndexDraft(): CreateIndexDraft {
 
 /**
  * Converts a form draft into a `PUT /indexes/{name}` body.
+ * Validates with the create-index request schema (throws on incomplete drafts).
  */
 export function draftToCreateRequest(
   draft: CreateIndexDraft,
 ): CreateIndexRequest {
-  const schema = draft.aspects.map(draftToAspect)
+  return createIndexRequestSchema.parse(draftToCreateRequestLoose(draft))
+}
+
+/**
+ * Best-effort create-index JSON for the form ↔ JSON toggle.
+ *
+ * Incomplete drafts still serialize so the user can switch views without
+ * filling every field first. Submit still goes through
+ * {@link draftToCreateRequest} / schema parse.
+ */
+export function draftToCreateRequestLoose(
+  draft: CreateIndexDraft,
+): Record<string, unknown> {
+  const schema = draft.aspects.map(draftToAspectLoose)
   const hnswEntries: Array<[string, number | boolean]> = []
   for (const [key, raw] of Object.entries(draft.hnsw)) {
     if (raw.trim() === "") {
@@ -124,12 +138,18 @@ export function draftToCreateRequest(
       hnswEntries.push([key, raw === "true"])
       continue
     }
-    hnswEntries.push([key, Number(raw)])
+    const n = Number(raw)
+    if (!Number.isNaN(n)) {
+      hnswEntries.push([key, n])
+    }
   }
   const hnsw = Object.fromEntries(hnswEntries)
 
-  const request: CreateIndexRequest = {
-    idSize: Number(draft.idSize),
+  const idSizeRaw = draft.idSize.trim()
+  const idSize = idSizeRaw === "" ? 36 : Number(idSizeRaw)
+
+  const request: Record<string, unknown> = {
+    idSize: Number.isNaN(idSize) ? draft.idSize : idSize,
     schema,
   }
 
@@ -141,7 +161,7 @@ export function draftToCreateRequest(
     request.hnsw = hnsw
   }
 
-  return createIndexRequestSchema.parse(request)
+  return request
 }
 
 /**
@@ -171,12 +191,19 @@ export function createRequestToDraft(
   return draft
 }
 
-function draftToAspect(draft: AspectDraft): Aspect {
+/**
+ * Loose aspect JSON for the form ↔ JSON toggle. Keeps partial field values
+ * instead of throwing on empty or invalid strings.
+ */
+function draftToAspectLoose(draft: AspectDraft): Record<string, unknown> {
   const name = draft.name.trim()
-  const path = draft.path.trim() || `$.${name}`
+  const path = draft.path.trim() || (name ? `$.${name}` : "")
   const multiplier = draft.multiplier.trim() === ""
     ? undefined
     : Number(draft.multiplier)
+  const multiplierOut = multiplier !== undefined && !Number.isNaN(multiplier)
+    ? multiplier
+    : undefined
 
   switch (draft.type) {
     case "enum":
@@ -184,7 +211,7 @@ function draftToAspect(draft: AspectDraft): Aspect {
         name,
         type: "enum",
         path,
-        multiplier,
+        multiplier: multiplierOut,
         settings: {
           values: splitList(draft.enumValues),
           maxValuesPerRadial: optionalNumber(draft.maxValuesPerRadial),
@@ -195,20 +222,23 @@ function draftToAspect(draft: AspectDraft): Aspect {
         name,
         type: "text",
         path,
-        multiplier,
+        multiplier: multiplierOut,
         settings: { model: draft.model.trim() },
       }
-    case "number":
+    case "number": {
+      const maxRaw = draft.max.trim()
+      const max = maxRaw === "" ? maxRaw : Number(maxRaw)
       return {
         name,
         type: "number",
         path,
-        multiplier,
+        multiplier: multiplierOut,
         settings: {
           min: optionalNumber(draft.min) ?? 0,
-          max: Number(draft.max),
+          max: typeof max === "number" && Number.isNaN(max) ? maxRaw : max,
         },
       }
+    }
     case "datetime": {
       const granularity = DATETIME_GRANULARITIES.filter((item) =>
         draft.granularities.includes(item)
@@ -217,10 +247,12 @@ function draftToAspect(draft: AspectDraft): Aspect {
         name,
         type: "datetime",
         path,
-        multiplier,
+        multiplier: multiplierOut,
         settings: {
           granularity: granularity.length === 1
             ? granularity[0]
+            : granularity.length === 0
+            ? "day"
             : [...granularity],
           format: draft.format.trim() || undefined,
           minYear: optionalNumber(draft.minYear),
@@ -228,24 +260,36 @@ function draftToAspect(draft: AspectDraft): Aspect {
         },
       }
     }
-    case "raw":
+    case "raw": {
+      const dimsRaw = draft.numDims.trim()
+      const dims = dimsRaw === "" ? dimsRaw : Number(dimsRaw)
       return {
         name,
         type: "raw",
         path,
-        multiplier,
-        settings: { numDims: Number(draft.numDims) },
+        multiplier: multiplierOut,
+        settings: {
+          numDims: typeof dims === "number" && Number.isNaN(dims)
+            ? dimsRaw
+            : dims,
+        },
       }
-    case "dict":
+    }
+    case "dict": {
+      let values: Record<string, number> | string = draft.dictJson
+      try {
+        values = JSON.parse(draft.dictJson) as Record<string, number>
+      } catch {
+        // Keep the raw string so the JSON editor still shows what the user typed.
+      }
       return {
         name,
         type: "dict",
         path,
-        multiplier,
-        settings: {
-          values: JSON.parse(draft.dictJson) as Record<string, number>,
-        },
+        multiplier: multiplierOut,
+        settings: { values },
       }
+    }
   }
 }
 

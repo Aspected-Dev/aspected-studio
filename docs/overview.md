@@ -14,8 +14,8 @@ weight tuning from guesswork into measured work.
 Web first: Vite + React in the browser, managed with Deno.
 
 Studio ships inside every official Aspected Docker image (disabled by default).
-See [Connections](connections.md) for the bundled quick start (UI on `:8081`,
-API on `:8080`).
+See [Connections](connections.md) for the bundled quick start (UI at `/studio/`
+on the same origin as the API).
 
 Desktop installers ship on each Studio GitHub Release via `deno desktop`
 (unsigned macOS `.dmg`, Windows `.msi`, Linux `.AppImage` and `.deb`). See

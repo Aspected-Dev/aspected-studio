@@ -42,7 +42,6 @@ vi.mock("@/hooks/use-connection.tsx", () => ({
 
 vi.mock("@/hooks/use-studio-config.tsx", () => ({
   useStudioConfig: () => ({
-    config: null,
     defaultBaseUrl: "http://localhost:8080",
     bundled: false,
   }),

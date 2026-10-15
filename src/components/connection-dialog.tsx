@@ -247,7 +247,7 @@ export function ConnectionDialog({
           </DialogTitle>
           <DialogDescription>
             {bundled
-              ? "This Studio UI is served by the Aspected container. Connect to the API on this host, or save another server."
+              ? "This Studio UI is served by the Aspected server on this host. Connect here, or save another server."
               : "Save a server for later, or connect now. Studio does not connect until you choose one."}
           </DialogDescription>
         </DialogHeader>
@@ -267,7 +267,7 @@ export function ConnectionDialog({
             htmlFor="connection-url"
             page="gettingStarted"
             description={bundled
-              ? "Defaults to the API port on this host. Studio and the API use separate ports."
+              ? "Defaults to this page origin. Studio and the API share the same host and port."
               : "Docker publishes Aspected on port 8080 by default."}
             error={form.formState.errors.baseUrl?.message}
           >

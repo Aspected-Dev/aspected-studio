@@ -19,6 +19,9 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
+# Desktop packages must load assets from `/`, not the web `/studio/` base.
+export STUDIO_BASE_PATH="${STUDIO_BASE_PATH:-/}"
+
 target=""
 out=""
 extra=()
@@ -62,6 +65,7 @@ if [[ -n "$target" ]]; then
 fi
 
 # Rewrite Debian control metadata after `deno desktop` packs a .deb.
+# Also install a PNG icon and a .desktop launcher entry when missing.
 fix_deb_control() {
   local deb="$1"
   local version="$2"
@@ -85,10 +89,45 @@ fix_deb_control() {
     sed -i 's/^Depends: /Depends: libwebkit2gtk-4.1-0, /' "$control"
   fi
 
+  local icon_src="${root}/desktop/icons/aspected-studio-512.png"
+  local icon_dst="$work/root/usr/share/icons/hicolor/512x512/apps/aspected-studio.png"
+  local desktop_dst="$work/root/usr/share/applications/aspected-studio.desktop"
+  if [[ -f "$icon_src" ]]; then
+    mkdir -p "$(dirname "$icon_dst")" "$(dirname "$desktop_dst")"
+    cp -f "$icon_src" "$icon_dst"
+    local exec_bin
+    exec_bin="$(find "$work/root/usr" -type f -executable ! -path '*/DEBIAN/*' 2>/dev/null | head -1 || true)"
+    local exec_path="/usr/bin/aspected-studio"
+    if [[ -n "$exec_bin" ]]; then
+      exec_path="/${exec_bin#"$work/root/"}"
+    fi
+    cat > "$desktop_dst" <<EOF
+[Desktop Entry]
+Type=Application
+Name=${display_name}
+Comment=${display_name} desktop application
+Exec=${exec_path}
+Icon=aspected-studio
+Terminal=false
+Categories=Development;
+EOF
+  fi
+
   local rebuilt="${work}/rebuilt.deb"
   dpkg-deb --root-owner-group -b "$work/root" "$rebuilt"
   mv -f "$rebuilt" "$deb"
 }
+
+# Resolve the app icon path for `--icon` (Windows wants .ico, others prefer PNG).
+resolve_icon() {
+  local ext="$1"
+  if [[ "$ext" == "msi" ]]; then
+    echo "${root}/desktop/icons/aspected-studio.ico"
+  else
+    echo "${root}/desktop/icons/aspected-studio-512.png"
+  fi
+}
+
 
 # Pack a .app into a UDZO DMG with an explicit size budget.
 #
@@ -150,15 +189,20 @@ pack_macos_dmg() {
 
 # Bash 3.2 (macOS) treats empty arrays as unbound under `set -u`.
 # Expand with ${arr[@]+"${arr[@]}"} so CI on Apple runners does not fail.
-if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb ) ]]; then
+#
+# Stage Linux and Windows installers with desktop.app.name (no version dots)
+# so the installed binary / product name stays readable, then rename the
+# artifact to the versioned release filename.
+if [[ -n "$out" && ( "$out" == *.AppImage || "$out" == *.deb || "$out" == *.msi ) ]]; then
   out_dir="$(dirname "$out")"
   mkdir -p "$out_dir"
   ext="${out##*.}"
   display_name="$(read_display_name)"
+  icon="$(resolve_icon "$ext")"
   staging="${out_dir}/${display_name}.${ext}"
   rm -f "$staging"
   # shellcheck disable=SC2086
-  deno desktop ${args[@]+"${args[@]}"} --output "$staging" ${extra[@]+"${extra[@]}"} .
+  deno desktop ${args[@]+"${args[@]}"} --icon "$icon" --output "$staging" ${extra[@]+"${extra[@]}"} .
   if [[ "$staging" != "$out" ]]; then
     mv -f "$staging" "$out"
   fi
@@ -171,19 +215,22 @@ elif [[ -n "$out" && "$out" == *.dmg ]]; then
   out_dir="$(dirname "$out")"
   mkdir -p "$out_dir"
   display_name="$(read_display_name)"
+  icon="$(resolve_icon "dmg")"
   # deno desktop appends ".app" to --output. Passing a path that already ends
   # in ".app" yields "….app.app" and then pack_macos_dmg cannot find the bundle.
   staging="${out_dir}/${display_name}"
   rm -rf "$staging" "${staging}.app" "$out" "${staging}.dylib"
   # Build the .app only; we pack the DMG ourselves (see pack_macos_dmg).
   # shellcheck disable=SC2086
-  deno desktop ${args[@]+"${args[@]}"} --output "$staging" ${extra[@]+"${extra[@]}"} .
+  deno desktop ${args[@]+"${args[@]}"} --icon "$icon" --output "$staging" ${extra[@]+"${extra[@]}"} .
   pack_macos_dmg "${staging}.app" "$out" "$display_name"
   rm -rf "$staging" "${staging}.app" "${staging}.dylib"
 else
   if [[ -n "$out" ]]; then
     args+=(--output "$out")
   fi
+  icon="$(resolve_icon "AppImage")"
   # shellcheck disable=SC2086
-  deno desktop ${args[@]+"${args[@]}"} ${extra[@]+"${extra[@]}"} .
+  deno desktop ${args[@]+"${args[@]}"} --icon "$icon" ${extra[@]+"${extra[@]}"} .
 fi
+

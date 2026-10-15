@@ -10,24 +10,39 @@ import {
 } from "react"
 import { AspectedApiError, AspectedClient } from "@/lib/aspected/client.ts"
 import {
+  clearLastConnection,
   type ConnectionSettings,
   DEFAULT_CONNECTION_SETTINGS,
   isSavedConnection,
   loadConnections,
+  loadLastConnection,
   removeConnection as persistRemove,
   type SavedConnection,
   type SavedConnectionInput,
+  saveLastConnection,
   toConnectionSettings,
   upsertConnection as persistUpsert,
 } from "@/lib/aspected/connection.ts"
 import { toUserFacingError } from "@/lib/aspected/user-error.ts"
 import type { StatusResponse } from "@/lib/aspected/types.ts"
+import { useStudioConfig } from "@/hooks/use-studio-config.tsx"
 
 /** Delays (in ms) between successive auto-retry attempts after a mid-session drop. */
 const RETRY_DELAYS = [2_000, 5_000, 10_000]
 
 /** How often (in ms) to poll /status while connected, to detect server going away. */
 const HEARTBEAT_INTERVAL = 30_000
+
+/**
+ * Module lock so React StrictMode double-mount does not fire two silent
+ * restores. Reset between Vitest cases via {@link resetAutoConnectLock}.
+ */
+let autoConnectLock = false
+
+/** Clears the silent-restore lock (tests only). */
+export function resetAutoConnectLock(): void {
+  autoConnectLock = false
+}
 
 type ConnectionContextValue = {
   settings: ConnectionSettings
@@ -52,6 +67,7 @@ type ConnectionContextValue = {
   deleteConnection: (id: string) => void
   connect: (
     target: ConnectionSettings | SavedConnection,
+    options?: { silent?: boolean },
   ) => Promise<StatusResponse>
   disconnect: () => void
   /** Reconnect to the current settings; starts auto-retry on failure. */
@@ -64,7 +80,11 @@ const ConnectionContext = createContext<ConnectionContextValue | undefined>(
 
 /**
  * Provides saved connections and an explicit live Aspected session.
- * Opening Studio does not connect until the user chooses a server.
+ *
+ * On mount, silently restores the last session (saved id in localStorage, or
+ * ephemeral settings in sessionStorage). Bundled Studio with no prior session
+ * tries `window.location.origin`. Failures stay on the welcome screen (no
+ * toast, no lost-connection overlay).
  *
  * Liveness detection runs on two paths:
  * - Any API call that fails with a network error (status 0) immediately
@@ -76,12 +96,16 @@ const ConnectionContext = createContext<ConnectionContextValue | undefined>(
  * auto-retry cycle (2 s, 5 s, 10 s).
  */
 export function ConnectionProvider({ children }: { children: ReactNode }) {
+  const { bundled, defaultBaseUrl } = useStudioConfig()
   const [connections, setConnections] = useState<SavedConnection[]>(() =>
     loadConnections()
   )
-  const [settings, setSettings] = useState<ConnectionSettings>(
-    DEFAULT_CONNECTION_SETTINGS,
+  const [settings, setSettings] = useState<ConnectionSettings>(() =>
+    bundled
+      ? { baseUrl: defaultBaseUrl, apiToken: "" }
+      : DEFAULT_CONNECTION_SETTINGS
   )
+
   const [status, setStatus] = useState<StatusResponse | null>(null)
   const [statusReceivedAt, setStatusReceivedAt] = useState<number | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -216,6 +240,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(() => {
     stopRetry()
+    clearLastConnection()
     setStatus(null)
     setStatusReceivedAt(null)
     setActiveId(null)
@@ -227,6 +252,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     setConnections(persistRemove(id))
     if (activeIdRef.current === id) {
       stopRetry()
+      clearLastConnection()
       setActiveId(null)
       setStatus(null)
       setStatusReceivedAt(null)
@@ -245,11 +271,15 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
   )
 
   const connect = useCallback(
-    async (target: ConnectionSettings | SavedConnection) => {
+    async (
+      target: ConnectionSettings | SavedConnection,
+      options?: { silent?: boolean },
+    ) => {
       const next = isSavedConnection(target)
         ? toConnectionSettings(target)
         : target
       const nextId = isSavedConnection(target) ? target.id : null
+      const silent = options?.silent === true
 
       // A manual connect always cancels any in-progress retry cycle.
       stopRetry()
@@ -269,11 +299,22 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
         setActiveId(nextId)
         setError(null)
         setWasConnected(true)
+        if (nextId) {
+          saveLastConnection({ kind: "saved", id: nextId })
+        } else {
+          saveLastConnection({ kind: "ephemeral", settings: next })
+        }
         return result
       } catch (caught) {
         setStatus(null)
         setStatusReceivedAt(null)
         setActiveId(null)
+        if (silent) {
+          // Keep wasConnected false so the welcome screen stays up.
+          setWasConnected(false)
+          setError(null)
+          throw caught instanceof Error ? caught : new Error("connect failed")
+        }
         const userError = toUserFacingError(caught, "Cannot reach Aspected")
         setError(userError.title)
         throw caught instanceof Error ? caught : new Error(userError.title)
@@ -283,6 +324,36 @@ export function ConnectionProvider({ children }: { children: ReactNode }) {
     },
     [stopRetry],
   )
+
+  // Silent restore of the last session (or bundled same-origin default).
+  useEffect(() => {
+    if (autoConnectLock) {
+      return
+    }
+    autoConnectLock = true
+
+    const last = loadLastConnection()
+    let target: ConnectionSettings | SavedConnection | null = null
+    if (last?.kind === "saved") {
+      const saved = connections.find((item) => item.id === last.id)
+      if (saved) {
+        target = saved
+      }
+    } else if (last?.kind === "ephemeral") {
+      target = last.settings
+    } else if (bundled) {
+      target = { baseUrl: defaultBaseUrl, apiToken: "" }
+    }
+
+    if (!target) {
+      return
+    }
+
+    void connect(target, { silent: true }).catch(() => {
+      // Welcome screen; no toast.
+    })
+    // Intentionally run once on mount (module lock covers StrictMode).
+  }, [])
 
   /**
    * Reconnect using the currently active settings. Used by the overlay's

@@ -37,8 +37,7 @@ jobs:
       - name: Build
         run: deno task build
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Smoke-build static image
-        run: docker build -f Dockerfile.static -t aspected-studio-static:ci .
+      - name: Assert production base path
+        run: |
+          test -f dist/index.html
+          grep -q '/studio/' dist/index.html

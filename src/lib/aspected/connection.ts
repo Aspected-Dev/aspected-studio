@@ -21,6 +21,15 @@ export const CONNECTIONS_STORAGE_KEY = "aspected-studio.connections"
 /** Legacy single-connection key. Read once for migrate, then ignored. */
 export const LEGACY_CONNECTION_STORAGE_KEY = "aspected-studio.connection"
 
+/** localStorage key for the last successfully connected saved connection id. */
+export const LAST_CONNECTION_ID_KEY = "aspected-studio.last-connection"
+
+/**
+ * sessionStorage key for an unsaved (ephemeral) session.
+ * Cleared when the browser tab closes so tokens do not linger.
+ */
+export const LAST_EPHEMERAL_SESSION_KEY = "aspected-studio.last-ephemeral"
+
 /** Default Aspected URL used by Docker quick start. */
 export const DEFAULT_BASE_URL = "http://localhost:8080"
 
@@ -159,8 +168,8 @@ export function removeConnection(id: string): SavedConnection[] {
 /**
  * Resolves the fetch origin. In Vite `dev`, the Docker default
  * (`http://localhost:8080`) uses `/api` so the proxy can avoid CORS.
- * Production / bundled builds always call the absolute Server URL (Studio on
- * `:8081` must reach the API on `:8080` cross-origin).
+ * Production / bundled builds always call the absolute Server URL. Same-origin
+ * bundled Studio under `/studio/` still uses that origin as the Server URL.
  */
 export function resolveApiBase(
   baseUrl: string,
@@ -224,6 +233,82 @@ export function connectionSettingsEqual(
   return left.baseUrl.replace(/\/+$/, "") ===
       right.baseUrl.replace(/\/+$/, "") &&
     left.apiToken === right.apiToken
+}
+
+/** Reference to the last live session for silent reconnect on reload. */
+export type LastConnectionRef =
+  | { kind: "saved"; id: string }
+  | { kind: "ephemeral"; settings: ConnectionSettings }
+
+/**
+ * Reads the last successful session (saved id or ephemeral settings).
+ */
+export function loadLastConnection(): LastConnectionRef | null {
+  try {
+    const id = localStorage.getItem(LAST_CONNECTION_ID_KEY)
+    if (id) {
+      return { kind: "saved", id }
+    }
+  } catch {
+    // Ignore storage access errors (private mode quirks).
+  }
+
+  try {
+    const raw = sessionStorage.getItem(LAST_EPHEMERAL_SESSION_KEY)
+    if (!raw) {
+      return null
+    }
+    const parsed = legacyConnectionSchema.safeParse(JSON.parse(raw))
+    if (!parsed.success) {
+      return null
+    }
+    return {
+      kind: "ephemeral",
+      settings: {
+        baseUrl: parsed.data.baseUrl.trim() || DEFAULT_BASE_URL,
+        apiToken: parsed.data.apiToken ?? "",
+      },
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Persists the last successful session for silent reconnect.
+ * Saved connections use localStorage; unsaved drafts use sessionStorage.
+ */
+export function saveLastConnection(ref: LastConnectionRef): void {
+  try {
+    if (ref.kind === "saved") {
+      localStorage.setItem(LAST_CONNECTION_ID_KEY, ref.id)
+      sessionStorage.removeItem(LAST_EPHEMERAL_SESSION_KEY)
+      return
+    }
+    localStorage.removeItem(LAST_CONNECTION_ID_KEY)
+    sessionStorage.setItem(
+      LAST_EPHEMERAL_SESSION_KEY,
+      JSON.stringify(ref.settings),
+    )
+  } catch {
+    // Ignore storage access errors.
+  }
+}
+
+/**
+ * Clears the last-session markers (explicit disconnect or remove).
+ */
+export function clearLastConnection(): void {
+  try {
+    localStorage.removeItem(LAST_CONNECTION_ID_KEY)
+  } catch {
+    // ignore
+  }
+  try {
+    sessionStorage.removeItem(LAST_EPHEMERAL_SESSION_KEY)
+  } catch {
+    // ignore
+  }
 }
 
 function readStoredConnections(): SavedConnection[] | null {

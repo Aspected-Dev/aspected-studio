@@ -14,6 +14,12 @@ describe("docsUrl", () => {
     )
     expect(docsUrl("home")).toBe(`${DOCS_ORIGIN}/`)
     expect(docsUrl("resolverEnum")).toBe(`${DOCS_ORIGIN}/resolvers/enum/`)
+    expect(docsUrl("security")).toBe(
+      `${DOCS_ORIGIN}/user-manual/security/authentication/`,
+    )
+    expect(docsUrl("accessControl")).toBe(
+      `${DOCS_ORIGIN}/user-manual/document-access-control/`,
+    )
   })
 
   it("appends a heading hash without a duplicate hash sign", () => {
@@ -36,7 +42,7 @@ describe("openDocs", () => {
     vi.stubGlobal("open", open)
     openDocs("security", DOCS_HASH.apiToken)
     expect(open).toHaveBeenCalledWith(
-      `${DOCS_ORIGIN}/user-manual/security/#api-token-authentication`,
+      `${DOCS_ORIGIN}/user-manual/security/authentication/#static-api-token-010`,
       "_blank",
       "noopener,noreferrer",
     )

@@ -47,7 +47,12 @@ const { connection, openEdit } = vi.hoisted(() => {
       activeId: "conn-1" as string | null,
       statusReceivedAt: null as number | null,
       connections: [savedConnection],
-      upsertConnection: vi.fn(),
+      upsertConnection: vi.fn((input) => ({
+        id: "saved-from-ephemeral",
+        name: input.name || "saved",
+        baseUrl: input.baseUrl,
+        apiToken: input.apiToken,
+      })),
       deleteConnection: vi.fn(),
       connect: vi.fn(),
       disconnect,
@@ -153,5 +158,22 @@ describe("ConnectionFooter", () => {
     render(<ConnectionFooter />)
     await user.click(screen.getByRole("button", { name: "Connect" }))
     expect(openEdit).toHaveBeenCalledWith(saved, { requireToken: true })
+  })
+
+  it("shows an unsaved active session with Disconnect and Save", async () => {
+    connection.activeId = null
+    connection.connections = []
+    const user = userEvent.setup()
+    render(<ConnectionFooter />)
+    expect(screen.getByText("Not saved")).toBeInTheDocument()
+    expect(screen.getByText("Connections (1)")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "Connection actions" }),
+    )
+    expect(
+      await screen.findByRole("menuitem", { name: "Disconnect" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: "Save connection" }))
+      .toBeInTheDocument()
   })
 })

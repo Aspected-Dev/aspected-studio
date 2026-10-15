@@ -1,14 +1,29 @@
 import { act, cleanup, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { ConnectionProvider, useConnection } from "@/hooks/use-connection.tsx"
+import {
+  ConnectionProvider,
+  resetAutoConnectLock,
+  useConnection,
+} from "@/hooks/use-connection.tsx"
+
 import { AspectedApiError } from "@/lib/aspected/client.ts"
 import type { ConnectionSettings } from "@/lib/aspected/connection.ts"
 import {
   CONNECTIONS_STORAGE_KEY,
   DEFAULT_BASE_URL,
+  LAST_CONNECTION_ID_KEY,
+  LAST_EPHEMERAL_SESSION_KEY,
+  saveConnections,
 } from "@/lib/aspected/connection.ts"
 import type { StatusResponse } from "@/lib/aspected/types.ts"
+
+vi.mock("@/hooks/use-studio-config.tsx", () => ({
+  useStudioConfig: () => ({
+    defaultBaseUrl: DEFAULT_BASE_URL,
+    bundled: false,
+  }),
+}))
 
 const statusResponse: StatusResponse = {
   version: "0.4.1",
@@ -114,6 +129,8 @@ describe("ConnectionProvider", () => {
   afterEach(() => {
     cleanup()
     localStorage.clear()
+    sessionStorage.clear()
+    resetAutoConnectLock()
     getStatus.mockReset()
     capturedOnNetworkError.length = 0
   })
@@ -125,6 +142,56 @@ describe("ConnectionProvider", () => {
     expect(getStatus).not.toHaveBeenCalled()
     await Promise.resolve()
     expect(getStatus).not.toHaveBeenCalled()
+  })
+
+  it("silently restores a saved last connection on mount", async () => {
+    getStatus.mockResolvedValue(statusResponse)
+    saveConnections([{
+      id: "saved-1",
+      name: "Local",
+      baseUrl: DEFAULT_BASE_URL,
+      apiToken: "",
+    }])
+    localStorage.setItem(LAST_CONNECTION_ID_KEY, "saved-1")
+    renderProvider()
+    expect(await screen.findByTestId("status")).toHaveTextContent("0.4.1")
+    expect(screen.getByTestId("active")).toHaveTextContent("saved-1")
+  })
+
+  it("silently restores an ephemeral last session from sessionStorage", async () => {
+    getStatus.mockResolvedValue(statusResponse)
+    sessionStorage.setItem(
+      LAST_EPHEMERAL_SESSION_KEY,
+      JSON.stringify({ baseUrl: "https://draft.example", apiToken: "" }),
+    )
+    renderProvider()
+    expect(await screen.findByTestId("status")).toHaveTextContent("0.4.1")
+    expect(screen.getByTestId("active")).toHaveTextContent("none")
+  })
+
+  it("stays on welcome when silent restore fails", async () => {
+    getStatus.mockRejectedValue(new Error("offline"))
+    sessionStorage.setItem(
+      LAST_EPHEMERAL_SESSION_KEY,
+      JSON.stringify({ baseUrl: "https://draft.example", apiToken: "" }),
+    )
+    renderProvider()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(screen.getByTestId("status")).toHaveTextContent("none")
+    expect(screen.getByTestId("wasConnected")).toHaveTextContent("false")
+  })
+
+  it("clears last-session markers on disconnect", async () => {
+    const user = userEvent.setup()
+    getStatus.mockResolvedValue(statusResponse)
+    renderProvider()
+    await user.click(screen.getByRole("button", { name: "Connect draft" }))
+    await screen.findByTestId("status")
+    expect(sessionStorage.getItem(LAST_EPHEMERAL_SESSION_KEY)).not.toBeNull()
+    await user.click(screen.getByRole("button", { name: "Disconnect" }))
+    expect(sessionStorage.getItem(LAST_EPHEMERAL_SESSION_KEY)).toBeNull()
+    expect(localStorage.getItem(LAST_CONNECTION_ID_KEY)).toBeNull()
   })
 
   it("saves a connection without calling /status", async () => {
